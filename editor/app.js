@@ -146,8 +146,8 @@ function FileField({ label, value, accept, hint, folder, ctx, onChange }) {
 // Lista z przyciskami kolejności i usuwania
 function Row({ title, onUp, onDown, onRemove, open, onToggle, children, sub }) {
   return html`<div class=${`card${open ? " is--open" : ""}`}>
-    <div class="card__head">
-      <button type="button" class="card__title" onClick=${onToggle}><span class="card__chev">${open ? "−" : "+"}</span>${title}${sub && html`<span class="card__sub">${sub}</span>`}</button>
+    <div class="card__head" onClick=${(e) => { if (!e.target.closest(".card__tools")) onToggle(); }}>
+      <button type="button" class="card__title"><span class="card__chev">${open ? "−" : "+"}</span>${title}${sub && html`<span class="card__sub">${sub}</span>`}</button>
       <span class="card__tools">
         ${onUp && html`<button type="button" title="W górę" onClick=${onUp}>↑</button>`}
         ${onDown && html`<button type="button" title="W dół" onClick=${onDown}>↓</button>`}
@@ -402,16 +402,30 @@ function Preview({ project, page, setPage, urls, focus, studio }) {
   const pending = useRef(null);
   const scrollTo = (anchor) => {
     if (!frame.current || frame.current.dataset.loading) return false;
-    const el = frame.current.contentDocument?.getElementById(anchor);
-    if (el) { el.scrollIntoView({ block: "start" }); return true; }
+    const win = frame.current.contentWindow, el = frame.current.contentDocument?.getElementById(anchor);
+    // scrollTo okna ramki, nie scrollIntoView — to drugie przewija też edytor (Safari)
+    if (el) { win.scrollTo(0, el.getBoundingClientRect().top + win.scrollY); return true; }
     return false;
   };
   // Podmiana treści ramki z zachowaniem przewinięcia
   useEffect(() => {
     const f = frame.current; if (!f) return;
+    const shown = single ? "index" : page; // single site to zawsze jedna strona
+    const samePage = f.dataset.page === shown;
+    // Ta sama strona: podmieniamy tylko treść dokumentu — bez przeładowania ramki,
+    // więc przewinięcie zostaje dokładnie tam, gdzie było (także w Safari) i nic nie mruga.
+    const d = f.contentDocument;
+    if (samePage && !f.dataset.loading && d?.body && d.documentElement.hasAttribute("data-preview")) {
+      const nd = new DOMParser().parseFromString(doc, "text/html");
+      const y = f.contentWindow.scrollY;
+      d.head.innerHTML = nd.head.innerHTML;
+      d.body.innerHTML = nd.body.innerHTML; // skrypt strony już działa (zdarzenia na document), nie uruchamia się drugi raz
+      f.contentWindow.scrollTo(0, y);
+      if (pending.current) { scrollTo(pending.current); pending.current = null; }
+      return;
+    }
     const y = f.contentWindow?.scrollY || 0;
-    const samePage = f.dataset.page === page;
-    f.dataset.page = page;
+    f.dataset.page = shown;
     f.dataset.loading = "1";
     f.srcdoc = doc;
     f.onload = () => {
