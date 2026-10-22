@@ -271,14 +271,18 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 @media (min-width: 768px) { .lottie__grid { grid-template-columns: repeat(3, 1fr); } }
 @media (min-width: 1280px) { .lottie { padding: var(--space-24); } .lottie__grid { grid-template-columns: repeat(4, 1fr); } }
 .lottie-tile { display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }
-.lottie-tile__stage { aspect-ratio: 1; display: grid; place-items: center; }
-.lottie-tile__anim { width: 100%; height: 100%; }
+.lottie-tile__stage { position: relative; aspect-ratio: 1; display: grid; place-items: center; color: inherit; text-decoration: none; }
+.lottie-tile__anim { grid-area: 1 / 1; width: 100%; height: 100%; display: block; }
 .lottie-tile__anim svg { display: block; }
-.lottie-tile__placeholder { width: 100%; height: 100%; display: grid; place-items: center; background: var(--bg-placeholder); color: var(--text-subtle); border-radius: var(--radius-2); }
-.lottie-tile__foot { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-8); }
+.lottie-tile__stage .swatch__copy { grid-area: 1 / 1; position: relative; z-index: 1; }
+.lottie-tile__placeholder { grid-area: 1 / 1; width: 100%; height: 100%; display: grid; place-items: center; background: var(--bg-placeholder); color: var(--text-subtle); border-radius: var(--radius-2); }
 .lottie-tile__name { min-width: 0; overflow-wrap: anywhere; }
-.lottie-tile__dl { color: var(--text-subtle); text-decoration: underline; text-underline-offset: .15em; flex: none; }
-.lottie-tile__dl:hover { color: var(--text-primary); }
+/* Tablet i telefon: brak najechania — przycisk „Pobierz” pod nazwą. Desktop: przycisk na animacji po najechaniu. */
+.lottie-tile__dl { display: flex; }
+@media (min-width: 1280px) {
+  .lottie-tile__dl { display: none; }
+  .lottie-tile__stage:hover .swatch__copy { opacity: 1; }
+}
 
 /* Model 3D */
 .model { position: relative; width: 100%; background: var(--bg-surface); display: grid; place-items: center; overflow: hidden; }

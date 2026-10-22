@@ -411,7 +411,7 @@ function LottieBlock({ b, set, ctx }) {
       set((x) => { x.items = [...(x.items || []).filter((k) => k.file || k.name), ...added]; });
     }} />
     ${warn && html`<p class="f__warn">${warn}</p>`}
-    <p class="note">Każda animacja zajmuje 2 kolumny: 4 w rzędzie na desktopie, 3 na tablecie, 2 na telefonie. Grają tylko, gdy są widoczne; przy włączonym „ograniczeniu ruchu” w systemie pokazuje się pierwsza klatka. W eksporcie: pobieranie pojedynczych JSON i „Pobierz wszystkie (ZIP)”.</p>`;
+    <p class="note">Każda animacja zajmuje 2 kolumny: 4 w rzędzie na desktopie, 3 na tablecie, 2 na telefonie. Grają tylko, gdy są widoczne; przy włączonym „ograniczeniu ruchu” w systemie pokazuje się pierwsza klatka. Desktop: kliknięcie w animację pobiera JSON, przycisk „Pobierz” po najechaniu. Tablet i telefon: przycisk „Pobierz” pod nazwą. „Pobierz wszystkie (ZIP)” w nagłówku sekcji.</p>`;
 }
 
 // 3D: GLB (najlepiej — jeden plik z materiałami) albo OBJ, który zamieniamy na GLB w przeglądarce (three.js, ładowane tylko wtedy).

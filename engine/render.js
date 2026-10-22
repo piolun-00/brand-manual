@@ -231,8 +231,12 @@ const BLOCKS = {
     const zip = items.some((i) => i.file) && ctx.headerTaken !== b.id ? `<div class="icons__actions">${button(ctx, "download", ctx.lottieZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)")}</div>` : "";
     return `<div class="lottie">${zip}<div class="lottie__grid">${items.map((i) => `
     <div class="lottie-tile">
-      <div class="lottie-tile__stage">${i.file ? `<div class="lottie-tile__anim" data-lottie="${esc(ctx.url(i.file))}" role="img" aria-label="${esc(i.name || "Animacja")}"></div>` : `<span class="lottie-tile__placeholder text-small">Lottie JSON</span>`}</div>
-      <div class="lottie-tile__foot"><span class="lottie-tile__name text-body">${t(i.name)}</span>${i.file ? `<a class="lottie-tile__dl text-small" href="${esc(ctx.url(i.file))}" download>JSON</a>` : ""}</div>
+      ${i.file ? `<a class="lottie-tile__stage" href="${esc(ctx.url(i.file))}" download="${esc((slugify(i.name) || "animacja") + ".json")}" aria-label="Pobierz animację ${esc(i.name)} (JSON)">
+        <span class="lottie-tile__anim" data-lottie="${esc(ctx.url(i.file))}" role="img" aria-label="${esc(i.name || "Animacja")}"></span>
+        <span class="swatch__copy"><span class="button is--download text-body"><span class="button__label">Pobierz</span><span class="button__icon">${icon("download")}</span></span></span>
+      </a>` : `<span class="lottie-tile__stage"><span class="lottie-tile__placeholder text-small">Lottie JSON</span></span>`}
+      <span class="lottie-tile__name text-body">${t(i.name)}</span>
+      ${i.file ? `<span class="lottie-tile__dl">${button(ctx, "download", i.file, "Pobierz")}</span>` : ""}
     </div>`).join("")}</div></div>`;
   },
 
