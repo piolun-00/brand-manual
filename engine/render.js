@@ -126,13 +126,24 @@ function sectionHeader(ctx, s) {
 </header>`;
 }
 
+// Zdjęcia w eksporcie mają wersję 1x (połowa szerokości) — telefon nie pobiera pliku 1848 px.
+// ctx.variants: zbiór ścieżek, dla których eksport przygotował plik „@1x”.
+const SIZES = { "1": "(min-width: 1280px) 924px, (min-width: 768px) 537px, 100vw", "2-equal": "(min-width: 1280px) 456px, (min-width: 768px) 263px, 100vw",
+  "wide-narrow": "(min-width: 1280px) 573px, (min-width: 768px) 354px, 100vw", "narrow-wide": "(min-width: 1280px) 573px, (min-width: 768px) 354px, 100vw" };
+export const variantOf = (path) => path.replace(/(\.[a-z0-9]+)$/i, "@1x$1");
+function srcset(ctx, path, layout) {
+  const v = ctx.variants?.get?.(path);
+  if (!v) return "";
+  return ` srcset="${esc(ctx.url(variantOf(path)))} ${v.half}w, ${esc(ctx.url(path))} ${v.full}w" sizes="${SIZES[layout] || SIZES["1"]}"`;
+}
+
 // Rząd zdjęć. layout: 1 | 2-equal | wide-narrow | narrow-wide · ratio: 4/3 | 3/4 | auto
 function imagesRow(ctx, b) {
   const mod = { "1": "is--1up", "wide-narrow": "is--wide-narrow", "narrow-wide": "is--narrow-wide" }[b.layout] || "is--2up";
   const ratio = b.ratio && b.ratio !== "auto" ? b.ratio : null;
   const items = (b.items || []).slice(0, b.layout === "1" ? 1 : 2);
   return `<div class="gallery__row ${mod}">${items.map((i) => `
-    <figure class="gallery__item"><div class="gallery__image"${ratio ? ` style="aspect-ratio:${ratio}"` : ""}>${i.image ? `<img src="${esc(ctx.url(i.image))}" alt="${esc(i.caption || "")}" loading="lazy">` : `<span class="gallery__placeholder text-small">Zdjęcie</span>`}</div>${i.caption ? `<figcaption class="gallery__caption text-caption">${t(i.caption)}</figcaption>` : ""}</figure>`).join("")}
+    <figure class="gallery__item"><div class="gallery__image"${ratio ? ` style="aspect-ratio:${ratio}"` : ""}>${i.image ? `<img src="${esc(ctx.url(i.image))}"${srcset(ctx, i.image, b.layout)} alt="${esc(i.alt || i.caption || "")}" loading="lazy">` : `<span class="gallery__placeholder text-small">Zdjęcie</span>`}</div>${i.caption ? `<figcaption class="gallery__caption text-caption">${t(i.caption)}</figcaption>` : ""}</figure>`).join("")}
   </div>`;
 }
 
@@ -189,9 +200,11 @@ const BLOCKS = {
   },
 
   // Ikony: 8 w rzędzie na desktopie (jak siatka), kopiowanie kodu SVG
-  icons: (ctx, b) => `<div class="icons"><div class="icons__grid">${(b.items || []).map((i) => `
+  // currentColor: przy kopiowaniu kolory w SVG zamieniane na currentColor (ikona przejmuje kolor tekstu w kodzie odbiorcy).
+  // ctx.iconZips: ścieżka ZIP-a ze wszystkimi ikonami bloku (robi go eksport).
+  icons: (ctx, b) => `<div class="icons">${(b.items || []).some((i) => i.svg) ? `<div class="icons__actions">${button(ctx, "download", ctx.iconZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)")}</div>` : ""}<div class="icons__grid">${(b.items || []).map((i) => `
     <div class="icon-tile">
-      <button class="icon-tile__chip" type="button"${i.svg ? ` data-copy-url="${esc(ctx.url(i.svg))}"` : ""} aria-label="Kopiuj SVG ${esc(i.name)}">
+      <button class="icon-tile__chip" type="button"${i.svg ? ` data-copy-url="${esc(ctx.url(i.svg))}"${b.currentColor ? " data-current-color" : ""}` : ""} aria-label="Kopiuj SVG ${esc(i.name)}">
         ${i.svg ? `<img class="icon-tile__svg" src="${esc(ctx.url(i.svg))}" alt="">` : `<span class="icon-tile__placeholder"></span>`}
         <span class="swatch__copy"><span class="button is--copy text-body"><span class="button__label">Kopiuj</span></span></span>
       </button>
@@ -205,7 +218,8 @@ const BLOCKS = {
       const frame = safeIframe(b.embed);
       return `<div class="video is--embed"${ratio}>${frame || `<span class="gallery__placeholder text-small">${b.embed ? "Wklej kod z &lt;iframe&gt; (Vimeo, YouTube, Lottie, Rive)" : "Kod embed"}</span>`}</div>`;
     }
-    return `<div class="video"${ratio}>${b.file ? `<video src="${esc(ctx.url(b.file))}" autoplay muted loop playsinline></video>` : `<span class="gallery__placeholder text-small">Animacja MP4</span>`}</div>`;
+    const poster = b.file && ctx.posters?.has?.(b.file) ? ` poster="${esc(ctx.url(b.file.replace(/\.[a-z0-9]+$/i, "-poster.jpg")))}"` : "";
+    return `<div class="video"${ratio}>${b.file ? `<video src="${esc(ctx.url(b.file))}"${poster} autoplay muted loop playsinline preload="metadata"></video>` : `<span class="gallery__placeholder text-small">Animacja MP4</span>`}</div>`;
   },
 
   typeface: (ctx, b) => {
@@ -265,12 +279,31 @@ function footer(site) {
 }
 
 // ——— Style strony ———
-// Cały manual w ABC Areal. Pliki webfontu dokłada studio (raz, w edytorze) — nie są częścią projektu klienta.
+// Krój manuala (brand.font):
+//  "geist"  — domyślny. Geist (OFL, Vercel): wolno go dołączyć do strony na domenie każdego klienta.
+//  "areal"  — ABC Areal z plików studia. Tylko gdy klient ma własną licencję webową Dinamo na swoją domenę.
+//  "system" — krój systemu odbiorcy (SF Pro / Segoe UI / Helvetica / Arial), zero plików.
+// Pliki Geista leżą w silniku (engine/fonts/geist) i trafiają do eksportu jako fonts/geist/…
+const SUBSETS = {
+  latin: "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD",
+  "latin-ext": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
+};
+export const GEIST_FILES = Object.keys(SUBSETS).flatMap((sub) => ["normal", "italic"].map((st) => `fonts/geist/geist-${sub}-wght-${st}.woff2`));
+export const FONT_FAMILY = { geist: "Geist", areal: "ABC Areal Variable", system: "System UI" };
+export const fontOf = (project) => FONT_FAMILY[project.brand?.font] ? project.brand.font : "geist";
+
+function geistFaces(url) {
+  return Object.entries(SUBSETS).flatMap(([sub, range]) => ["normal", "italic"].map((st) =>
+    `@font-face{font-family:"Geist";src:url("${url(`fonts/geist/geist-${sub}-wght-${st}.woff2`)}") format("woff2");font-style:${st};font-weight:100 900;font-display:swap;unicode-range:${range}}`)).join("\n");
+}
+
 export function siteCss(project, figmaVars, baseCss, url, studioFonts = []) {
   const b = project.brand || {};
-  const overrides = {};
+  const font = fontOf(project);
+  const overrides = { "font/ui/family": FONT_FAMILY[font] };
   if (b.accent) overrides["brand/accent"] = b.accent;
-  return [fontFaces([{ family: "ABC Areal Variable", files: studioFonts }], url), tokensCss(figmaVars, overrides), baseCss].join("\n");
+  const faces = font === "geist" ? geistFaces(url) : font === "areal" ? fontFaces([{ family: "ABC Areal Variable", files: studioFonts }], url) : "";
+  return [faces, tokensCss(figmaVars, overrides), baseCss].join("\n");
 }
 
 // ——— Strona ———
@@ -296,6 +329,9 @@ export function renderPage(project, page, ctx) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>${esc(title)}</title>
+${b.favicon ? `<link rel="icon" href="${esc(ctx.url(b.favicon))}">` : ""}
+<meta property="og:title" content="${esc(title)}">
+${b.ogImage && b.siteUrl ? `<meta property="og:image" content="${esc(new URL(b.ogImage, b.siteUrl.replace(/\/?$/, "/")).href)}">` : ""}
 ${ctx.css.inline != null ? `<style>${ctx.css.inline}</style>` : `<link rel="stylesheet" href="${esc(ctx.css.href)}">`}
 ${ctx.preview ? `<style>[data-kh]{cursor:pointer}[data-kh="block"]:hover{outline:1px dashed rgba(0,0,0,.35);outline-offset:6px}.contrast__pair.is--empty .contrast__sample{display:grid;place-items:center;border:1px dashed var(--border-strong);color:var(--text-subtle);text-align:center}</style>` : ""}
 </head>
@@ -316,12 +352,13 @@ ${showFooter ? footer(site) : ""}
 
 // ——— Cała strona do eksportu ———
 // Linki względne, więc strona działa z dowolnego folderu na serwerze (np. klient.pl/brandbook/).
-export function renderSite(project, figmaVars, baseCss, studioFonts = []) {
+// extra: { variants: Map(ścieżka → {full, half}), posters: Set(ścieżek MP4), iconZips: Map(id bloku → ścieżka ZIP) }
+export function renderSite(project, figmaVars, baseCss, studioFonts = [], extra = {}) {
   const site = prepare(project);
   const single = site.brand.mode === "single";
   const pages = ["index", ...(single ? [] : site.chapters.map((c) => c.slug))];
   const files = [];
-  const css = siteCss(project, figmaVars, baseCss, (p) => `../${p}`, studioFonts); // style.css leży w assets/
+  const css = siteCss(project, figmaVars, baseCss, (p) => `../${p}`, fontOf(project) === "areal" ? studioFonts : []); // style.css leży w assets/
   files.push({ path: "assets/style.css", content: css });
   for (const page of pages) {
     const root = page === "index" ? "" : "../";
@@ -329,7 +366,8 @@ export function renderSite(project, figmaVars, baseCss, studioFonts = []) {
       url: (p) => root + String(p).replace(/^\//, ""),
       link: (target) => target === "index" ? `href="${root || "./"}"`
         : single ? `href="${root}#${target}"` : `href="${root}${target}/"`,
-      css: { href: `${root}assets/style.css` }
+      css: { href: `${root}assets/style.css` },
+      ...extra
     };
     files.push({ path: page === "index" ? "index.html" : `${page}/index.html`, content: renderPage(project, page, ctx) });
   }

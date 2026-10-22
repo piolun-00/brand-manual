@@ -17,7 +17,9 @@ export const RUNTIME = `
     if (!el) return;
     try {
       // Ikony: kopiujemy kod SVG (pobrany z pliku), kolory: wartość HEX
-      const text = el.dataset.copy ?? await fetch(el.dataset.copyUrl).then((r) => r.text());
+      let text = el.dataset.copy ?? await fetch(el.dataset.copyUrl).then((r) => r.text());
+      // Wersja „currentColor”: każdy konkretny kolor wypełnienia i obrysu → currentColor (none i url(#…) zostają)
+      if (el.hasAttribute("data-current-color")) text = text.replace(/((?:fill|stroke)\s*[=:]\s*["']?)(#[0-9a-f]{3,8}|rgba?\([^)]*\)|black|white)/gi, "$1currentColor");
       await navigator.clipboard.writeText(text);
     } catch { return; }
     const label = el.querySelector(".button__label");
@@ -60,7 +62,10 @@ export const RUNTIME = `
   };
   async function go(url, push) {
     let html;
-    try { html = await load(url.href.split("#")[0]); } catch { location.href = url.href; return; }
+    try {
+      html = await load(url.href.split("#")[0]);
+      if (window.khDecrypt) html = await window.khDecrypt(html); // manual chroniony hasłem
+    } catch { location.href = url.href; return; }
     const doc = new DOMParser().parseFromString(html, "text/html");
     const next = doc.querySelector(".layout__column");
     if (!next) { location.href = url.href; return; }

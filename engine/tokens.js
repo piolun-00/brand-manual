@@ -31,7 +31,7 @@ export function tokensCss(data, overrides = {}) {
       }
       const raw = overrides[v.name] ?? v.values[col.modes[0]];
       if (v.name.endsWith("/family")) {
-        const fallback = v.name.startsWith("brand/") ? "Georgia, serif" : "system-ui, -apple-system, \"Helvetica Neue\", Arial, sans-serif";
+        const fallback = v.name.startsWith("brand/") ? "Georgia, serif" : "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"Helvetica Neue\", Helvetica, Arial, sans-serif";
         root.push(`${prop(v.name)}:${quote(raw)}, ${fallback}`);
       } else if (v.type === "STRING" && /\/style(\/|$)/.test(v.name)) {
         root.push(`${prop(v.name)}-weight:${weightOf(raw)}`, `${prop(v.name)}-italic:${isItalic(raw) ? "italic" : "normal"}`);

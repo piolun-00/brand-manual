@@ -8,8 +8,11 @@ import htm from "htm";
 // więc po aktualizacji przeglądarka nie zmiesza starych plików z nowymi.
 const VERSION = new URL(import.meta.url).searchParams.get("v") || "dev";
 const Q = `?v=${VERSION}`;
-const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets } = await import("../engine/render.js" + Q);
+const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets, GEIST_FILES, fontOf, variantOf } = await import("../engine/render.js" + Q);
+// Pliki kroju Geist leżą w silniku: w podglądzie ładowane z edytora, w eksporcie kopiowane do fonts/geist/
+const ENGINE_URL = (p) => new URL("../engine/" + p, import.meta.url).href;
 const store = await import("./store.js" + Q);
+const { lockKey, lockPage } = await import("../engine/lock.js" + Q);
 
 const html = htm.bind(h);
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -121,6 +124,31 @@ const ago = (t) => {
   return m < 1 ? "przed chwilą" : m < 60 ? `${m} min temu` : m < 1440 ? `${Math.round(m / 60)} h temu` : `${Math.round(m / 1440)} dni temu`;
 };
 
+// Eksport: zdjęcie o połowę węższe (dla telefonów). Pomijamy małe pliki — nie ma czego oszczędzać.
+async function halfSize(blob) {
+  const bmp = await createImageBitmap(blob);
+  const full = bmp.width, half = Math.round(full / 2);
+  if (full < 1000) { bmp.close?.(); return null; }
+  const c = document.createElement("canvas"); c.width = half; c.height = Math.round(bmp.height / 2);
+  const g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(bmp, 0, 0, c.width, c.height); bmp.close?.();
+  const type = /png/.test(blob.type) ? "image/png" : /webp/.test(blob.type) ? "image/webp" : "image/jpeg";
+  const out = await new Promise((r) => c.toBlob(r, type, 0.86));
+  return out && out.size < blob.size ? { blob: out, full, half } : null;
+}
+// Eksport: pierwsza klatka animacji jako JPG — widać ją, zanim MP4 się wczyta
+async function posterOf(blob) {
+  const v = document.createElement("video"); v.muted = true; v.playsInline = true; v.preload = "auto";
+  const src = URL.createObjectURL(blob); v.src = src;
+  try {
+    await new Promise((ok, bad) => { v.onloadeddata = ok; v.onerror = bad; setTimeout(bad, 8000); });
+    v.currentTime = Math.min(0.05, v.duration || 0);
+    await new Promise((ok) => { v.onseeked = ok; setTimeout(ok, 2000); });
+    const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight;
+    if (!c.width) return null;
+    c.getContext("2d").drawImage(v, 0, 0);
+    return await new Promise((r) => c.toBlob(r, "image/jpeg", 0.8));
+  } finally { URL.revokeObjectURL(src); }
+}
 function download(blob, name) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = name;
@@ -260,6 +288,7 @@ function ImagesBlock({ b, set, ctx }) {
         hint="Szablon z Figmy: 4:3 → 1848×1386, 3:4 → 1386×1848"
         onChange=${(p) => set((x) => { x.items = items.map((o) => ({ ...o })); x.items[i].image = p; })} />
       <${Text} label="Podpis" value=${it.caption} onInput=${(v) => set((x) => { x.items = items.map((o) => ({ ...o })); x.items[i].caption = v; })} />
+      <${Text} label="Tekst alternatywny (czytniki ekranu)" value=${it.alt} placeholder=${it.caption || "Co widać na zdjęciu"} onInput=${(v) => set((x) => { x.items = items.map((o) => ({ ...o })); x.items[i].alt = v; })} />
     </div>`)}`;
 }
 function ListBlock({ items, add, render: r, addLabel }) {
@@ -321,7 +350,8 @@ function IconsBlock({ b, set, ctx }) {
       for (const f of files) { const svg = await ctx.addFile(f, "media"); if (svg) added.push({ name: f.name.replace(/\.svg$/i, "").replace(/[-_]+/g, " "), svg }); }
       set((x) => { x.items = [...(x.items || []).filter((k) => k.svg || k.name), ...added]; });
     }} />
-    <p class="note">8 w rzędzie na desktopie, 6 na tablecie, 4 na telefonie. Kliknięcie kopiuje kod SVG.</p>`;
+    <label class="check"><input type="checkbox" checked=${!!b.currentColor} onChange=${(e) => set((x) => { x.currentColor = e.target.checked; })} />Kopiuj z kolorem currentColor (ikona przejmie kolor tekstu w kodzie)</label>
+    <p class="note">8 w rzędzie na desktopie, 6 na tablecie, 4 na telefonie. Kliknięcie kopiuje kod SVG. W eksporcie pojawia się przycisk „Pobierz wszystkie (ZIP)”.</p>`;
 }
 function VideoBlock({ b, set, ctx }) {
   return html`<div class="grid2">
@@ -456,6 +486,17 @@ function BrandForm({ b, set, ctx }) {
     <${Select} label="Tryb strony" value=${b.mode} options=${[["multi", "Multi site — osobna strona na rozdział"], ["single", "Single site — wszystko na jednej stronie"]]} onChange=${(v) => ctx.switchMode(v)} />
     <${FileField} label="Logo w sidebarze (SVG)" value=${b.logo} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 210, h: 72 }} hint="Ramka 210×72 z Figmy, przezroczysta" onChange=${(p) => up((x) => { x.logo = p; })} />
     <${Text} label="E-mail w stopce" value=${b.contact} onInput=${(v) => up((x) => { x.contact = v; })} />
+    <div class="sub">
+      <b class="sub__title">Dostęp</b>
+      <${Text} label="Hasło do manuala (puste = otwarty)" value=${b.password} placeholder="np. marka2026" onInput=${(v) => up((x) => { x.password = v; })} />
+      <p class="note">Eksport szyfruje treść stron — bez hasła nie da się jej przeczytać. Hasło wpisuje się raz na sesję przeglądarki. Pliki do pobrania (media/, files/) pozostają dostępne pod bezpośrednim adresem, jeśli ktoś go zna.</p>
+    </div>
+    <div class="sub">
+      <b class="sub__title">Ikona karty i udostępnianie</b>
+      <${FileField} label="Favicon (SVG lub PNG 512×512)" value=${b.favicon} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} onChange=${(p) => up((x) => { x.favicon = p; })} />
+      <${FileField} label="Obrazek do udostępniania (1200×630)" value=${b.ogImage} accept="image/png,image/jpeg" folder="media" ctx=${ctx} expect=${{ w: 1200, h: 630 }} hint="Pokazuje się, gdy ktoś wklei link do manuala w Slacku, mailu czy na LinkedIn." onChange=${(p) => up((x) => { x.ogImage = p; })} />
+      <${Text} label="Adres manuala" value=${b.siteUrl} placeholder="https://klient.pl/brandbook/" hint="Potrzebny, żeby obrazek do udostępniania działał." onInput=${(v) => up((x) => { x.siteUrl = v; })} />
+    </div>
     <${Color} label="Kolor akcentu (token brand/accent)" value=${b.accent || "#000000"} onInput=${(v) => up((x) => { x.accent = v; })} />
     <div class="blocks">
       <span class="f__label">Kolory marki — z nich korzystają bloki „Paleta” i „Pary kontrastowe”</span>
@@ -473,7 +514,8 @@ function BrandForm({ b, set, ctx }) {
       </div>`)}
       <button type="button" class="btn is--add" onClick=${() => up((x) => { (x.colors ||= []).push({ id: uid(), name: "", hex: "#000000", rgb: "", cmyk: "", pantone: "", ral: "" }); })}>+ Dodaj kolor</button>
     </div>
-    <p class="note">Cały manual jest składany w ABC Areal — krój ustawiasz raz dla studia (menu projektu → Krój ABC Areal).</p>
+    <${Select} label="Krój manuala" value=${fontOf({ brand: b })} options=${[["geist", "Geist (domyślny, darmowa licencja OFL)"], ["areal", "ABC Areal — tylko z licencją webową klienta"], ["system", "Systemowy (SF Pro, Segoe UI, Helvetica, Arial)"]]} onChange=${(v) => up((x) => { x.font = v; })} />
+    <p class="note">${fontOf({ brand: b }) === "areal" ? "Licencja Dinamo obejmuje jedną domenę i jednego licencjobiorcę — klient musi kupić własną licencję webową na swoją domenę. Pliki wgrywasz w menu projektu → Krój ABC Areal." : fontOf({ brand: b }) === "geist" ? "Geist jest na licencji SIL Open Font License — wolno go dołączyć do strony klienta. Pliki (ok. 95 KB) trafiają do eksportu." : "Bez plików fontu — każdy zobaczy krój swojego systemu."}</p>
   </div>`;
 }
 
@@ -491,7 +533,7 @@ function Preview({ project, page, setPage, urls, focus, studio, onSelect }) {
   useEffect(() => { try { localStorage.setItem("kh-preview-width", String(width)); } catch {} }, [width]);
   const single = project.brand.mode === "single";
   const doc = useMemo(() => {
-    const url = (p) => urls[p] || studio.urls[p] || p;
+    const url = (p) => urls[p] || studio.urls[p] || (p.startsWith("fonts/geist/") ? ENGINE_URL(p) : p);
     const ctx = {
       preview: true, url,
       link: (target) => target === "index" ? `href="#" data-page="index"` : single ? `href="#${target}"` : `href="#" data-page="${target}"`,
@@ -758,10 +800,54 @@ function App() {
   async function exportZip() {
     setStatus("Przygotowuję eksport…");
     const zip = new JSZip();
-    for (const f of renderSite(project, FIGMA, BASE_CSS, studio.fonts)) zip.file(f.path, f.content);
-    for (const f of studio.fonts) zip.file(f.path, await store.getAsset("_studio", f.path));
-    const missing = [];
+    const font = fontOf(project), missing = [];
+    const extra = { variants: new Map(), posters: new Set(), iconZips: new Map() };
     for (const path of usedAssets(project)) { const blob = await store.getAsset(pid, path); blob ? zip.file(path, blob) : missing.push(path); }
+    // Zdjęcia z bloków „Rząd zdjęć”: wersja o połowę mniejsza dla telefonów (srcset)
+    const walkBlocks = (fn) => { for (const c of project.chapters || []) for (const s of c.sections || []) for (const bl of s.blocks || []) fn(bl); };
+    const photos = new Set(), videos = new Set(), iconBlocks = [];
+    walkBlocks((bl) => {
+      if (bl.type === "images") for (const it of bl.items || []) if (it.image && /\.(jpe?g|png|webp)$/i.test(it.image)) photos.add(it.image);
+      if (bl.type === "video" && (bl.source || "file") === "file" && bl.file) videos.add(bl.file);
+      if (bl.type === "icons" && (bl.items || []).some((i) => i.svg)) iconBlocks.push(bl);
+    });
+    let n = 0;
+    for (const path of photos) {
+      setStatus(`Przygotowuję zdjęcia dla telefonów… ${++n}/${photos.size}`);
+      const blob = await store.getAsset(pid, path); if (!blob) continue;
+      try { const r = await halfSize(blob); if (r) { zip.file(variantOf(path), r.blob); extra.variants.set(path, { full: r.full, half: r.half }); } } catch {}
+    }
+    for (const path of videos) {
+      setStatus("Przygotowuję klatki startowe animacji…");
+      const blob = await store.getAsset(pid, path); if (!blob) continue;
+      try { const poster = await posterOf(blob); if (poster) { zip.file(path.replace(/\.[a-z0-9]+$/i, "-poster.jpg"), poster); extra.posters.add(path); } } catch {}
+    }
+    for (const bl of iconBlocks) {
+      const iz = new JSZip(), names = new Set();
+      for (const it of bl.items) {
+        if (!it.svg) continue;
+        const blob = await store.getAsset(pid, it.svg); if (!blob) continue;
+        let name = slugify(it.name) || it.svg.split("/").pop().replace(/\.svg$/i, ""), k = 2;
+        while (names.has(name)) name = `${slugify(it.name)}-${k++}`;
+        names.add(name); iz.file(`${name}.svg`, blob);
+      }
+      const zpath = `files/${slugify(project.brand.name) || "marka"}-ikony${iconBlocks.length > 1 ? `-${iconBlocks.indexOf(bl) + 1}` : ""}.zip`;
+      zip.file(zpath, await iz.generateAsync({ type: "blob", compression: "DEFLATE" }));
+      if (bl.id) extra.iconZips.set(bl.id, zpath);
+    }
+    const pw = (project.brand.password || "").trim();
+    const lock = pw ? await lockKey(pw) : null;
+    if (lock) setStatus("Szyfruję strony…");
+    for (const f of renderSite(project, FIGMA, BASE_CSS, studio.fonts, extra)) {
+      zip.file(f.path, lock && f.path.endsWith(".html")
+        ? await lockPage(f.content, lock, { title: `${project.brand.name || ""} · ${project.brand.documentTitle || ""}`, accent: "#111111" })
+        : f.content);
+    }
+    if (font === "areal") for (const f of studio.fonts) zip.file(f.path, await store.getAsset("_studio", f.path));
+    if (font === "geist") {
+      for (const p of GEIST_FILES) zip.file(p, await fetch(ENGINE_URL(p)).then((r) => r.blob()));
+      zip.file("fonts/geist/LICENSE.txt", await fetch(ENGINE_URL("fonts/geist/LICENSE.txt")).then((r) => r.blob()));
+    }
     const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
     download(blob, `${slugify(project.brand.name)}-brandmanual-${(project.brand.version || "1.0").replace(/[^0-9a-z.]/gi, "")}.zip`);
     setStatus(missing.length ? `Eksport gotowy — brakuje ${missing.length} plików` : "Eksport gotowy");
