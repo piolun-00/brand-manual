@@ -48,7 +48,10 @@ button { cursor: pointer; }
 .nav li > button em { margin-left: auto; font-style: normal; color: var(--muted); }
 .nav__tools { display: none; }
 .nav li:hover .nav__tools { display: flex; }
-.nav__tools button, .card__tools button { border: 0; background: none; color: var(--muted); padding: 4px 5px; }
+.nav__tools button, .card__tools button { border: 0; background: none; color: var(--muted); padding: 4px; display: inline-grid; place-items: center; border-radius: 2px; }
+.nav__tools button:hover, .card__tools button:hover { background: var(--soft); }
+.ico { display: block; flex: none; }
+.link.is--icon { text-decoration: none; display: inline-grid; place-items: center; padding: 2px; }
 .nav__tools button:hover, .card__tools button:hover { color: var(--fg); }
 
 .panel { grid-area: panel; overflow: auto; border-right: 1px solid var(--line); }
@@ -127,7 +130,9 @@ button { cursor: pointer; }
 .btn.is--warn { border-color: #b25c00; color: #b25c00; }
 
 .top__history { display: flex; gap: 4px; }
-.top__history .btn { padding: 6px 9px; }
+.top__history .btn { padding: 6px 7px; }
+.top__history .btn[disabled] { opacity: .35; cursor: default; }
+.top__history .btn[disabled]:hover { border-color: var(--line); }
 .btn:disabled { opacity: .35; cursor: default; }
 
 .menu__usage { color: var(--muted); padding: 0 8px 6px; font-size: 12px; }
@@ -135,6 +140,7 @@ button { cursor: pointer; }
 
 .f__warn { color: #b25c00; font-size: 12px; }
 .file.is--drop { outline: 2px dashed var(--fg); outline-offset: 4px; }
-.card__grip { cursor: grab; color: var(--muted); padding: 9px 2px 9px 8px; user-select: none; letter-spacing: -2px; }
+.card__grip { cursor: grab; color: var(--muted); padding: 8px 0 8px 6px; user-select: none; display: grid; place-items: center; }
+.card__grip:hover { color: var(--fg); }
 .card.is--over, .nav li.is--over { box-shadow: 0 -2px 0 var(--fg); }
 .nav li[draggable] { cursor: grab; }

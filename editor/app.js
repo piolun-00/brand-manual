@@ -15,6 +15,18 @@ const store = await import("./store.js" + Q);
 const { lockKey, lockPage } = await import("../engine/lock.js" + Q);
 
 const html = htm.bind(h);
+// Ikony narzędzi: siatka 16 px, obrys 1,25 px, kolor z tekstu (currentColor)
+const ICONS = {
+  undo: "M5.5 3.5L2.5 6.5L5.5 9.5M2.5 6.5H9.5C11.71 6.5 13.5 8.29 13.5 10.5C13.5 12.71 11.71 14.5 9.5 14.5H7",
+  redo: "M10.5 3.5L13.5 6.5L10.5 9.5M13.5 6.5H6.5C4.29 6.5 2.5 8.29 2.5 10.5C2.5 12.71 4.29 14.5 6.5 14.5H9",
+  duplicate: "M5.5 5.5H13.5V13.5H5.5Z M10.5 5.5V2.5H2.5V10.5H5.5",
+  up: "M8 13.5V2.5M3.5 7L8 2.5L12.5 7",
+  down: "M8 2.5V13.5M3.5 9L8 13.5L12.5 9",
+  close: "M3.5 3.5L12.5 12.5M12.5 3.5L3.5 12.5"
+};
+const Icon = ({ name }) => html`<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d=${ICONS[name]} stroke="currentColor" stroke-width="1.25" stroke-linecap="square" /></svg>`;
+const Grip = () => html`<svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">${[4, 8, 12].flatMap((y) => [6, 10].map((x) => html`<circle cx=${x} cy=${y} r="1.1" fill="currentColor" />`))}</svg>`;
+
 const uid = () => Math.random().toString(36).slice(2, 10);
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
@@ -243,7 +255,7 @@ function FileField({ label, value, accept, hint, folder, ctx, onChange, expect }
   </div>`;
 }
 
-// Karta na liście: rozwijanie, przeciąganie (uchwyt ⋮⋮), duplikowanie, kolejność, usuwanie.
+// Karta na liście: rozwijanie, przeciąganie (uchwyt z kropkami), duplikowanie, kolejność, usuwanie.
 // drag = { group, index, onMove(from, to) } — przeciągać można tylko w obrębie tej samej listy.
 function Row({ id, title, onUp, onDown, onRemove, onDuplicate, open, onToggle, children, sub, drag }) {
   const [over, setOver] = useState(false);
@@ -255,13 +267,13 @@ function Row({ id, title, onUp, onDown, onRemove, onDuplicate, open, onToggle, c
   return html`<div class=${`card${open ? " is--open" : ""}${over ? " is--over" : ""}`} data-card=${id} ...${dnd}>
     <div class="card__head" onClick=${(e) => { if (!e.target.closest(".card__tools, .card__grip")) onToggle(); }}>
       ${drag && html`<span class="card__grip" title="Przeciągnij, żeby zmienić kolejność" draggable="true"
-        onDragStart=${(e) => { e.stopPropagation(); e.dataTransfer.setData(`kh/${drag.group}`, String(drag.index)); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setDragImage(e.target.closest(".card"), 20, 20); }}>⋮⋮</span>`}
+        onDragStart=${(e) => { e.stopPropagation(); e.dataTransfer.setData(`kh/${drag.group}`, String(drag.index)); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setDragImage(e.target.closest(".card"), 20, 20); }}><${Grip} /></span>`}
       <button type="button" class="card__title"><span class="card__chev">${open ? "−" : "+"}</span>${title}${sub && html`<span class="card__sub">${sub}</span>`}</button>
       <span class="card__tools">
-        ${onDuplicate && html`<button type="button" title="Duplikuj" onClick=${onDuplicate}>⧉</button>`}
-        ${onUp && html`<button type="button" title="W górę" onClick=${onUp}>↑</button>`}
-        ${onDown && html`<button type="button" title="W dół" onClick=${onDown}>↓</button>`}
-        ${onRemove && html`<button type="button" title="Usuń" onClick=${onRemove}>✕</button>`}
+        ${onDuplicate && html`<button type="button" title="Duplikuj" aria-label="Duplikuj" onClick=${onDuplicate}><${Icon} name="duplicate" /></button>`}
+        ${onUp && html`<button type="button" title="W górę" aria-label="W górę" onClick=${onUp}><${Icon} name="up" /></button>`}
+        ${onDown && html`<button type="button" title="W dół" aria-label="W dół" onClick=${onDown}><${Icon} name="down" /></button>`}
+        ${onRemove && html`<button type="button" title="Usuń" aria-label="Usuń" onClick=${onRemove}><${Icon} name="close" /></button>`}
       </span>
     </div>
     ${open && html`<div class="card__body">${children}</div>`}
@@ -337,8 +349,8 @@ function IconsBlock({ b, set, ctx }) {
     add=${() => set((x) => { (x.items ||= []).push({ name: "", svg: null }); })}
     render=${(it, i) => html`<div class="sub">
       <div class="sub__head"><b>${it.name || `Ikona ${i + 1}`}</b><span>
-        <button type="button" class="link" onClick=${() => set((x) => move(x.items, i, -1))}>↑</button>
-        <button type="button" class="link" onClick=${() => set((x) => move(x.items, i, 1))}>↓</button>
+        <button type="button" class="link is--icon" title="W górę" aria-label="W górę" onClick=${() => set((x) => move(x.items, i, -1))}><${Icon} name="up" /></button>
+        <button type="button" class="link is--icon" title="W dół" aria-label="W dół" onClick=${() => set((x) => move(x.items, i, 1))}><${Icon} name="down" /></button>
         <button type="button" class="link" onClick=${() => set((x) => { x.items.splice(i, 1); })}>Usuń</button></span></div>
       <${Text} label="Nazwa" value=${it.name} onInput=${(v) => set((x) => { x.items[i].name = v; })} />
       <${FileField} label="Plik SVG" value=${it.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} onChange=${(p) => set((x) => { x.items[i].svg = p; })} />
@@ -502,8 +514,8 @@ function BrandForm({ b, set, ctx }) {
       <span class="f__label">Kolory marki — z nich korzystają bloki „Paleta” i „Pary kontrastowe”</span>
       ${(b.colors || []).map((c, i) => html`<div class="sub">
         <div class="sub__head"><b><span class="check__chip" style=${`background:${c.hex}`}></span> ${c.name || `Kolor ${i + 1}`}</b><span>
-          <button type="button" class="link" onClick=${() => up((x) => move(x.colors, i, -1))}>↑</button>
-          <button type="button" class="link" onClick=${() => up((x) => move(x.colors, i, 1))}>↓</button>
+          <button type="button" class="link is--icon" title="W górę" aria-label="W górę" onClick=${() => up((x) => move(x.colors, i, -1))}><${Icon} name="up" /></button>
+          <button type="button" class="link is--icon" title="W dół" aria-label="W dół" onClick=${() => up((x) => move(x.colors, i, 1))}><${Icon} name="down" /></button>
           <button type="button" class="link" onClick=${() => up((x) => { x.colors.splice(i, 1); })}>Usuń</button></span></div>
         <div class="grid2"><${Text} label="Nazwa" value=${c.name} onInput=${(v) => up((x) => { x.colors[i].name = v; })} />
         <${Color} label="HEX" value=${c.hex} onInput=${(v) => up((x) => { x.colors[i].hex = v; })} /></div>
@@ -951,8 +963,8 @@ function App() {
         </div>`}
       </div>
       <span class="top__history">
-        <button type="button" class="btn is--ghost" title="Cofnij (Cmd+Z)" disabled=${!undoStack.current.length} onClick=${undo}>↶</button>
-        <button type="button" class="btn is--ghost" title="Przywróć (Cmd+Shift+Z)" disabled=${!redoStack.current.length} onClick=${redo}>↷</button>
+        <button type="button" class="btn is--ghost" title="Cofnij (Cmd+Z)" disabled=${!undoStack.current.length} aria-label="Cofnij" onClick=${undo}><${Icon} name="undo" /></button>
+        <button type="button" class="btn is--ghost" title="Przywróć (Cmd+Shift+Z)" disabled=${!redoStack.current.length} aria-label="Przywróć" onClick=${redo}><${Icon} name="redo" /></button>
       </span>
       <span class="top__status">${status}</span>
       <span class="top__actions">
@@ -978,10 +990,10 @@ function App() {
         onDrop=${(e) => { const from = e.dataTransfer.getData("kh/chapters"); setNavOver(null); if (from !== "") { e.preventDefault(); update((p) => moveTo(p.chapters, Number(from), i)); } }}>
         <button type="button" onClick=${() => { setView(c.id); setPage(c.id); }}><span>${c.num}</span>${c.title || "Bez tytułu"}<em>${single ? "" : c.sections.length || ""}</em></button>
         <span class="nav__tools">
-          <button type="button" title="Duplikuj rozdział" onClick=${() => { const nc = freshIds(project.chapters[i]); nc.title = `${nc.title} (kopia)`; nc.slug = ""; nc.slugLocked = false; update((p) => { p.chapters.splice(i + 1, 0, nc); }); setView(nc.id); setPage(nc.id); }}>⧉</button>
-          ${i > 0 && html`<button type="button" title="W górę" onClick=${() => update((p) => move(p.chapters, i, -1))}>↑</button>`}
-          ${i < site.chapters.length - 1 && html`<button type="button" title="W dół" onClick=${() => update((p) => move(p.chapters, i, 1))}>↓</button>`}
-          <button type="button" title="Usuń" onClick=${() => { if (confirm(`Usunąć rozdział „${c.title}”?`)) { update((p) => { p.chapters.splice(i, 1); }); setView("brand"); } }}>✕</button>
+          <button type="button" title="Duplikuj rozdział" aria-label="Duplikuj rozdział" onClick=${() => { const nc = freshIds(project.chapters[i]); nc.title = `${nc.title} (kopia)`; nc.slug = ""; nc.slugLocked = false; update((p) => { p.chapters.splice(i + 1, 0, nc); }); setView(nc.id); setPage(nc.id); }}><${Icon} name="duplicate" /></button>
+          ${i > 0 && html`<button type="button" title="W górę" aria-label="W górę" onClick=${() => update((p) => move(p.chapters, i, -1))}><${Icon} name="up" /></button>`}
+          ${i < site.chapters.length - 1 && html`<button type="button" title="W dół" aria-label="W dół" onClick=${() => update((p) => move(p.chapters, i, 1))}><${Icon} name="down" /></button>`}
+          <button type="button" title="Usuń" onClick=${() => { if (confirm(`Usunąć rozdział „${c.title}”?`)) { update((p) => { p.chapters.splice(i, 1); }); setView("brand"); } }}><${Icon} name="close" /></button>
         </span>
       </li>`)}</ol>
       <button type="button" class="btn is--add" onClick=${() => { const nc = newChapter(); update((p) => { p.chapters.push(nc); }); setView(nc.id); setPage(nc.id); }}>+ Dodaj rozdział</button>
