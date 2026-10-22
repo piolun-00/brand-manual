@@ -60,7 +60,7 @@ const newBlock = (type) => ({
   contrast: { pairs: [] },
   icons: { items: [{ name: "", svg: null }] },
   video: { source: "file", file: null, embed: "", ratio: "16/9" },
-  lottie: { items: [{ name: "", file: null }] },
+  lottie: { line: true, label: "Animacje Lottie", items: [{ name: "", file: null }] },
   model: { file: null, ratio: "16/9", autoRotate: true, speed: 20, background: "surface", shadow: true, download: false, alt: "" },
   typeface: { name: "", foundry: "", weights: "", svg: null, license: { kind: "note", note: "Krój komercyjny — do użycia wymagana licencja.", linkLabel: "Przejdź do kroju", href: "", file: null } },
   typeScale: { image: null },
