@@ -1,0 +1,537 @@
+{
+ "version": 1,
+ "brand": {
+  "name": "Nazwa Marki",
+  "documentTitle": "Księga znaku",
+  "version": "1.0",
+  "date": "październik 2026",
+  "mode": "multi",
+  "logo": null,
+  "contact": "studio@khorei.com",
+  "accent": "",
+  "brandFont": {
+   "family": "",
+   "files": []
+  },
+  "uiFont": {
+   "family": "ABC Areal Variable",
+   "files": []
+  }
+ },
+ "chapters": [
+  {
+   "id": "x1",
+   "slug": "wprowadzenie",
+   "title": "Wprowadzenie",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x2",
+   "slug": "w-co-wierzymy",
+   "title": "W co wierzymy",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x3",
+   "slug": "kim-jestesmy",
+   "title": "Kim jesteśmy",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x4",
+   "slug": "co-robimy",
+   "title": "Co robimy",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x5",
+   "slug": "jak-sie-pokazujemy",
+   "title": "Jak się pokazujemy",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x6",
+   "slug": "komunikacja",
+   "title": "Komunikacja",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x7",
+   "slug": "dlaczego-to-wazne",
+   "title": "Dlaczego to ważne",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x8",
+   "slug": "dostepnosc",
+   "title": "Dostępność",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x9",
+   "slug": "identyfikacja",
+   "title": "Identyfikacja",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "xa",
+     "title": "Wprowadzenie",
+     "text": [
+      "Identyfikacja to zestaw elementów, po których marka jest rozpoznawana: logo, symbol, logotyp oraz sposób, w jaki łączą się z kolorem i typografią. Ten rozdział opisuje każdy z nich osobno i pokazuje, jak ze sobą współpracują.",
+      "Zasady w tym rozdziale nie są ograniczeniem, tylko wspólnym językiem. Dzięki nim marka wygląda spójnie niezależnie od tego, kto i gdzie ją stosuje — w druku, na ekranie czy w przestrzeni."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": []
+    },
+    {
+     "id": "xb",
+     "title": "Historia",
+     "text": [
+      "Znak ewoluował przez dekady, ale jego rdzeń pozostał ten sam. Krótka historia pokazuje, skąd pochodzą dzisiejsze zasady."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "xc",
+       "type": "images",
+       "layout": "2-equal",
+       "ratio": "4/3",
+       "items": [
+        {
+         "caption": "Reklama prasowa, 1962"
+        },
+        {
+         "caption": "Katalog, 1964"
+        }
+       ]
+      },
+      {
+       "id": "xd",
+       "type": "images",
+       "layout": "1",
+       "ratio": "4/3",
+       "items": [
+        {
+         "caption": "Plakat, 1968"
+        }
+       ]
+      },
+      {
+       "id": "xe",
+       "type": "images",
+       "layout": "wide-narrow",
+       "ratio": "4/3",
+       "items": [
+        {
+         "caption": "Ulotka, 1972"
+        },
+        {
+         "caption": "Opakowanie, 1975"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "xf",
+     "title": "Social media",
+     "text": [
+      "Szablony postów i relacji dla Instagrama i LinkedIna. Makiety do edycji są w osobnym pliku."
+     ],
+     "action": {
+      "kind": "external",
+      "label": "Makiety edycyjne",
+      "file": null,
+      "href": "https://www.figma.com"
+     },
+     "blocks": [
+      {
+       "id": "xg",
+       "type": "images",
+       "layout": "1",
+       "ratio": "4/3",
+       "items": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "id": "xh",
+     "title": "Archiwum",
+     "text": [
+      "Pierwsze zastosowania znaku, które wyznaczyły kierunek dla obecnej identyfikacji."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "xi",
+       "type": "images",
+       "layout": "1",
+       "ratio": "4/3",
+       "items": [
+        {
+         "caption": "Reklama prasowa, 1962"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "xj",
+     "title": "Elementy identyfikacji",
+     "text": [
+      "Logo i symbol tworzą razem system identyfikacji. Logo stosujemy najczęściej, symbol tam, gdzie brakuje miejsca."
+     ],
+     "action": {
+      "kind": "download",
+      "label": "Pobierz",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "xk",
+       "type": "specimens",
+       "items": [
+        {
+         "label": "Logo",
+         "caption": "Najczęściej używany"
+        },
+        {
+         "label": "Symbol",
+         "caption": "Często używany",
+         "svg": null
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "xl",
+     "title": "Paleta",
+     "text": [
+      "Kolory marki z wartościami do ekranu i druku. Przycisk kopiuje wartość HEX."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "xm",
+       "type": "palette",
+       "items": [
+        {
+         "name": "Grafit",
+         "hex": "#1C1C1C",
+         "rgb": "28 28 28",
+         "cmyk": "0 0 0 95",
+         "pantone": "Neutral Black C"
+        },
+        {
+         "name": "Popiel",
+         "hex": "#6E6E6A",
+         "rgb": "110 110 106",
+         "cmyk": "0 0 4 65",
+         "pantone": "424 C"
+        },
+        {
+         "name": "Kamień",
+         "hex": "#B7B8B2",
+         "rgb": "183 184 178",
+         "cmyk": "0 0 3 32",
+         "pantone": "Cool Gray 5 C"
+        },
+        {
+         "name": "Biel",
+         "hex": "#FFFFFF",
+         "rgb": "255 255 255",
+         "cmyk": "0 0 0 0"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "xn",
+     "title": "Pary kontrastowe",
+     "text": [
+      "Dozwolone zestawienia tła i tekstu. Poziom zgodności z WCAG liczony automatycznie."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "xo",
+       "type": "contrast",
+       "pairs": [
+        {
+         "bg": "Popiel",
+         "fg": "Biel"
+        },
+        {
+         "bg": "Grafit",
+         "fg": "Kamień"
+        },
+        {
+         "bg": "Kamień",
+         "fg": "Grafit"
+        },
+        {
+         "bg": "Kamień",
+         "fg": "Popiel"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "xp",
+     "title": "Krój podstawowy",
+     "text": [
+      "Krój do nagłówków i krótkich tekstów. Do użycia wymagana jest licencja."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "xq",
+       "type": "typeface",
+       "name": "Nazwa kroju",
+       "foundry": "Odlewnia",
+       "weights": "Regular, Medium, Bold",
+       "license": {
+        "kind": "note",
+        "note": "Krój komercyjny — do użycia wymagana licencja.",
+        "linkLabel": "Przejdź do kroju",
+        "href": "https://example.com",
+        "file": null
+       }
+      }
+     ]
+    },
+    {
+     "id": "xr",
+     "title": "Krój uzupełniający",
+     "text": [
+      "Krój do dłuższych tekstów i materiałów roboczych. Dostępny na darmowej licencji."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "xs",
+       "type": "typeface",
+       "name": "Nazwa kroju",
+       "foundry": "Odlewnia",
+       "weights": "Regular, Medium, Bold",
+       "license": {
+        "kind": "file",
+        "note": "Krój na darmowej licencji.",
+        "file": null
+       }
+      }
+     ]
+    },
+    {
+     "id": "xt",
+     "title": "Skala typograficzna",
+     "text": [
+      "Hierarchia stopni z parametrami dla ekranu i druku. Plik ze stylami do pobrania."
+     ],
+     "action": {
+      "kind": "download",
+      "label": "Pobierz",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "xu",
+       "type": "typeScale",
+       "sample": "Marka w ruchu",
+       "levels": [
+        {
+         "name": "H1",
+         "size": 56,
+         "lineHeight": 110,
+         "tracking": "−1%",
+         "weight": "Medium",
+         "pt": 42
+        },
+        {
+         "name": "H2",
+         "size": 36,
+         "lineHeight": 115,
+         "tracking": "0",
+         "weight": "Medium",
+         "pt": 27
+        },
+        {
+         "name": "H3",
+         "size": 24,
+         "lineHeight": 125,
+         "tracking": "0",
+         "weight": "Medium",
+         "pt": 18
+        },
+        {
+         "name": "Tekst",
+         "size": 16,
+         "lineHeight": 145,
+         "tracking": "0",
+         "weight": "Regular",
+         "pt": 12
+        },
+        {
+         "name": "Podpis",
+         "size": 12,
+         "lineHeight": 140,
+         "tracking": "0",
+         "weight": "Regular",
+         "pt": 9
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "xv",
+   "slug": "kolor",
+   "title": "Kolor",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "xw",
+   "slug": "typografia",
+   "title": "Typografia",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "xx",
+   "slug": "fotografia",
+   "title": "Fotografia",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "xy",
+   "slug": "ilustracja",
+   "title": "Ilustracja",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "xz",
+   "slug": "elementy-graficzne",
+   "title": "Elementy graficzne",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x10",
+   "slug": "infografiki",
+   "title": "Infografiki",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x11",
+   "slug": "kompozycja",
+   "title": "Kompozycja",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x12",
+   "slug": "ruch",
+   "title": "Ruch",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x13",
+   "slug": "wideo",
+   "title": "Wideo",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x14",
+   "slug": "zastosowania",
+   "title": "Zastosowania",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x15",
+   "slug": "w-uzyciu",
+   "title": "W użyciu",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  },
+  {
+   "id": "x16",
+   "slug": "zasoby",
+   "title": "Zasoby",
+   "cover": null,
+   "downloadAll": null,
+   "sections": []
+  }
+ ]
+}

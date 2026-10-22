@@ -1,0 +1,237 @@
+/* Rama szablonu. Wartości wyłącznie z tokens.css — tu tylko układ. Mobile-first: 768 tablet, 1280 desktop. */
+
+/* Kroje (@font-face) dokłada silnik — z plików wgranych w edytorze, z local() jako pierwszym źródłem. */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body { margin: 0; background: var(--bg-page); color: var(--text-primary); font-family: var(--font-ui-family); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, p, ul, ol, dl, dd, figure { margin: 0; padding: 0; }
+ul, ol { list-style: none; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+img { display: block; max-width: 100%; }
+
+/* ——— Rama ——— */
+.page { display: block; }
+.layout__column { min-width: 0; }
+
+.sidebar {
+  position: fixed; inset: 0 auto 0 0; z-index: 50;
+  width: var(--layout-sidebar-width); height: 100svh;
+  display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-48);
+  padding: var(--space-16) var(--space-12) var(--space-24) var(--space-24);
+  background: var(--bg-surface);
+  transform: translateX(-100%); transition: transform .3s ease;
+}
+.is--drawer-open .sidebar { transform: none; }
+.sidebar__head { display: flex; flex-direction: column; gap: var(--space-16); }
+.sidebar__close { align-self: flex-end; padding-right: var(--space-12); }
+.sidebar__logo { display: block; width: 210px; height: 72px; }
+.sidebar__logo img { width: 100%; height: 100%; object-fit: contain; object-position: left top; }
+.sidebar__logo-placeholder { display: block; width: 100%; height: 100%; background: var(--bg-logo); }
+.sidebar__nav { min-height: 0; overflow-y: auto; }           /* przewija się tylko lista */
+.sidebar__item { display: flex; gap: var(--space-8); padding: var(--space-2) 0; color: var(--text-muted); }
+.sidebar__item.is--active, .sidebar__item:hover { color: var(--text-accent); }
+.sidebar__num { width: 32px; flex: none; }
+
+.overlay { position: fixed; inset: 0; z-index: 40; background: var(--overlay); opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+.is--drawer-open .overlay { opacity: 1; pointer-events: auto; }
+
+.topbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: var(--space-16) var(--grid-margin); background: var(--bg-surface);
+}
+
+@media (min-width: 1280px) {
+  .page { display: grid; grid-template-columns: var(--layout-sidebar-width) 1fr; align-items: start; }
+  .sidebar { position: sticky; top: 0; transform: none; transition: none; padding-top: var(--space-48); }
+  .sidebar__close, .overlay, .topbar { display: none; }
+}
+
+/* ——— Okładka ——— */
+.cover {
+  position: relative; display: flex; flex-direction: column;
+  height: 62svh; padding: var(--space-24) var(--grid-margin);
+  background: var(--bg-media) center / cover no-repeat; color: var(--text-on-media);
+}
+.cover.is--start, .cover.is--full { height: 100svh; }
+.cover.is--start { height: calc(100svh - 51px); }
+.cover__head { display: grid; grid-template-columns: 1fr 1fr; gap: var(--grid-gutter); }
+.cover__version { position: absolute; right: var(--grid-margin); bottom: var(--space-24); writing-mode: vertical-rl; transform: rotate(180deg); }
+@media (min-width: 768px) {
+  .cover__head { grid-template-columns: calc(var(--layout-block-indent) - var(--grid-gutter)) 1fr; }
+}
+/* Desktop: pierwsza kolumna okładki ma szerokość kolumny etykiety, ale gdy nazwa marki w dużym stopniu
+   jest szersza, kolumna rośnie razem z nią — tytuł odsuwa się, zamiast na nią nachodzić. Nazwa się nie łamie.
+   Odstęp 0,5 em rośnie razem ze stopniem, więc przy dużym nagłówku nazwa i tytuł nie zlewają się w jedno. */
+@media (min-width: 1280px) {
+  .cover__head { grid-template-columns: minmax(calc(var(--layout-block-indent) - var(--grid-gutter)), max-content) minmax(0, 1fr); }
+  .cover__brand, .cover__num { white-space: nowrap; padding-right: 0.5em; }
+}
+@media (min-width: 1280px) {
+  .cover { padding-top: var(--space-48); }
+  .cover.is--start { height: 100svh; }
+}
+
+/* ——— Treść ——— */
+.main { display: flex; flex-direction: column; gap: var(--layout-section-gap); padding: var(--layout-content-padding-y) var(--layout-content-padding-x); }
+.block { padding-left: var(--layout-block-indent); padding-bottom: var(--layout-block-gap); }
+
+/* Spis rozdziału */
+.toc { border-top: 1px solid var(--border-strong); padding: var(--layout-header-padding-top) 0 var(--layout-toc-gap); display: grid; gap: var(--space-16); }
+.toc__body { display: flex; flex-direction: column; align-items: flex-start; gap: var(--layout-toc-gap); }
+.toc__list { width: 100%; column-count: 1; column-gap: var(--grid-gutter); }
+.toc__list li { break-inside: avoid; padding-bottom: var(--space-4); }
+.toc__item:hover { color: var(--text-muted); }
+@media (min-width: 768px) {
+  .toc { grid-template-columns: calc(var(--layout-block-indent) - var(--grid-gutter)) 1fr; gap: var(--grid-gutter); }
+  .toc__list { column-count: 2; }
+}
+@media (min-width: 1280px) { .toc__list { column-count: 4; } }
+
+/* Nagłówek sekcji */
+.section { scroll-margin-top: 64px; }
+/* Minimalna wysokość sekcji = wysokość specimenu znaku (364 / 212 / 141) — token layout/section-min-height.
+   Krótka sekcja (sam tekst) nie skleja się z następną. */
+.section { min-height: var(--layout-section-min-height); }
+.section-header { border-top: 1px solid var(--border-strong); padding: var(--layout-header-padding-top) 0 var(--layout-header-gap); display: grid; gap: var(--space-12); }
+.section-header__label { display: flex; flex-direction: column; }
+.section-header__body { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-16); }
+.section-header__text + .section-header__text { margin-top: 1.2em; }
+/* Długość wiersza: na szerokich ekranach kolumna rośnie, ale akapit kończy się na ~75 znakach. */
+.section-header__text { max-width: 75ch; }
+@media (min-width: 768px) {
+  .section-header { grid-template-columns: calc(var(--layout-block-indent) - var(--grid-gutter)) 1fr; gap: var(--grid-gutter); }
+}
+@media (min-width: 1280px) {
+  .section-header__body { display: grid; grid-template-columns: 1fr 1fr; gap: var(--grid-gutter); align-items: start; }
+  .section-header__text + .section-header__text { margin-top: 0; }
+  .section-header__action { justify-self: end; }
+}
+
+/* Przycisk */
+.button {
+  display: inline-flex; align-items: center; gap: var(--space-8);
+  padding: var(--button-padding-y) var(--button-padding-x);
+  background: var(--button-bg); border: 1.5px solid var(--button-border); border-radius: var(--radius-4);
+}
+.button:hover { border-color: var(--border-strong); }
+.button__icon { display: inline-flex; }
+
+/* Moduły zdjęć */
+.gallery { display: flex; flex-direction: column; gap: var(--layout-image-gap); }
+.gallery__row { display: grid; gap: var(--space-20) var(--grid-gutter); align-items: start; }
+.gallery__image { position: relative; display: grid; place-items: center; overflow: hidden; background: var(--bg-placeholder); color: var(--text-subtle); }
+.gallery__image img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.gallery__caption { margin-top: var(--space-12); }
+@media (min-width: 768px) {
+  .gallery__row { --row-cols: 6; grid-template-columns: repeat(var(--row-cols), 1fr); }
+  .gallery__row.is--1up > * { grid-column: 1 / -1; }
+  .gallery__row.is--2up > * { grid-column: span calc(var(--row-cols) / 2); }
+  .gallery__row.is--wide-narrow > :first-child, .gallery__row.is--narrow-wide > :last-child { grid-column: span 4; }
+  .gallery__row.is--wide-narrow > :last-child, .gallery__row.is--narrow-wide > :first-child { grid-column: span 2; }
+}
+@media (min-width: 1280px) {
+  .gallery__row { --row-cols: 8; }
+  .gallery__row.is--wide-narrow > :first-child, .gallery__row.is--narrow-wide > :last-child { grid-column: span 5; }
+  .gallery__row.is--wide-narrow > :last-child, .gallery__row.is--narrow-wide > :first-child { grid-column: span 3; }
+}
+
+/* Specimeny */
+.specimen { padding-bottom: var(--space-24); }
+.specimen__meta { display: flex; flex-direction: column; border-top: 1px solid var(--border-strong); padding-top: var(--space-8); }
+.specimen__stage { aspect-ratio: 924 / 364; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+/* Specimen = cała ramka 924×364 z Figmy (ten sam format co specimen kroju) (przezroczysta, znak na środku).
+   Skaluje się proporcjonalnie do szerokości sceny — jeden plik na wszystkie ekrany. */
+.specimen__svg { width: 100%; height: 100%; object-fit: contain; }
+.specimen__svg.is--placeholder { display: block; background: var(--bg-placeholder); border-radius: var(--radius-2); }
+
+/* Paleta */
+.palette { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-24) var(--grid-gutter); }
+.swatch__chip { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 1; }
+.swatch.is--light .swatch__chip { box-shadow: inset 0 0 0 1px var(--border-subtle); }
+.swatch__copy { opacity: 0; transition: opacity .15s ease; }
+@media (hover: hover) { .swatch__chip:hover .swatch__copy, .swatch__chip.is--copied .swatch__copy { opacity: 1; } }
+.swatch__info { display: flex; flex-direction: column; gap: var(--space-8); margin-top: var(--space-8); }
+.swatch__values div { display: flex; gap: var(--space-8); }
+.swatch__values dt { min-width: 52px; }
+@media (min-width: 768px) { .palette { grid-template-columns: repeat(4, 1fr); } }
+
+/* Pary kontrastowe */
+.contrast { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-24) var(--grid-gutter); }
+.contrast__sample { aspect-ratio: 222 / 140; padding: var(--space-12); }
+.contrast__badge { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-8); }
+.contrast__icon { display: grid; place-items: center; width: 24px; height: 24px; background: var(--status-pass); color: var(--color-white); font-size: 12px; }
+.contrast__badge.is--fail .contrast__icon { background: var(--status-fail); }
+.contrast__badge.is--fail .contrast__level { color: var(--status-fail); }
+.contrast__ratio { margin-left: auto; color: var(--text-subtle); }
+@media (min-width: 768px) { .contrast { grid-template-columns: repeat(4, 1fr); } }
+
+/* Krój */
+.typeface { display: flex; flex-direction: column; gap: var(--space-12); }
+.typeface__specimen { display: grid; place-items: center; aspect-ratio: 924 / 364; background: var(--bg-surface); color: var(--text-subtle); }
+.typeface__svg { width: 100%; height: 100%; object-fit: contain; }
+.typeface__meta { display: grid; gap: var(--space-12); }
+.typeface__license { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-8); }
+.typeface__link { display: inline-flex; align-items: center; gap: var(--space-4); }
+@media (min-width: 768px) {
+  .typeface__meta { grid-template-columns: 2fr 3fr 3fr; gap: var(--grid-gutter); }
+}
+
+/* Skala typograficzna */
+.type-scale__row { display: grid; grid-template-columns: 1fr; gap: var(--space-6); border-top: 1px solid var(--border-strong); padding: var(--space-12) 0; }
+.type-scale__body { display: flex; flex-direction: column; gap: var(--space-6); }
+.type-scale__sample {
+  --sample-scale: .65;
+  font-family: var(--brand-font-family);
+  font-size: max(calc(var(--sample-size) * var(--sample-scale)), min(var(--sample-size), 16px));
+  line-height: 1.1;
+}
+.type-scale__params { display: flex; gap: var(--space-16); }
+@media (min-width: 768px) {
+  .type-scale__row { grid-template-columns: 105px 1fr; gap: var(--grid-gutter); align-items: start; }
+  .type-scale__sample { --sample-scale: .86; }
+}
+@media (min-width: 1280px) {
+  .type-scale__row { align-items: baseline; }
+  .type-scale__body { display: grid; grid-template-columns: 1fr 456px; align-items: baseline; gap: var(--grid-gutter); }
+  .type-scale__params { display: grid; grid-template-columns: 1fr 1fr; gap: var(--grid-gutter); }
+  .type-scale__sample { --sample-scale: 1; }
+}
+
+/* Stopka — mobile: logo nad kolumnami, 2 kolumny z zawijaniem; tablet: 3 kolumny; desktop: logo na 4 kolumnach, treść na 8 (3 + 3 + 2) */
+.footer { display: flex; flex-direction: column; gap: var(--space-24); padding: var(--space-24) var(--grid-margin) var(--space-32); background: var(--bg-media); color: var(--text-primary); }
+.footer__logo { display: block; width: 84px; height: 22px; }
+.footer__cols { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-16) var(--grid-gutter); }
+.footer__col { display: flex; flex-direction: column; gap: var(--space-16); }
+.footer__text { display: block; }
+@media (min-width: 768px) {
+  .footer__cols { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1280px) {
+  .footer { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--grid-gutter); padding: var(--space-40) var(--grid-margin); }
+  .footer__brand { grid-column: 1 / 5; }
+  .footer__cols { grid-column: 5 / 13; grid-template-columns: repeat(8, 1fr); }
+  .footer__col { grid-column: span 3; gap: var(--space-24); }
+  .footer__col:last-child { grid-column: span 2; }
+}
+
+
+/* Akapity: bez zawieszek (twarde spacje z brand.js) i bez pojedynczych słów w ostatnim wierszu */
+p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note { text-wrap: pretty; }
+
+/* Nagłówek okładki (text/display: numer i tytuł rozdziału, nazwa marki na starcie).
+   Mobile i tablet: stałe 24 px z tokenu. Desktop: od 24 px przy 1280 rośnie liniowo z szerokością okna (svw),
+   aż przy 2560 wersaliki mają dokładnie wysokość logo (72 px). Powyżej 2560 już nie rośnie.
+   font-size-adjust ustala wysokość wersalika na 0,7 stopnia — dzięki temu „wysokość logo” jest dokładna
+   niezależnie od metryk kroju (72 / 0,7 = 102,86 px). */
+.cover .text-display { font-size-adjust: cap-height 0.7; }
+@media (min-width: 1280px) {
+  .cover .text-display { font-size: clamp(24px, calc(24px + (100svw - 1280px) * 0.061607), 102.86px); }
+}
+
+/* Wyrównanie do logo: góra wersalika leży na górnej krawędzi logo przy każdym rozmiarze.
+   text-box obcina światło nad wersalikiem, które rośnie razem z krojem (Chrome, Safari). */
+.cover .text-display { text-box: trim-start cap alphabetic; }
