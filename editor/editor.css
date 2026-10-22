@@ -125,3 +125,7 @@ button { cursor: pointer; }
 .saved { color: var(--muted); align-self: center; white-space: nowrap; }
 .saved.is--warn { color: #b25c00; font-weight: 600; }
 .btn.is--warn { border-color: #b25c00; color: #b25c00; }
+
+.top__history { display: flex; gap: 4px; }
+.top__history .btn { padding: 6px 9px; }
+.btn:disabled { opacity: .35; cursor: default; }

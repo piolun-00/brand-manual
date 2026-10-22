@@ -560,6 +560,7 @@ function App() {
     Object.values(urls).forEach((u) => URL.revokeObjectURL(u));
     const map = {};
     for (const path of await store.assetKeys(id)) { const blob = await store.getAsset(id, path); if (blob) map[path] = URL.createObjectURL(blob); }
+    undoStack.current = []; redoStack.current = [];
     setUrls(map); setPid(id); setProject(withIds(rec.data)); setView("brand"); setPage("index"); setMenu(false);
     const m = await store.getMeta(id); setMetaState(m);
     if (m.dir && CAN_FOLDER) {
@@ -575,9 +576,10 @@ function App() {
     await refreshList(); await open(id);
   }
   // Każda zmiana: nowy stan + zapis w przeglądarce po chwili ciszy
-  const update = useCallback((fn) => {
-    setProject((prev) => {
-      const next = clone(prev); fn(next);
+  // Cofanie: stos poprzednich stanów. Szybkie pisanie (zmiany w odstępie < 1 s) to jeden krok.
+  const undoStack = useRef([]), redoStack = useRef([]), lastPush = useRef(0);
+  const [, historyTick] = useState(0);
+  const scheduleSave = (next) => {
       clearTimeout(saveTimer.current); setStatus("Zapisuję…");
       saveTimer.current = setTimeout(async () => {
         await store.putProject({ id: pid, name: next.brand.name || "Bez nazwy", data: next });
@@ -591,9 +593,37 @@ function App() {
         } else setStatus("Zapisano w przeglądarce");
         setMetaState(await store.getMeta(pid)); refreshList();
       }, 500);
+  };
+  const update = useCallback((fn) => {
+    setProject((prev) => {
+      const next = clone(prev); fn(next);
+      const now = Date.now();
+      if (now - lastPush.current > 1000) { undoStack.current.push(prev); if (undoStack.current.length > 200) undoStack.current.shift(); }
+      lastPush.current = now; redoStack.current = [];
+      historyTick((x) => x + 1);
+      scheduleSave(next);
       return next;
     });
   }, [pid]);
+  const undo = () => setProject((cur) => {
+    const prev = undoStack.current.pop(); if (!prev) return cur;
+    redoStack.current.push(cur); lastPush.current = 0; historyTick((x) => x + 1);
+    scheduleSave(prev); setStatus("Cofnięto"); return prev;
+  });
+  const redo = () => setProject((cur) => {
+    const next = redoStack.current.pop(); if (!next) return cur;
+    undoStack.current.push(cur); lastPush.current = 0; historyTick((x) => x + 1);
+    scheduleSave(next); setStatus("Przywrócono"); return next;
+  });
+  // Cmd+Z / Cmd+Shift+Z (Ctrl na Windows) — cały projekt, także w polach tekstowych
+  useEffect(() => {
+    const on = (e) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
+      e.preventDefault(); e.shiftKey ? redo() : undo();
+    };
+    addEventListener("keydown", on); return () => removeEventListener("keydown", on);
+  });
+
 
   const addFile = useCallback(async (file, folder) => {
     const blob = await prepareFile(file);
@@ -723,6 +753,10 @@ function App() {
           <button type="button" class="is--danger" onClick=${remove}>Usuń ten projekt</button>
         </div>`}
       </div>
+      <span class="top__history">
+        <button type="button" class="btn is--ghost" title="Cofnij (Cmd+Z)" disabled=${!undoStack.current.length} onClick=${undo}>↶</button>
+        <button type="button" class="btn is--ghost" title="Przywróć (Cmd+Shift+Z)" disabled=${!redoStack.current.length} onClick=${redo}>↷</button>
+      </span>
       <span class="top__status">${status}</span>
       <span class="top__actions">
         ${CAN_FOLDER
