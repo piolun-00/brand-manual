@@ -136,6 +136,18 @@ function imagesRow(ctx, b) {
   </div>`;
 }
 
+// Embed: z wklejonego kodu zostaje tylko <iframe> z adresem https i bezpiecznymi atrybutami.
+// Skrypty i inny kod są odrzucane — strona klienta nie wykona cudzego JavaScriptu.
+export function safeIframe(code) {
+  const m = String(code || "").match(/<iframe\b[^>]*>/i);
+  if (!m) return "";
+  const attr = (name) => { const r = m[0].match(new RegExp(`\\s${name}\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s>]+))`, "i")); return r ? (r[2] ?? r[3] ?? r[4]) : null; };
+  const src = attr("src");
+  if (!src || !/^https:\/\//i.test(src.trim())) return "";
+  const allow = (attr("allow") || "autoplay; fullscreen; picture-in-picture").replace(/[^a-z0-9;\- ]/gi, "");
+  return `<iframe src="${esc(src.trim())}" title="${esc(attr("title") || "Animacja")}" allow="${allow}" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+}
+
 // Nagłówek bloku: opcjonalna pozioma linia (przełącznik „line”) + opcjonalna nazwa i opis.
 // Domyślnie bez linii — pierwszy blok pod nagłówkiem sekcji nie potrzebuje drugiego odkreślenia.
 function blockMeta(b) {
@@ -189,7 +201,10 @@ const BLOCKS = {
   // Animacja: plik MP4 (odtwarza się sam, bez dźwięku, w pętli) albo kod embed (np. Vimeo, Lottie, Rive)
   video: (ctx, b) => {
     const ratio = b.ratio && b.ratio !== "auto" ? ` style="aspect-ratio:${b.ratio}"` : "";
-    if (b.source === "embed") return `<div class="video is--embed"${ratio}>${b.embed || `<span class="gallery__placeholder text-small">Kod embed</span>`}</div>`;
+    if (b.source === "embed") {
+      const frame = safeIframe(b.embed);
+      return `<div class="video is--embed"${ratio}>${frame || `<span class="gallery__placeholder text-small">${b.embed ? "Wklej kod z &lt;iframe&gt; (Vimeo, YouTube, Lottie, Rive)" : "Kod embed"}</span>`}</div>`;
+    }
     return `<div class="video"${ratio}>${b.file ? `<video src="${esc(ctx.url(b.file))}" autoplay muted loop playsinline></video>` : `<span class="gallery__placeholder text-small">Animacja MP4</span>`}</div>`;
   },
 

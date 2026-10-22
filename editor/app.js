@@ -277,7 +277,7 @@ function VideoBlock({ b, set, ctx }) {
     </div>
     ${(b.source || "file") === "file"
       ? html`<${FileField} label="Plik MP4" value=${b.file} accept="video/mp4,video/webm" folder="media" ctx=${ctx} hint="Odtwarza się sam, bez dźwięku, w pętli. Najlepiej do 10 MB." onChange=${(p) => set((x) => { x.file = p; })} />`
-      : html`<${Text} label="Kod embed" multiline value=${b.embed} placeholder="<iframe src=…></iframe>" hint="Wklej kod z serwisu. W podglądzie edytora część serwisów może się nie wyświetlić — w eksporcie zadziała." onInput=${(v) => set((x) => { x.embed = v; })} />`}`;
+      : html`<${Text} label="Kod embed" multiline value=${b.embed} placeholder="<iframe src=…></iframe>" hint="Wklej kod z serwisu (Vimeo, YouTube, Lottie, Rive). Zostaje tylko <iframe> z adresem https — skrypty są pomijane dla bezpieczeństwa strony klienta." onInput=${(v) => set((x) => { x.embed = v; })} />`}`;
 }
 function TypefaceBlock({ b, set, ctx }) {
   const l = b.license || {};
