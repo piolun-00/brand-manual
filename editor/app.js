@@ -20,6 +20,7 @@ const [FIGMA, BASE_CSS, SAMPLE, SAMPLE_SINGLE] = await Promise.all([
 ]);
 
 const BLOCK_TYPES = {
+  text: "Tekst (1 lub 2 kolumny)",
   images: "Rząd zdjęć",
   specimens: "Specimeny znaku",
   palette: "Paleta",
@@ -37,7 +38,8 @@ const newBlock = (type) => ({
   icons: { items: [{ name: "", svg: null }] },
   video: { source: "file", file: null, embed: "", ratio: "16/9" },
   typeface: { name: "", foundry: "", weights: "", svg: null, license: { kind: "note", note: "Krój komercyjny — do użycia wymagana licencja.", linkLabel: "Przejdź do kroju", href: "", file: null } },
-  typeScale: { image: null }
+  typeScale: { image: null },
+  text: { columns: 1, col1: "", col2: "" }
 }[type]);
 // Nowy rozdział / sekcja zaczyna się od tekstu i zdjęcia — nic więcej.
 const newSection = (title = "") => ({ id: uid(), title, text: [""], action: { kind: "none", label: "", file: null, href: "" },
@@ -210,6 +212,11 @@ function ContrastBlock({ b, set, ctx }) {
       <button type="button" class="link" onClick=${() => set((x) => { x.pairs.splice(i, 1); })}>Usuń</button>
     </div>`} /><p class="note">Poziom WCAG liczy się sam. Para pojawia się w podglądzie, gdy wybierzesz oba kolory.</p>`;
 }
+function TextBlock({ b, set }) {
+  return html`<${Select} label="Układ" value=${String(b.columns || 1)} options=${[["1", "Jedna kolumna"], ["2", "Dwie kolumny"]]} onChange=${(v) => set((x) => { x.columns = Number(v); })} />
+    <${Text} label=${b.columns === 2 ? "Kolumna 1" : "Tekst"} multiline value=${b.col1} hint="Pusta linia = nowy akapit" onInput=${(v) => set((x) => { x.col1 = v; })} />
+    ${b.columns === 2 && html`<${Text} label="Kolumna 2" multiline value=${b.col2} onInput=${(v) => set((x) => { x.col2 = v; })} />`}`;
+}
 function IconsBlock({ b, set, ctx }) {
   const ref = useRef();
   return html`<${ListBlock} items=${b.items || []} addLabel="Dodaj ikonę"
@@ -258,7 +265,7 @@ function TypeScaleBlock({ b, set, ctx }) {
   return html`<${FileField} label="Grafika skali (SVG lub PNG)" value=${b.image} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx}
     hint="Szerokość 924 px (PNG: 1848 px), wysokość dowolna — strona dopasuje ją sama. Bez webfontu klienta, więc bez problemu z licencją." onChange=${(p) => set((x) => { x.image = p; })} />`;
 }
-const BLOCK_FORMS = { images: ImagesBlock, specimens: SpecimensBlock, palette: PaletteBlock, contrast: ContrastBlock, icons: IconsBlock, typeface: TypefaceBlock, typeScale: TypeScaleBlock, video: VideoBlock };
+const BLOCK_FORMS = { text: TextBlock, images: ImagesBlock, specimens: SpecimensBlock, palette: PaletteBlock, contrast: ContrastBlock, icons: IconsBlock, typeface: TypefaceBlock, typeScale: TypeScaleBlock, video: VideoBlock };
 
 // ——— Sekcja ———
 function SectionForm({ s, set, ctx, open, setOpen, noTitle }) {

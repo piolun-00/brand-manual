@@ -270,3 +270,9 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 /* Grafika na szerokość kolumny, wysokość z pliku (np. skala typograficzna) */
 .graphic__img { display: block; width: 100%; height: auto; }
 .graphic__placeholder { display: grid; place-items: center; aspect-ratio: 924 / 364; background: var(--bg-surface); color: var(--text-subtle); }
+
+/* Blok tekstu: 1 lub 2 kolumny, jak tekst w nagłówku sekcji */
+.text-block { display: grid; gap: var(--space-16); }
+.text-block__col { display: flex; flex-direction: column; gap: 1.2em; min-width: 0; }
+.text-block__p { max-width: 75ch; overflow-wrap: anywhere; text-wrap: pretty; }
+@media (min-width: 768px) { .text-block.is--2col { grid-template-columns: 1fr 1fr; gap: var(--grid-gutter); } }

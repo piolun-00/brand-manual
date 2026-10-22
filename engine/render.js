@@ -167,6 +167,13 @@ const BLOCKS = {
       <span class="contrast__names text-small">${t(bgC.name)} / ${t(fgC.name)}</span></div>`;
     }).join("")}</div>`,
 
+  // Tekst: jedna albo dwie kolumny, w tej samej siatce co tekst nagłówka sekcji
+  text: (ctx, b) => {
+    const cols = (b.columns === 2 ? [b.col1, b.col2] : [b.col1]).map((x) => x || "");
+    return `<div class="text-block${b.columns === 2 ? " is--2col" : ""}">${cols.map((c) => `<div class="text-block__col">${
+      c.split(/\n\s*\n/).filter((p) => p.trim()).map((p) => `<p class="text-block__p text-body">${t(p.trim()).replace(/\n/g, "<br>")}</p>`).join("")}</div>`).join("")}</div>`;
+  },
+
   // Ikony: 8 w rzędzie na desktopie (jak siatka), kopiowanie kodu SVG
   icons: (ctx, b) => `<div class="icons"><div class="icons__grid">${(b.items || []).map((i) => `
     <div class="icon-tile">
