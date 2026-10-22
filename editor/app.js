@@ -288,6 +288,7 @@ function SectionForm({ s, set, ctx, open, setOpen, noTitle }) {
           sub=${b.type === "images" ? `${{ "2-equal": "2 równe", "wide-narrow": "szerokie + wąskie", "narrow-wide": "wąskie + szerokie", "1": "1 zdjęcie" }[b.layout]} · ${b.ratio === "auto" ? "oryginalne" : b.ratio.replace("/", ":")}` : ""}
           onUp=${i > 0 && (() => set((x) => move(x.blocks, i, -1)))} onDown=${i < s.blocks.length - 1 && (() => set((x) => move(x.blocks, i, 1)))}
           onRemove=${() => set((x) => { x.blocks.splice(i, 1); })}>
+          <label class="check is--line"><input type="checkbox" checked=${!!b.line} onChange=${(e) => setB((x) => { x.line = e.target.checked; })} />Linia nad blokiem</label>
           <div class="grid2"><${Text} label="Nazwa nad blokiem (opcjonalna)" value=${b.label} onInput=${(v) => setB((x) => { x.label = v; })} />
           <${Text} label="Opis (opcjonalny)" value=${b.text} onInput=${(v) => setB((x) => { x.text = v; })} /></div>
           ${Form && html`<${Form} b=${b} set=${setB} ctx=${ctx} />`}

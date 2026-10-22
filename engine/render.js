@@ -134,11 +134,12 @@ function imagesRow(ctx, b) {
   </div>`;
 }
 
-// Nagłówek bloku: pozioma linia + opcjonalna nazwa i opis (jak przy specimenach znaku).
-function blockMeta(b, always = true) {
+// Nagłówek bloku: opcjonalna pozioma linia (przełącznik „line”) + opcjonalna nazwa i opis.
+// Domyślnie bez linii — pierwszy blok pod nagłówkiem sekcji nie potrzebuje drugiego odkreślenia.
+function blockMeta(b) {
   const label = (b.label || "").trim(), text = (b.text || "").trim();
-  if (!always && !label && !text) return "";
-  return `<div class="block__meta">${label ? `<span class="block__label text-body">${t(label)}</span>` : ""}${text ? `<span class="block__text text-body-regular">${t(text)}</span>` : ""}</div>`;
+  if (!b.line && !label && !text) return "";
+  return `<div class="block__meta${b.line ? " is--line" : ""}">${label ? `<span class="block__label text-body">${t(label)}</span>` : ""}${text ? `<span class="block__text text-body-regular">${t(text)}</span>` : ""}</div>`;
 }
 
 const BLOCKS = {
@@ -167,14 +168,14 @@ const BLOCKS = {
     }).join("")}</div>`,
 
   // Ikony: 8 w rzędzie na desktopie (jak siatka), kopiowanie kodu SVG
-  icons: (ctx, b) => `<div class="icons">${(b.items || []).map((i) => `
+  icons: (ctx, b) => `<div class="icons"><div class="icons__grid">${(b.items || []).map((i) => `
     <div class="icon-tile">
       <button class="icon-tile__chip" type="button"${i.svg ? ` data-copy-url="${esc(ctx.url(i.svg))}"` : ""} aria-label="Kopiuj SVG ${esc(i.name)}">
         ${i.svg ? `<img class="icon-tile__svg" src="${esc(ctx.url(i.svg))}" alt="">` : `<span class="icon-tile__placeholder"></span>`}
         <span class="swatch__copy"><span class="button is--copy text-body"><span class="button__label">Kopiuj</span></span></span>
       </button>
       <span class="icon-tile__name text-body">${t(i.name)}</span>
-    </div>`).join("")}</div>`,
+    </div>`).join("")}</div></div>`,
 
   // Animacja: plik MP4 (odtwarza się sam, bez dźwięku, w pętli) albo kod embed (np. Vimeo, Lottie, Rive)
   video: (ctx, b) => {
@@ -207,8 +208,8 @@ function section(ctx, s, site) {
     else groups.push(b.type === "images" ? { type: "gallery", rows: [b] } : b);
   }
   return `<section class="section" id="${s.anchor}">${sectionHeader(ctx, s)}${groups.map((g) =>
-    g.type === "gallery" ? `<div class="block gallery">${g.rows.map((r) => blockMeta(r, false) + imagesRow(ctx, r)).join("")}</div>`
-      : BLOCKS[g.type] ? `<div class="block is--${g.type}">${g.type === "specimens" ? blockMeta(g, false) : blockMeta(g)}${BLOCKS[g.type](ctx, g, site)}</div>` : "").join("")}</section>`;
+    g.type === "gallery" ? `<div class="block gallery">${g.rows.map((r) => blockMeta(r) + imagesRow(ctx, r)).join("")}</div>`
+      : BLOCKS[g.type] ? `<div class="block is--${g.type}">${blockMeta(g)}${BLOCKS[g.type](ctx, g, site)}</div>` : "").join("")}</section>`;
 }
 
 // Single site: jedna okładka manuala, a rozdział = jedna sekcja (numer 01, 02…, bez podsekcji).
