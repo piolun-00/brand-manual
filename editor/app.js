@@ -310,7 +310,7 @@ function SpecimensBlock({ b, set, ctx }) {
   return html`<${ListBlock} items=${b.items || []} addLabel="Dodaj wersję znaku"
     add=${() => set((x) => { x.items.push({ label: "", caption: "", svg: null }); })}
     render=${(it, i) => html`<div class="sub">
-      <div class="sub__head"><b>Wersja ${i + 1}</b><button type="button" class="link" onClick=${() => set((x) => { x.items.splice(i, 1); })}>Usuń</button></div>
+      <div class="sub__head"><b>Wersja ${i + 1}</b><button type="button" class="link is--icon" title="Usuń" aria-label="Usuń" onClick=${() => set((x) => { x.items.splice(i, 1); })}><${Icon} name="close" /></button></div>
       <div class="grid2"><${Text} label="Nazwa" value=${it.label} placeholder="np. Logo" onInput=${(v) => set((x) => { x.items[i].label = v; })} />
       <${Text} label="Opis" value=${it.caption} placeholder="np. Najczęściej używany" onInput=${(v) => set((x) => { x.items[i].caption = v; })} /></div>
       <${FileField} label="Plik SVG" value=${it.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} expect=${{ w: 924, h: 364 }}
@@ -335,7 +335,7 @@ function ContrastBlock({ b, set, ctx }) {
     render=${(p, i) => html`<div class="sub grid2x">
       <${Select} label="Tło" value=${p.bg} options=${opts} onChange=${(v) => set((x) => { x.pairs[i].bg = v; })} />
       <${Select} label="Tekst" value=${p.fg} options=${opts} onChange=${(v) => set((x) => { x.pairs[i].fg = v; })} />
-      <button type="button" class="link" onClick=${() => set((x) => { x.pairs.splice(i, 1); })}>Usuń</button>
+      <button type="button" class="link is--icon" title="Usuń" aria-label="Usuń" onClick=${() => set((x) => { x.pairs.splice(i, 1); })}><${Icon} name="close" /></button>
     </div>`} /><p class="note">Poziom WCAG liczy się sam. Para pojawia się w podglądzie, gdy wybierzesz oba kolory.</p>`;
 }
 function TextBlock({ b, set }) {
@@ -351,7 +351,7 @@ function IconsBlock({ b, set, ctx }) {
       <div class="sub__head"><b>${it.name || `Ikona ${i + 1}`}</b><span>
         <button type="button" class="link is--icon" title="W górę" aria-label="W górę" onClick=${() => set((x) => move(x.items, i, -1))}><${Icon} name="up" /></button>
         <button type="button" class="link is--icon" title="W dół" aria-label="W dół" onClick=${() => set((x) => move(x.items, i, 1))}><${Icon} name="down" /></button>
-        <button type="button" class="link" onClick=${() => set((x) => { x.items.splice(i, 1); })}>Usuń</button></span></div>
+        <button type="button" class="link is--icon" title="Usuń" aria-label="Usuń" onClick=${() => set((x) => { x.items.splice(i, 1); })}><${Icon} name="close" /></button></span></div>
       <${Text} label="Nazwa" value=${it.name} onInput=${(v) => set((x) => { x.items[i].name = v; })} />
       <${FileField} label="Plik SVG" value=${it.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} onChange=${(p) => set((x) => { x.items[i].svg = p; })} />
     </div>`} />
@@ -521,7 +521,7 @@ function BrandForm({ b, set, ctx }) {
         <div class="sub__head"><b><span class="check__chip" style=${`background:${c.hex}`}></span> ${c.name || `Kolor ${i + 1}`}</b><span>
           <button type="button" class="link is--icon" title="W górę" aria-label="W górę" onClick=${() => up((x) => move(x.colors, i, -1))}><${Icon} name="up" /></button>
           <button type="button" class="link is--icon" title="W dół" aria-label="W dół" onClick=${() => up((x) => move(x.colors, i, 1))}><${Icon} name="down" /></button>
-          <button type="button" class="link" onClick=${() => up((x) => { x.colors.splice(i, 1); })}>Usuń</button></span></div>
+          <button type="button" class="link is--icon" title="Usuń" aria-label="Usuń" onClick=${() => up((x) => { x.colors.splice(i, 1); })}><${Icon} name="close" /></button></span></div>
         <div class="grid2"><${Text} label="Nazwa" value=${c.name} onInput=${(v) => up((x) => { x.colors[i].name = v; })} />
         <${Color} label="HEX" value=${c.hex} onInput=${(v) => up((x) => { x.colors[i].hex = v; })} /></div>
         <div class="grid2"><${Text} label="RGB" value=${c.rgb} placeholder="28 28 28" onInput=${(v) => up((x) => { x.colors[i].rgb = v; })} />
