@@ -501,7 +501,12 @@ function BrandForm({ b, set, ctx }) {
     <div class="sub">
       <b class="sub__title">Dostęp</b>
       <${Text} label="Hasło do manuala (puste = otwarty)" value=${b.password} placeholder="np. marka2026" onInput=${(v) => up((x) => { x.password = v; })} />
-      <p class="note">Eksport szyfruje treść stron — bez hasła nie da się jej przeczytać. Hasło wpisuje się raz na sesję przeglądarki. Pliki do pobrania (media/, files/) pozostają dostępne pod bezpośrednim adresem, jeśli ktoś go zna.</p>
+      ${(b.password || "").trim() && html`
+        <${Select} label="Sposób ochrony" value=${b.protect || "encrypt"} options=${[["encrypt", "Szyfrowanie stron (każdy serwer)"], ["server", "Hasło serwera (.htaccess, Apache)"]]} onChange=${(v) => up((x) => { x.protect = v; })} />
+        ${(b.protect || "encrypt") === "server" && html`<${Text} label="Login" value=${b.login} placeholder="klient" onInput=${(v) => up((x) => { x.login = v; })} />`}`}
+      <p class="note">${!(b.password || "").trim() ? "Bez hasła manual jest otwarty dla każdego, kto zna adres."
+        : (b.protect || "encrypt") === "encrypt" ? "Eksport szyfruje treść stron — bez hasła nie da się jej przeczytać. Hasło wpisuje się raz na sesję przeglądarki. Pliki do pobrania (media/, files/) pozostają dostępne pod bezpośrednim adresem, jeśli ktoś go zna."
+        : "Serwer pyta o login i hasło, zanim wyda cokolwiek — strony, zdjęcia i pliki. Działa na hostingach z Apache (cPanel, home.pl, nazwa.pl, OVH, LH.pl). Po wgraniu trzeba wpisać w .htaccess pełną ścieżkę folderu — instrukcja jest w pliku CZYTAJ-HASLO.txt w eksporcie. Uwaga: jeśli serwer nie obsługuje .htaccess (np. nginx, Netlify), manual będzie otwarty — wtedy wybierz szyfrowanie."}</p>
     </div>
     <div class="sub">
       <b class="sub__title">Ikona karty i udostępnianie</b>
@@ -848,7 +853,45 @@ function App() {
       if (bl.id) extra.iconZips.set(bl.id, zpath);
     }
     const pw = (project.brand.password || "").trim();
-    const lock = pw ? await lockKey(pw) : null;
+    const serverAuth = pw && project.brand.protect === "server";
+    const lock = pw && !serverAuth ? await lockKey(pw) : null;
+    if (serverAuth) {
+      const login = (project.brand.login || "klient").trim().replace(/[:\s]/g, "") || "klient";
+      const hash = window.dcodeIO.bcrypt.hashSync(pw, 10).replace(/^\$2a\$/, "$2y$"); // Apache rozpoznaje bcrypt jako $2y$
+      zip.file(".htpasswd", `${login}:${hash}\n`);
+      zip.file(".htaccess", [
+        "# Hasło do manuala (Apache). Zamień ŚCIEŻKĘ poniżej na pełną ścieżkę tego folderu na serwerze — patrz CZYTAJ-HASLO.txt",
+        'AuthType Basic',
+        `AuthName "${(project.brand.name || "Brandmanual").replace(/"/g, "")}"`,
+        'AuthUserFile /PELNA/SCIEZKA/DO/FOLDERU/.htpasswd',
+        'Require valid-user',
+        '',
+        '# Plik z hasłem nie może być do pobrania',
+        '<Files ".htpasswd">',
+        '  Require all denied',
+        '</Files>',
+        ''
+      ].join("\n"));
+      zip.file("CZYTAJ-HASLO.txt", [
+        "MANUAL CHRONIONY HASŁEM — INSTRUKCJA WGRANIA",
+        "",
+        `Login: ${login}`,
+        "Hasło: (to, które wpisano w edytorze — nie ma go w tym pliku)",
+        "",
+        "1. Wgraj zawartość ZIP-a na serwer razem z ukrytymi plikami .htaccess i .htpasswd",
+        "   (w FileZilli: Serwer → Wymuś pokazywanie plików ukrytych).",
+        "2. Sprawdź pełną ścieżkę folderu na serwerze. Najprościej: w panelu hostingu (menedżer plików pokazuje ją u góry),",
+        "   albo zapytaj support hostingu. Wygląda zwykle tak: /home/uzytkownik/public_html/brandbook",
+        "3. Otwórz .htaccess i zamień /PELNA/SCIEZKA/DO/FOLDERU na tę ścieżkę. Zostaw końcówkę /.htpasswd.",
+        "4. Otwórz manual w przeglądarce — powinno pojawić się okienko logowania.",
+        "",
+        "Alternatywa: w cPanelu zamiast kroków 2–3 użyj „Ochrona katalogu / Directory Privacy” — panel zrobi to sam.",
+        "Jeśli po wgraniu pojawia się błąd 500, serwer nie obsługuje bcrypt — skontaktuj się z KHOREI.",
+        "Jeśli manual otwiera się BEZ pytania o hasło, serwer nie czyta .htaccess (np. nginx) — trzeba wyeksportować",
+        "manual z opcją „Szyfrowanie stron”.",
+        ""
+      ].join("\n"));
+    }
     if (lock) setStatus("Szyfruję strony…");
     for (const f of renderSite(project, FIGMA, BASE_CSS, studio.fonts, extra)) {
       zip.file(f.path, lock && f.path.endsWith(".html")
