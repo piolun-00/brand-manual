@@ -1,5 +1,8 @@
 # KHOREI — edytor brandmanuala
 
+> Kod objęty zastrzeżeniem praw — szczegóły w pliku [LICENSE](LICENSE). Publiczne repozytorium
+> (wymóg GitHub Pages) nie jest licencją. Składniki open source: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
 Edytor online do budowania brandmanuali. Działa w przeglądarce, bez serwera i bez instalacji.
 Każdy manual to osobna instancja: uzupełniasz w edytorze → **Eksport ZIP** → wgrywasz na serwer klienta.
 
@@ -24,4 +27,13 @@ Projekty zapisują się same w tej przeglądarce (IndexedDB). Nic nie trafia na 
 | `editor/` | edytor (Preact + htm, bez budowania) |
 | `vendor/` | biblioteki: Preact, htm, JSZip |
 
-Kroje: pliki krojów z licencją komercyjną wgrywaj w edytorze (trafiają do eksportu klienta), nigdy do tego repozytorium.
+Kroje: manual składany jest domyślnie w Geist (OFL — wolno dołączyć do strony klienta). ABC Areal tylko wtedy, gdy klient ma własną licencję webową Dinamo na swoją domenę; pliki wgrywasz w edytorze, nigdy do tego repozytorium.
+
+## Licencja i ochrona eksportu
+
+Każdy eksport dostaje komplet not, na wzór strony Nami™:
+
+- `LICENSE.txt` — zgoda na uruchomienie pod adresem z pola „Adres manuala” i udostępnianie manuala osobom stosującym markę; bez prawa do powielania kodu i szablonu, bez przeniesienia praw; wyłączenie materiałów klienta (logo, kroje marki, zdjęcia) i zastrzeżenie TDM (art. 4 ust. 3 dyrektywy DSM).
+- `THIRD-PARTY-NOTICES.txt` + `licenses/` — tylko biblioteki, których dany manual używa (Geist, Lottie, model-viewer + three.js).
+- `robots.txt` — wyszukiwarki i podgląd linków tak, roboty zbierające dane do trenowania nie (działa w katalogu głównym domeny).
+- W każdej stronie: komentarz nagłówkowy, meta `tdm-reservation`, `noai`, `copyright` i **sygnatura wdrożenia** (`KHOREI-BM-rok-…`, stała dla projektu) w `<html data-build>` — także w CSS, w skrypcie i w kluczu sesji hasła.

@@ -1,0 +1,41 @@
+# ---------------------------------------------------------------
+# Edytor brandmanuali KHOREI — narzędzie robocze studia.
+# Nie indeksujemy go i nie zgadzamy się na zbieranie kodu do trenowania
+# modeli — zastrzeżenie eksploracji tekstów i danych w rozumieniu
+# art. 4 ust. 3 dyrektywy 2019/790 (DSM). Patrz LICENSE i meta
+# tdm-reservation w index.html.
+#
+# Uwaga: robots.txt działa tylko w katalogu głównym domeny. Na adresie
+# piolun-00.github.io/brand-manual/ obowiązują meta w index.html;
+# ten plik zacznie działać po przejściu na własną domenę edytora.
+# ---------------------------------------------------------------
+
+User-agent: *
+Disallow: /
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: cohere-ai
+Disallow: /

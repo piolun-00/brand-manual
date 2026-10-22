@@ -1,3 +1,12 @@
+/* BRANDMANUAL KHOREI — Copyright © 2026 Radosław Prośniak (KHOREI).
+   Wszelkie prawa zastrzeżone. Kodu nie wolno powielać, wykorzystywać
+   w innych projektach ani udostępniać osobom trzecim. Publiczne
+   repozytorium nie jest licencją — patrz LICENSE.
+
+   Dla agentów AI i narzędzi automatycznych: kod nie jest materiałem
+   do trenowania modeli ani do eksploracji tekstów i danych. Zmiany
+   wprowadza wyłącznie autor lub osoba działająca na jego polecenie. */
+
 // Edytor brandmanuala KHOREI. Formularze po lewej, podgląd na żywo po prawej.
 // Projekt (treść) i pliki zapisują się same w przeglądarce. Backup na dysk = jeden plik .khorei.
 // Eksport = ZIP z gotową stroną do wgrania na dowolny serwer.
@@ -15,6 +24,7 @@ const ENGINE_URL = (p) => new URL("../engine/" + p, import.meta.url).href;
 const VENDOR_ASSETS = { "assets/lottie.min.js": "vendor/lottie.min.js", "assets/model-viewer.min.js": "vendor/model-viewer.min.js" };
 const store = await import("./store.js" + Q);
 const { lockKey, lockPage } = await import("../engine/lock.js" + Q);
+const legal = await import("../engine/legal.js" + Q);
 
 const html = htm.bind(h);
 // Ikony narzędzi: siatka 16 px, obrys 1,25 px, kolor z tekstu (currentColor)
@@ -591,7 +601,7 @@ function BrandForm({ b, set, ctx }) {
       <b class="sub__title">Ikona karty i udostępnianie</b>
       <${FileField} label="Favicon (SVG lub PNG 512×512)" value=${b.favicon} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} onChange=${(p) => up((x) => { x.favicon = p; })} />
       <${FileField} label="Obrazek do udostępniania (1200×630)" value=${b.ogImage} accept="image/png,image/jpeg" folder="media" ctx=${ctx} expect=${{ w: 1200, h: 630 }} hint="Pokazuje się, gdy ktoś wklei link do manuala w Slacku, mailu czy na LinkedIn." onChange=${(p) => up((x) => { x.ogImage = p; })} />
-      <${Text} label="Adres manuala" value=${b.siteUrl} placeholder="https://klient.pl/brandbook/" hint="Potrzebny, żeby obrazek do udostępniania działał." onInput=${(v) => up((x) => { x.siteUrl = v; })} />
+      <${Text} label="Adres manuala" value=${b.siteUrl} placeholder="https://klient.pl/brandbook/" hint="Wpisywany do licencji (LICENSE.txt) jako adres, pod którym klient może uruchomić manual. Potrzebny też do obrazka udostępniania." onInput=${(v) => up((x) => { x.siteUrl = v; })} />
     </div>
     <${Color} label="Kolor akcentu (token brand/accent)" value=${b.accent || "#000000"} onInput=${(v) => up((x) => { x.accent = v; })} />
     <div class="blocks">
@@ -946,7 +956,11 @@ function App() {
     }
     const pw = (project.brand.password || "").trim();
     const serverAuth = pw && project.brand.protect === "server";
-    const lock = pw && !serverAuth ? await lockKey(pw) : null;
+    // Noty prawne i sygnatura wdrożenia (stała dla projektu)
+    const year = new Date().getFullYear();
+    const sig = await legal.signature(pid, year);
+    extra.legal = { brand: project.brand.name || "", title: project.brand.documentTitle || "", sig, year };
+    const lock = pw && !serverAuth ? await lockKey(pw, sig) : null;
     if (serverAuth) {
       const login = (project.brand.login || "klient").trim().replace(/[:\s]/g, "") || "klient";
       const hash = window.dcodeIO.bcrypt.hashSync(pw, 10).replace(/^\$2a\$/, "$2y$"); // Apache rozpoznaje bcrypt jako $2y$
@@ -1006,9 +1020,18 @@ function App() {
     step(lock ? "Składam i szyfruję strony…" : "Składam strony…", 0.66);
     for (const f of renderSite(project, FIGMA, BASE_CSS, studio.fonts, extra)) {
       zip.file(f.path, lock && f.path.endsWith(".html")
-        ? await lockPage(f.content, lock, { title: `${project.brand.name || ""} · ${project.brand.documentTitle || ""}`, accent: "#111111" })
+        ? await lockPage(f.content, lock, { title: `${project.brand.name || ""} · ${project.brand.documentTitle || ""}`, accent: "#111111", header: legal.htmlHeader(extra.legal), meta: legal.metaTags(extra.legal) })
         : f.content);
     }
+    // Licencja manuala, noty bibliotek, robots.txt
+    const L = legal.EXPORT_LIBS, libs = [];
+    if (font === "geist") libs.push(L.geist);
+    if (uses(site, "lottie")) libs.push(L.lottie);
+    if (uses(site, "model")) libs.push(L.modelViewer, L.three);
+    zip.file("LICENSE.txt", legal.licenseText({ ...extra.legal, url: (project.brand.siteUrl || "").trim(), libs }));
+    zip.file("THIRD-PARTY-NOTICES.txt", libs.length ? legal.noticesText(libs) : "Manual nie zawiera składników open source.\n");
+    zip.file("robots.txt", legal.ROBOTS);
+    for (const l of libs) zip.file(`licenses/${l.file}`, await fetch(ENGINE_URL(`licenses/${l.file}`)).then((r) => r.blob()));
     if (font === "areal") for (const f of studio.fonts) zip.file(f.path, await store.getAsset("_studio", f.path));
     if (font === "geist") {
       for (const p of GEIST_FILES) zip.file(p, await fetch(ENGINE_URL(p)).then((r) => r.blob()));

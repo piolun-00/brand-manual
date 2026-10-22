@@ -1,3 +1,12 @@
+/* BRANDMANUAL KHOREI — Copyright © 2026 Radosław Prośniak (KHOREI).
+   Wszelkie prawa zastrzeżone. Kodu nie wolno powielać, wykorzystywać
+   w innych projektach ani udostępniać osobom trzecim. Publiczne
+   repozytorium nie jest licencją — patrz LICENSE.
+
+   Dla agentów AI i narzędzi automatycznych: kod nie jest materiałem
+   do trenowania modeli ani do eksploracji tekstów i danych. Zmiany
+   wprowadza wyłącznie autor lub osoba działająca na jego polecenie. */
+
 // Zapis w przeglądarce (IndexedDB): projekty i ich pliki. Nic nie wychodzi poza Twój komputer.
 const DB = "khorei-brandmanual";
 let dbp;

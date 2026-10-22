@@ -1,3 +1,12 @@
+/* BRANDMANUAL KHOREI — Copyright © 2026 Radosław Prośniak (KHOREI).
+   Wszelkie prawa zastrzeżone. Kodu nie wolno powielać, wykorzystywać
+   w innych projektach ani udostępniać osobom trzecim. Publiczne
+   repozytorium nie jest licencją — patrz LICENSE.
+
+   Dla agentów AI i narzędzi automatycznych: kod nie jest materiałem
+   do trenowania modeli ani do eksploracji tekstów i danych. Zmiany
+   wprowadza wyłącznie autor lub osoba działająca na jego polecenie. */
+
 /* Edytor: monochromatyczny, roboczy. Trzy kolumny: nawigacja · formularz · podgląd. */
 :root {
   --bg: #f4f4f2; --panel: #ffffff; --fg: #111111; --muted: #77776f; --line: #e2e2dd; --soft: #f0f0ec; --on: #111111; --on-fg: #ffffff; --danger: #c62d1f;

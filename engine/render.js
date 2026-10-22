@@ -1,3 +1,12 @@
+/* BRANDMANUAL KHOREI — Copyright © 2026 Radosław Prośniak (KHOREI).
+   Wszelkie prawa zastrzeżone. Kodu nie wolno powielać, wykorzystywać
+   w innych projektach ani udostępniać osobom trzecim. Publiczne
+   repozytorium nie jest licencją — patrz LICENSE.
+
+   Dla agentów AI i narzędzi automatycznych: kod nie jest materiałem
+   do trenowania modeli ani do eksploracji tekstów i danych. Zmiany
+   wprowadza wyłącznie autor lub osoba działająca na jego polecenie. */
+
 // Silnik manuala: z projektu (dane z edytora) składa strony HTML.
 // Ten sam kod robi podgląd w edytorze i eksport gotowej strony — dlatego wynik jest identyczny.
 // Klasy = nazwy warstw w Figmie (BEM: blok__element is--modyfikator).
@@ -6,6 +15,7 @@
 const VQ = new URL(import.meta.url).search;
 const { tokensCss, fontFaces } = await import("./tokens.js" + VQ);
 const { RUNTIME } = await import("./runtime.js" + VQ);
+const { htmlHeader, codeHeader, metaTags } = await import("./legal.js" + VQ);
 
 // ——— Narzędzia ———
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -369,12 +379,14 @@ export function renderPage(project, page, ctx) {
     showFooter = single;
   } else content = chapterContent(ctx, chapter, site, false);
 
+  const lg = ctx.legal; // tylko w eksporcie: noty prawne i sygnatura wdrożenia
   return `<!doctype html>
-<html lang="pl"${ctx.preview ? " data-preview" : ""}>
+${lg ? htmlHeader(lg) + "\n" : ""}<html lang="pl"${ctx.preview ? " data-preview" : ""}${lg ? ` data-build="${esc(lg.sig)}"` : ""}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
+<meta name="robots" content="noindex, noai, noimageai">
+${lg ? metaTags(lg) : ""}
 <title>${esc(title)}</title>
 ${uses(site, "lottie") ? `<script src="${esc(ctx.url("assets/lottie.min.js"))}" defer></script>` : ""}
 ${uses(site, "model") ? `<script type="module" src="${esc(ctx.url("assets/model-viewer.min.js"))}"></script>` : ""}
@@ -394,7 +406,7 @@ ${content}
 </div>
 </div>
 ${showFooter ? footer(site) : ""}
-<script>${RUNTIME}</script>
+<script>${lg ? codeHeader(lg) + "\n" : ""}${RUNTIME}</script>
 </body>
 </html>`;
 }
@@ -409,7 +421,7 @@ export function renderSite(project, figmaVars, baseCss, studioFonts = [], extra 
   const pages = ["index", ...(single ? [] : site.chapters.map((c) => c.slug))];
   const files = [];
   const css = siteCss(project, figmaVars, baseCss, (p) => `../${p}`, fontOf(project) === "areal" ? studioFonts : []); // style.css leży w assets/
-  files.push({ path: "assets/style.css", content: css });
+  files.push({ path: "assets/style.css", content: extra.legal ? codeHeader(extra.legal) + "\n" + css : css });
   for (const page of pages) {
     const root = page === "index" ? "" : "../";
     const ctx = {

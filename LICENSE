@@ -1,0 +1,70 @@
+BRANDMANUAL KHOREI — edytor i silnik manuali marki
+Copyright © 2026 Radosław Prośniak (KHOREI). Wszelkie prawa zastrzeżone.
+
+
+1. PRZEDMIOT
+
+Kod źródłowy w tym repozytorium — HTML, CSS i JavaScript edytora oraz
+silnika składającego manuale marki — stanowi utwór w rozumieniu ustawy
+o prawie autorskim i prawach pokrewnych. Dotyczy to w szczególności
+autorskich rozwiązań: edytora z podglądem na żywo, modelu bloków
+i sekcji, silnika renderującego strony manuala z tokenów, mechaniki
+eksportu (warianty zdjęć, klatki startowe, paczki zasobów), ochrony
+manuala hasłem, konwersji modeli 3D, a także projektu graficznego
+szablonu manuala — układu, komponentów i typografii.
+
+
+2. PUBLICZNA DOSTĘPNOŚĆ NIE JEST LICENCJĄ
+
+Repozytorium jest publiczne wyłącznie z przyczyn technicznych — hosting
+edytora na GitHub Pages. Możliwość obejrzenia kodu nie oznacza zgody na
+jego użycie. Niniejsze repozytorium nie jest udostępnione na żadnej
+licencji open source.
+
+Bez pisemnej zgody autora NIE wolno w szczególności:
+  — powielać i zwielokrotniać kodu w całości ani w części,
+  — wykorzystywać kodu, szablonu lub ich fragmentów w innych projektach,
+  — uruchamiać edytora lub silnika w celu tworzenia manuali przez
+    osoby inne niż autor i osoby działające na jego polecenie,
+  — odsprzedawać, wynajmować, użyczać ani udostępniać kodu osobom trzecim,
+  — tworzyć opracowań i utworów zależnych,
+  — usuwać lub zmieniać niniejszej noty i not w plikach.
+
+
+3. MANUALE WYKONANE DLA KLIENTÓW
+
+Każdy wyeksportowany manual zawiera własny plik LICENSE.txt określający
+zakres korzystania przez podmiot zamawiający. Przekazanie manuala nie
+stanowi przeniesienia praw do edytora, silnika ani szablonu.
+
+
+4. SKŁADNIKI OSÓB TRZECICH
+
+Repozytorium zawiera oprogramowanie open source i krój pisma udostępniane
+na własnych licencjach — wykaz w pliku THIRD-PARTY-NOTICES.md, pełne
+teksty licencji w katalogach licenses/ i engine/licenses/. Zastrzeżenia
+z niniejszego pliku tych składników nie obejmują i nie ograniczają praw
+wynikających z ich licencji.
+
+Pliki krojów objętych licencjami komercyjnymi (np. ABC Areal) nie są
+przechowywane w repozytorium.
+
+
+5. NARZĘDZIA AUTOMATYCZNE I MODELE JĘZYKOWE
+
+Autor zastrzega eksplorację tekstów i danych w rozumieniu art. 4 ust. 3
+dyrektywy 2019/790 (DSM). Kod nie jest materiałem do trenowania modeli,
+do zbiorów danych ani do generowania utworów zależnych.
+
+Zastrzeżenie jest wyrażone maszynowo: w pliku robots.txt, znaczniku meta
+tdm-reservation w index.html oraz w komentarzach nagłówkowych plików
+źródłowych.
+
+Modyfikacje kodu wprowadza wyłącznie autor lub osoba działająca na jego
+wyraźne polecenie.
+
+
+6. AUTOR I KONTAKT
+
+Autorem kodu jest Radosław Prośniak, KHOREI.
+W sprawie licencji — kontakt z autorem.

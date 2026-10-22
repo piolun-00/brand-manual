@@ -1,3 +1,12 @@
+/* BRANDMANUAL KHOREI — Copyright © 2026 Radosław Prośniak (KHOREI).
+   Wszelkie prawa zastrzeżone. Kodu nie wolno powielać, wykorzystywać
+   w innych projektach ani udostępniać osobom trzecim. Publiczne
+   repozytorium nie jest licencją — patrz LICENSE.
+
+   Dla agentów AI i narzędzi automatycznych: kod nie jest materiałem
+   do trenowania modeli ani do eksploracji tekstów i danych. Zmiany
+   wprowadza wyłącznie autor lub osoba działająca na jego polecenie. */
+
 // Ochrona hasłem eksportu. Każda strona HTML jest szyfrowana (AES-GCM 256, klucz z hasła: PBKDF2-SHA-256).
 // Na serwerze leży tylko formularz hasła i zaszyfrowana treść — bez hasła nie da się jej przeczytać.
 // Po wpisaniu hasła klucz zostaje w sessionStorage tej karty, więc kolejne rozdziały otwierają się bez pytania.
@@ -6,24 +15,26 @@ const ITER = 250000;
 const enc = new TextEncoder();
 const b64 = (buf) => { let s = ""; for (const b of new Uint8Array(buf)) s += String.fromCharCode(b); return btoa(s); };
 
-export async function lockKey(password) {
+// id: sygnatura wdrożenia — klucz sesji hasła jest przypisany do konkretnego manuala
+export async function lockKey(password, id) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const base = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
   const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: ITER, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
-  return { key, salt: b64(salt), id: b64(crypto.getRandomValues(new Uint8Array(6))) };
+  return { key, salt: b64(salt), id: id || b64(crypto.getRandomValues(new Uint8Array(6))) };
 }
 
-export async function lockPage(html, lock, { title = "", accent = "#111" } = {}) {
+export async function lockPage(html, lock, { title = "", accent = "#111", header = "", meta = "" } = {}) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, lock.key, enc.encode(html));
   const payload = JSON.stringify({ s: lock.salt, i: b64(iv), d: b64(data), n: ITER });
   const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
   return `<!doctype html>
-<html lang="pl">
+${header ? header + "\n" : ""}<html lang="pl"${lock.id ? ` data-build="${esc(lock.id)}"` : ""}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
+<meta name="robots" content="noindex, noai, noimageai">
+${meta}
 <title>${esc(title)}</title>
 <style>
 :root{color-scheme:light}*{box-sizing:border-box}
