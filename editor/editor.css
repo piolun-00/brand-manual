@@ -151,3 +151,12 @@ button { cursor: pointer; }
 .panel__inner, .blocks, .card__body, .sub { grid-template-columns: minmax(0, 1fr); }
 .card, .sub, .f, .file { min-width: 0; }
 .file .btn { flex: none; }
+
+/* Listy rozwijane: własna strzałka (jak ikony edytora), 12 px od krawędzi; długi tekst ucina się przed strzałką */
+.f select, select.add {
+  appearance: none; -webkit-appearance: none;
+  padding-right: 36px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6.25L8 10.25L12 6.25' stroke='%2377776f' stroke-width='1.25' stroke-linecap='square'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 16px 16px;
+}
+.f select:hover, select.add:hover { border-color: #c9c9c3; }
