@@ -174,7 +174,7 @@ const BLOCKS = {
 
   contrast: (ctx, b, site) => `<div class="contrast">${(b.pairs || []).map((p) => {
       const bgC = colorById(site, p.bg), fgC = colorById(site, p.fg);
-      if (!bgC || !fgC) return "";
+      if (!bgC || !fgC) return ctx.preview ? `<div class="contrast__pair is--empty"><div class="contrast__sample"><span class="text-small">Wybierz kolor tła i tekstu</span></div></div>` : "";
       const c = contrast(bgC.hex, fgC.hex);
       return `<div class="contrast__pair"><div class="contrast__sample" style="background:${esc(bgC.hex)};color:${esc(fgC.hex)}"><span class="contrast__aa text-sample">Aa</span></div>
       <div class="contrast__badge${c.pass ? "" : " is--fail"}"><span class="contrast__icon" aria-hidden="true">${c.pass ? "✓" : "✕"}</span><span class="contrast__level text-label">${c.level}</span><span class="contrast__ratio text-small">${c.ratio}:1</span></div>
@@ -231,9 +231,11 @@ function section(ctx, s, site) {
     if (b.type === "images" && last && last.type === "gallery") last.rows.push(b);
     else groups.push(b.type === "images" ? { type: "gallery", rows: [b] } : b);
   }
-  return `<section class="section" id="${s.anchor}">${sectionHeader(ctx, s)}${groups.map((g) =>
-    g.type === "gallery" ? `<div class="block gallery">${g.rows.map((r) => blockMeta(r) + imagesRow(ctx, r)).join("")}</div>`
-      : BLOCKS[g.type] ? `<div class="block is--${g.type}">${blockMeta(g)}${BLOCKS[g.type](ctx, g, site)}</div>` : "").join("")}</section>`;
+  // W podglądzie edytora elementy dostają data-kh — klik otwiera ich formularz.
+  const kh = (kind, id) => ctx.preview && id ? ` data-kh="${kind}" data-kh-id="${esc(id)}"` : "";
+  return `<section class="section" id="${s.anchor}"${kh("section", s.id)}>${sectionHeader(ctx, s)}${groups.map((g) =>
+    g.type === "gallery" ? `<div class="block gallery">${g.rows.map((r) => `<div class="gallery__module"${kh("block", r.id)}>${blockMeta(r) + imagesRow(ctx, r)}</div>`).join("")}</div>`
+      : BLOCKS[g.type] ? `<div class="block is--${g.type}"${kh("block", g.id)}>${blockMeta(g)}${BLOCKS[g.type](ctx, g, site)}</div>` : "").join("")}</section>`;
 }
 
 // Single site: jedna okładka manuala, a rozdział = jedna sekcja (numer 01, 02…, bez podsekcji).
@@ -295,6 +297,7 @@ export function renderPage(project, page, ctx) {
 <meta name="robots" content="noindex">
 <title>${esc(title)}</title>
 ${ctx.css.inline != null ? `<style>${ctx.css.inline}</style>` : `<link rel="stylesheet" href="${esc(ctx.css.href)}">`}
+${ctx.preview ? `<style>[data-kh]{cursor:pointer}[data-kh="block"]:hover{outline:1px dashed rgba(0,0,0,.35);outline-offset:6px}.contrast__pair.is--empty .contrast__sample{display:grid;place-items:center;border:1px dashed var(--border-strong);color:var(--text-subtle);text-align:center}</style>` : ""}
 </head>
 <body>
 <div class="page">

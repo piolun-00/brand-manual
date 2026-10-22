@@ -154,33 +154,83 @@ function Color({ label, value, onInput }) {
     <span class="color"><input type="color" value=${hex} onInput=${(e) => onInput(e.target.value.toUpperCase())} />
     <input type="text" value=${value || ""} placeholder="#000000" onInput=${(e) => onInput(e.target.value)} /></span></label>`;
 }
-function FileField({ label, value, accept, hint, folder, ctx, onChange }) {
+// Wymiary pliku: SVG z atrybutów width/height albo viewBox, obrazy z pikseli
+async function measure(url, path) {
+  try {
+    if (/\.svg$/i.test(path)) {
+      const t = await (await fetch(url)).text();
+      const svg = new DOMParser().parseFromString(t, "image/svg+xml").documentElement;
+      const vb = (svg.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
+      const w = parseFloat(svg.getAttribute("width")) || vb[2], h = parseFloat(svg.getAttribute("height")) || vb[3];
+      return w && h ? { w, h } : null;
+    }
+    if (/\.(jpe?g|png|webp)$/i.test(path)) {
+      const img = new Image(); img.src = url; await img.decode();
+      return { w: img.naturalWidth, h: img.naturalHeight };
+    }
+  } catch {}
+  return null;
+}
+const ratioName = (r) => ({ "4/3": "4:3", "3/4": "3:4", "16/9": "16:9", "1/1": "1:1" }[r] || r);
+// expect: { w, h } — dokładny format z szablonu (proporcja liczy się, skala nie) · { ratio: "4/3" } · { w } — tylko szerokość
+function FileField({ label, value, accept, hint, folder, ctx, onChange, expect }) {
   const ref = useRef();
+  const [warn, setWarn] = useState("");
+  const [drop, setDrop] = useState(false);
   const name = value ? value.split("/").pop() : null;
   const isImg = value && /\.(svg|jpe?g|png|webp)$/i.test(value);
+  useEffect(() => {
+    setWarn("");
+    if (!expect || !value || !ctx.urls[value]) return;
+    let live = true;
+    measure(ctx.urls[value], value).then((d) => {
+      if (!live || !d) return;
+      const r = d.w / d.h, size = `${Math.round(d.w)}×${Math.round(d.h)}`;
+      if (expect.ratio && expect.ratio !== "auto") {
+        const [a, b] = expect.ratio.split("/").map(Number);
+        if (Math.abs(r - a / b) > 0.02) setWarn(`Plik ma ${size}, a blok ma proporcje ${ratioName(expect.ratio)} — obraz zostanie przycięty.`);
+      } else if (expect.w && expect.h) {
+        if (Math.abs(r - expect.w / expect.h) > 0.01) setWarn(`Plik ma ${size}, szablon z Figmy to ${expect.w}×${expect.h}. Wyeksportuj całą ramkę z szablonu, inaczej znak wyświetli się w innej skali.`);
+      } else if (expect.w && Math.round(d.w) % expect.w !== 0) {
+        setWarn(`Plik ma szerokość ${Math.round(d.w)} px — najlepiej ${expect.w} px (SVG) albo ${expect.w * 2} px (PNG).`);
+      }
+    });
+    return () => { live = false; };
+  }, [value, ctx.urls[value], expect && JSON.stringify(expect)]);
+  const take = async (f) => { const path = f && await ctx.addFile(f, folder); if (path) onChange(path); };
   return html`<div class="f">
     <span class="f__label">${label}</span>
-    <div class="file">
+    <div class=${`file${drop ? " is--drop" : ""}`}
+      onDragOver=${(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setDrop(true); } }}
+      onDragLeave=${() => setDrop(false)}
+      onDrop=${(e) => { if (!e.dataTransfer.files.length) return; e.preventDefault(); setDrop(false); take(e.dataTransfer.files[0]); }}>
       ${isImg && ctx.urls[value] ? html`<img class="file__thumb" src=${ctx.urls[value]} alt="" />` : html`<span class="file__thumb is--empty"></span>`}
-      <span class="file__name">${name || "Brak pliku"}</span>
+      <span class="file__name">${name || "Brak pliku — przeciągnij tutaj"}</span>
       <button type="button" class="btn" onClick=${() => ref.current.click()}>${value ? "Zmień" : "Wgraj"}</button>
       ${value && html`<button type="button" class="btn is--ghost" onClick=${() => onChange(null)}>Usuń</button>`}
-      <input ref=${ref} type="file" accept=${accept} hidden onChange=${async (e) => {
-        const f = e.target.files[0]; e.target.value = "";
-        const path = f && await ctx.addFile(f, folder);
-        if (path) onChange(path);
-      }} />
+      <input ref=${ref} type="file" accept=${accept} hidden onChange=${(e) => { const f = e.target.files[0]; e.target.value = ""; take(f); }} />
     </div>
+    ${warn && html`<span class="f__warn">${warn}</span>`}
     ${hint && html`<span class="f__hint">${hint}</span>`}
   </div>`;
 }
 
-// Lista z przyciskami kolejności i usuwania
-function Row({ title, onUp, onDown, onRemove, open, onToggle, children, sub }) {
-  return html`<div class=${`card${open ? " is--open" : ""}`}>
-    <div class="card__head" onClick=${(e) => { if (!e.target.closest(".card__tools")) onToggle(); }}>
+// Karta na liście: rozwijanie, przeciąganie (uchwyt ⋮⋮), duplikowanie, kolejność, usuwanie.
+// drag = { group, index, onMove(from, to) } — przeciągać można tylko w obrębie tej samej listy.
+function Row({ id, title, onUp, onDown, onRemove, onDuplicate, open, onToggle, children, sub, drag }) {
+  const [over, setOver] = useState(false);
+  const dnd = drag ? {
+    onDragOver: (e) => { if (e.dataTransfer.types.includes(`kh/${drag.group}`)) { e.preventDefault(); e.stopPropagation(); setOver(true); } },
+    onDragLeave: () => setOver(false),
+    onDrop: (e) => { const from = e.dataTransfer.getData(`kh/${drag.group}`); setOver(false); if (from === "") return; e.preventDefault(); e.stopPropagation(); drag.onMove(Number(from), drag.index); }
+  } : {};
+  return html`<div class=${`card${open ? " is--open" : ""}${over ? " is--over" : ""}`} data-card=${id} ...${dnd}>
+    <div class="card__head" onClick=${(e) => { if (!e.target.closest(".card__tools, .card__grip")) onToggle(); }}>
+      ${drag && html`<span class="card__grip" title="Przeciągnij, żeby zmienić kolejność" draggable="true"
+        onDragStart=${(e) => { e.stopPropagation(); e.dataTransfer.setData(`kh/${drag.group}`, String(drag.index)); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setDragImage(e.target.closest(".card"), 20, 20); }}>⋮⋮</span>`}
       <button type="button" class="card__title"><span class="card__chev">${open ? "−" : "+"}</span>${title}${sub && html`<span class="card__sub">${sub}</span>`}</button>
       <span class="card__tools">
+        ${onDuplicate && html`<button type="button" title="Duplikuj" onClick=${onDuplicate}>⧉</button>`}
         ${onUp && html`<button type="button" title="W górę" onClick=${onUp}>↑</button>`}
         ${onDown && html`<button type="button" title="W dół" onClick=${onDown}>↓</button>`}
         ${onRemove && html`<button type="button" title="Usuń" onClick=${onRemove}>✕</button>`}
@@ -189,6 +239,9 @@ function Row({ title, onUp, onDown, onRemove, open, onToggle, children, sub }) {
     ${open && html`<div class="card__body">${children}</div>`}
   </div>`;
 }
+const moveTo = (arr, from, to) => { if (from === to || from < 0 || to < 0) return; const [x] = arr.splice(from, 1); arr.splice(to, 0, x); };
+// Kopia z nowymi identyfikatorami (pliki zostają wspólne — to te same ścieżki)
+const freshIds = (o) => { const c = clone(o); const walk = (x) => { if (Array.isArray(x)) x.forEach(walk); else if (x && typeof x === "object") { if ("id" in x && typeof x.id === "string") x.id = uid(); Object.values(x).forEach(walk); } }; walk(c); return c; };
 const move = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; };
 
 // ——— Bloki ———
@@ -203,7 +256,7 @@ function ImagesBlock({ b, set, ctx }) {
         options=${[["4/3", "4:3 poziome"], ["3/4", "3:4 pionowe"], ["auto", "Oryginalne"]]} />
     </div>
     ${items.map((it, i) => html`<div class="sub">
-      <${FileField} label=${`Zdjęcie ${i + 1}`} value=${it.image} accept="image/*" folder="media" ctx=${ctx}
+      <${FileField} label=${`Zdjęcie ${i + 1}`} value=${it.image} accept="image/*" folder="media" ctx=${ctx} expect=${{ ratio: b.ratio }}
         hint="Szablon z Figmy: 4:3 → 1848×1386, 3:4 → 1386×1848"
         onChange=${(p) => set((x) => { x.items = items.map((o) => ({ ...o })); x.items[i].image = p; })} />
       <${Text} label="Podpis" value=${it.caption} onInput=${(v) => set((x) => { x.items = items.map((o) => ({ ...o })); x.items[i].caption = v; })} />
@@ -219,7 +272,7 @@ function SpecimensBlock({ b, set, ctx }) {
       <div class="sub__head"><b>Wersja ${i + 1}</b><button type="button" class="link" onClick=${() => set((x) => { x.items.splice(i, 1); })}>Usuń</button></div>
       <div class="grid2"><${Text} label="Nazwa" value=${it.label} placeholder="np. Logo" onInput=${(v) => set((x) => { x.items[i].label = v; })} />
       <${Text} label="Opis" value=${it.caption} placeholder="np. Najczęściej używany" onInput=${(v) => set((x) => { x.items[i].caption = v; })} /></div>
-      <${FileField} label="Plik SVG" value=${it.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx}
+      <${FileField} label="Plik SVG" value=${it.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} expect=${{ w: 924, h: 364 }}
         hint="Ramka 924×364 z Figmy, przezroczysta, znak na środku" onChange=${(p) => set((x) => { x.items[i].svg = p; })} />
     </div>`} />`;
 }
@@ -285,7 +338,7 @@ function TypefaceBlock({ b, set, ctx }) {
     <div class="grid2"><${Text} label="Nazwa kroju" value=${b.name} onInput=${(v) => set((x) => { x.name = v; })} />
     <${Text} label="Odlewnia" value=${b.foundry} onInput=${(v) => set((x) => { x.foundry = v; })} /></div>
     <${Text} label="Odmiany" value=${b.weights} placeholder="Regular, Medium, Bold" onInput=${(v) => set((x) => { x.weights = v; })} />
-    <${FileField} label="Specimen SVG" value=${b.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} hint="Ramka 924×364 z Figmy" onChange=${(p) => set((x) => { x.svg = p; })} />
+    <${FileField} label="Specimen SVG" value=${b.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} expect=${{ w: 924, h: 364 }} hint="Ramka 924×364 z Figmy" onChange=${(p) => set((x) => { x.svg = p; })} />
     <${Select} label="Licencja" value=${l.kind || "note"} options=${[["note", "Komercyjna — adnotacja + link do odlewni"], ["file", "Darmowa — plik do pobrania"]]} onChange=${(v) => set((x) => { x.license = { ...l, kind: v }; })} />
     <${Text} label="Adnotacja" value=${l.note} onInput=${(v) => set((x) => { x.license = { ...l, note: v }; })} />
     ${l.kind === "file"
@@ -294,7 +347,7 @@ function TypefaceBlock({ b, set, ctx }) {
         <${Text} label="Adres odlewni" value=${l.href} placeholder="https://" onInput=${(v) => set((x) => { x.license = { ...l, href: v }; })} /></div>`}`;
 }
 function TypeScaleBlock({ b, set, ctx }) {
-  return html`<${FileField} label="Grafika skali (SVG lub PNG)" value=${b.image} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx}
+  return html`<${FileField} label="Grafika skali (SVG lub PNG)" value=${b.image} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 924 }}
     hint="Szerokość 924 px (PNG: 1848 px), wysokość dowolna — strona dopasuje ją sama. Bez webfontu klienta, więc bez problemu z licencją." onChange=${(p) => set((x) => { x.image = p; })} />`;
 }
 const BLOCK_FORMS = { text: TextBlock, images: ImagesBlock, specimens: SpecimensBlock, palette: PaletteBlock, contrast: ContrastBlock, icons: IconsBlock, typeface: TypefaceBlock, typeScale: TypeScaleBlock, video: VideoBlock };
@@ -323,7 +376,9 @@ function SectionForm({ s, set, ctx, open, setOpen, noTitle }) {
       ${(s.blocks || []).map((b, i) => {
         const Form = BLOCK_FORMS[b.type];
         const setB = (fn) => set((x) => fn(x.blocks[i]));
-        return html`<${Row} key=${b.id} title=${BLOCK_TYPES[b.type]} open=${open === b.id} onToggle=${() => setOpen(open === b.id ? null : b.id)}
+        return html`<${Row} key=${b.id} id=${b.id} title=${BLOCK_TYPES[b.type]} open=${open === b.id} onToggle=${() => setOpen(open === b.id ? null : b.id)}
+          drag=${{ group: `blocks-${s.id}`, index: i, onMove: (from, to) => set((x) => moveTo(x.blocks, from, to)) }}
+          onDuplicate=${() => { const nb = freshIds(b); set((x) => { x.blocks.splice(i + 1, 0, nb); }); setOpen(nb.id); }}
           sub=${b.type === "images" ? `${{ "2-equal": "2 równe", "wide-narrow": "szerokie + wąskie", "narrow-wide": "wąskie + szerokie", "1": "1 zdjęcie" }[b.layout]} · ${b.ratio === "auto" ? "oryginalne" : b.ratio.replace("/", ":")}` : ""}
           onUp=${i > 0 && (() => set((x) => move(x.blocks, i, -1)))} onDown=${i < s.blocks.length - 1 && (() => set((x) => move(x.blocks, i, 1)))}
           onRemove=${() => set((x) => { x.blocks.splice(i, 1); })}>
@@ -341,9 +396,19 @@ function SectionForm({ s, set, ctx, open, setOpen, noTitle }) {
 }
 
 // ——— Rozdział ———
-function ChapterForm({ c, set, ctx, num, onFocus, single }) {
+function ChapterForm({ c, set, ctx, num, onFocus, single, select }) {
   const [openS, _setOpenS] = useState(null);
   const [openB1, setOpenB1] = useState(null);
+  const [openB, setOpenB] = useState(null);
+  // Klik w podglądzie: otwórz sekcję i blok, przewiń formularz do karty
+  useEffect(() => {
+    if (!select) return;
+    const s = (c.sections || []).find((x) => x.id === select.section);
+    if (!s) return;
+    if (single) setOpenB1(select.block || null);
+    else { _setOpenS(s.id); setOpenB(select.block || null); }
+    setTimeout(() => document.querySelector(`[data-card="${select.block || s.id}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" }), 60);
+  }, [select]);
   if (single) {
     // Single site: rozdział = jedna sekcja (tekst, przycisk, bloki)
     const s = c.sections?.[0] || newSection();
@@ -356,16 +421,19 @@ function ChapterForm({ c, set, ctx, num, onFocus, single }) {
     </div>`;
   }
   const setOpenS = (id) => { _setOpenS(id); onFocus(id ? c.sections.findIndex((s) => s.id === id) : -1); };
-  const [openB, setOpenB] = useState(null);
+  
   return html`<div class="panel__inner">
     <h2 class="h">${num} ${c.title || "Rozdział"}</h2>
     <${Text} label="Tytuł rozdziału" value=${c.title} onInput=${(v) => set((x) => { x.title = v; if (!x.slugLocked) x.slug = slugify(v); })} />
     <${Text} label="Adres strony" value=${c.slug} hint=${`/${c.slug || slugify(c.title)}/ — w trybie multi każdy rozdział to osobna strona`} onInput=${(v) => set((x) => { x.slug = slugify(v); x.slugLocked = true; })} />
-    <${FileField} label="Zdjęcie okładki (opcjonalne)" value=${c.cover} accept="image/*" folder="media" ctx=${ctx} hint="Szablon z Figmy: 1440×900, eksport 2x" onChange=${(p) => set((x) => { x.cover = p; })} />
+    <${FileField} label="Zdjęcie okładki (opcjonalne)" value=${c.cover} accept="image/*" folder="media" ctx=${ctx} expect=${{ w: 1440, h: 900 }} hint="Szablon z Figmy: 1440×900, eksport 2x" onChange=${(p) => set((x) => { x.cover = p; })} />
     <${FileField} label="„Pobierz wszystko” (ZIP pod spisem)" value=${c.downloadAll} accept=".zip" folder="files" ctx=${ctx} onChange=${(p) => set((x) => { x.downloadAll = p; })} />
     <div class="blocks">
       <span class="f__label">Sekcje</span>
-      ${(c.sections || []).map((s, i) => html`<${Row} key=${s.id} title=${`${num.replace(/^0/, "")}.${i} ${s.title || "Sekcja"}`} open=${openS === s.id}
+      ${(c.sections || []).map((s, i) => html`<${Row} key=${s.id} id=${s.id}
+        drag=${{ group: `sections-${c.id}`, index: i, onMove: (from, to) => set((x) => moveTo(x.sections, from, to)) }}
+        onDuplicate=${() => { const ns = freshIds(s); ns.title = `${s.title} (kopia)`; set((x) => { x.sections.splice(i + 1, 0, ns); }); setOpenS(ns.id); }}
+        title=${`${num.replace(/^0/, "")}.${i} ${s.title || "Sekcja"}`} open=${openS === s.id}
         onToggle=${() => setOpenS(openS === s.id ? null : s.id)}
         onUp=${i > 0 && (() => set((x) => move(x.sections, i, -1)))} onDown=${i < c.sections.length - 1 && (() => set((x) => move(x.sections, i, 1)))}
         onRemove=${() => { if (confirm(`Usunąć sekcję „${s.title || "bez tytułu"}” razem z blokami?`)) set((x) => { x.sections.splice(i, 1); }); }}>
@@ -385,8 +453,8 @@ function BrandForm({ b, set, ctx }) {
     <${Text} label="Tytuł dokumentu" value=${b.documentTitle} placeholder="Księga znaku" onInput=${(v) => up((x) => { x.documentTitle = v; })} /></div>
     <div class="grid2"><${Text} label="Wersja" value=${b.version} onInput=${(v) => up((x) => { x.version = v; })} />
     <${Text} label="Data" value=${b.date} placeholder="październik 2026" onInput=${(v) => up((x) => { x.date = v; })} /></div>
-    <${Select} label="Tryb strony" value=${b.mode} options=${[["multi", "Multi site — osobna strona na rozdział"], ["single", "Single site — wszystko na jednej stronie"]]} onChange=${(v) => up((x) => { x.mode = v; })} />
-    <${FileField} label="Logo w sidebarze (SVG)" value=${b.logo} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} hint="Ramka 210×72 z Figmy, przezroczysta" onChange=${(p) => up((x) => { x.logo = p; })} />
+    <${Select} label="Tryb strony" value=${b.mode} options=${[["multi", "Multi site — osobna strona na rozdział"], ["single", "Single site — wszystko na jednej stronie"]]} onChange=${(v) => ctx.switchMode(v)} />
+    <${FileField} label="Logo w sidebarze (SVG)" value=${b.logo} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 210, h: 72 }} hint="Ramka 210×72 z Figmy, przezroczysta" onChange=${(p) => up((x) => { x.logo = p; })} />
     <${Text} label="E-mail w stopce" value=${b.contact} onInput=${(v) => up((x) => { x.contact = v; })} />
     <${Color} label="Kolor akcentu (token brand/accent)" value=${b.accent || "#000000"} onInput=${(v) => up((x) => { x.accent = v; })} />
     <div class="blocks">
@@ -411,7 +479,8 @@ function BrandForm({ b, set, ctx }) {
 
 // ——— Podgląd ———
 const PRESETS = [390, 768, 1280, 1440, 1920, 2560];
-function Preview({ project, page, setPage, urls, focus, studio }) {
+function Preview({ project, page, setPage, urls, focus, studio, onSelect }) {
+  const selectRef = useRef(); selectRef.current = onSelect;
   const stage = useRef(), frame = useRef();
   const [width, setWidth] = useState(() => { try { return Number(localStorage.getItem("kh-preview-width")) || 1440; } catch { return 1440; } });
   const [box, setBox] = useState({ w: 800, h: 600 });
@@ -477,7 +546,11 @@ function Preview({ project, page, setPage, urls, focus, studio }) {
     if (!scrollTo(anchor)) pending.current = anchor;
   }, [focus, page, single]);
   useEffect(() => {
-    const on = (e) => { if (e.data?.khorei === "page" && e.source === frame.current?.contentWindow) setPage(e.data.page); };
+    const on = (e) => {
+      if (e.source !== frame.current?.contentWindow) return;
+      if (e.data?.khorei === "page") setPage(e.data.page);
+      if (e.data?.khorei === "select") selectRef.current?.({ section: e.data.section, block: e.data.block });
+    };
     addEventListener("message", on); return () => removeEventListener("message", on);
   }, []);
   const scale = Math.min(1, (box.w - 32) / width);
@@ -506,6 +579,8 @@ function App() {
   const [status, setStatus] = useState("");
   const [menu, setMenu] = useState(false);
   const [focus, setFocus] = useState(-1);
+  const [navOver, setNavOver] = useState(null);
+  const [select, setSelect] = useState(null); // klik w podglądzie → { section, block }
   const [studio, setStudio] = useState({ fonts: [], urls: {} }); // pliki ABC Areal — wspólne dla wszystkich projektów
   const saveTimer = useRef();
   const folderRef = useRef(null);
@@ -655,7 +730,29 @@ function App() {
       if (b.type === "palette") for (const i of b.items || []) if (i.name) n.push(i.name);
     return [...new Set(n)];
   }, [project]);
-  const ctx = { urls, addFile, paletteNames, colors };
+  // Zmiana trybu strony: single = rozdział to jedna sekcja, więc przy przejściu z multi pytamy o konwersję
+  function switchMode(mode) {
+    if (mode === project.brand.mode) return;
+    if (mode === "single") {
+      const many = project.chapters.filter((c) => (c.sections || []).length > 1).length;
+      const flatten = many > 0 && confirm(`W single site rozdział to jedna sekcja. ${many} ${many === 1 ? "rozdział ma" : "rozdziały mają"} kilka sekcji.\n\nOK — zamień każdą sekcję w osobny rozdział (nic nie zginie).\nAnuluj — zostaw strukturę (w podglądzie widać tylko pierwszą sekcję rozdziału).`);
+      update((p) => {
+        p.brand.mode = "single";
+        if (flatten) p.chapters = p.chapters.flatMap((c) => (c.sections || []).length > 1
+          ? c.sections.map((s) => ({ id: uid(), slug: "", title: s.title || c.title, cover: null, downloadAll: null, sections: [{ ...s, title: s.title || c.title }] }))
+          : [c]);
+      });
+      setStatus(flatten ? "Tryb single site — sekcje są teraz rozdziałami" : "Tryb single site");
+    } else {
+      update((p) => {
+        p.brand.mode = "multi";
+        for (const c of p.chapters) for (const s of c.sections || []) if (!s.title) s.title = c.title;
+      });
+      setStatus("Tryb multi site — każdy rozdział to osobna strona");
+    }
+    setView("brand"); setPage("index");
+  }
+  const ctx = { urls, addFile, paletteNames, colors, switchMode };
 
   // ——— Eksport i backup ———
   async function exportZip() {
@@ -788,9 +885,14 @@ function App() {
     <nav class="nav">
       <button type="button" class=${view === "brand" ? "is--on" : ""} onClick=${() => { setView("brand"); setPage("index"); }}>Marka i ustawienia</button>
       <span class="nav__label">Rozdziały</span>
-      <ol>${site.chapters.map((c, i) => html`<li class=${view === c.id ? "is--on" : ""}>
+      <ol>${site.chapters.map((c, i) => html`<li class=${`${view === c.id ? "is--on" : ""}${navOver === i ? " is--over" : ""}`} draggable="true"
+        onDragStart=${(e) => { e.dataTransfer.setData("kh/chapters", String(i)); e.dataTransfer.effectAllowed = "move"; }}
+        onDragOver=${(e) => { if (e.dataTransfer.types.includes("kh/chapters")) { e.preventDefault(); setNavOver(i); } }}
+        onDragLeave=${() => setNavOver(null)}
+        onDrop=${(e) => { const from = e.dataTransfer.getData("kh/chapters"); setNavOver(null); if (from !== "") { e.preventDefault(); update((p) => moveTo(p.chapters, Number(from), i)); } }}>
         <button type="button" onClick=${() => { setView(c.id); setPage(c.id); }}><span>${c.num}</span>${c.title || "Bez tytułu"}<em>${single ? "" : c.sections.length || ""}</em></button>
         <span class="nav__tools">
+          <button type="button" title="Duplikuj rozdział" onClick=${() => { const nc = freshIds(project.chapters[i]); nc.title = `${nc.title} (kopia)`; nc.slug = ""; nc.slugLocked = false; update((p) => { p.chapters.splice(i + 1, 0, nc); }); setView(nc.id); setPage(nc.id); }}>⧉</button>
           ${i > 0 && html`<button type="button" title="W górę" onClick=${() => update((p) => move(p.chapters, i, -1))}>↑</button>`}
           ${i < site.chapters.length - 1 && html`<button type="button" title="W dół" onClick=${() => update((p) => move(p.chapters, i, 1))}>↓</button>`}
           <button type="button" title="Usuń" onClick=${() => { if (confirm(`Usunąć rozdział „${c.title}”?`)) { update((p) => { p.chapters.splice(i, 1); }); setView("brand"); } }}>✕</button>
@@ -802,9 +904,15 @@ function App() {
       ${view === "brand" || !chapter
         ? html`<${BrandForm} b=${project.brand} ctx=${ctx} set=${(fn) => update((p) => fn(p.brand))} />`
         : html`<${ChapterForm} key=${chapter.id + (single ? "s" : "m")} single=${single} c=${chapter} num=${site.chapters[chapterIndex].num} ctx=${ctx}
-            onFocus=${setFocus} set=${(fn) => update((p) => { fn(p.chapters[chapterIndex]); })} />`}
+            onFocus=${setFocus} select=${select} set=${(fn) => update((p) => { fn(p.chapters[chapterIndex]); })} />`}
     </main>
     <${Preview} project=${project} page=${page} urls=${urls} focus=${focus} studio=${studio}
+      onSelect=${(sel) => {
+        const c = project.chapters.find((ch) => (ch.sections || []).some((x) => x.id === sel.section));
+        if (!c) return;
+        setView(c.id); if (!single) setPage(c.id);
+        setSelect({ ...sel, n: Date.now() });
+      }}
       setPage=${(slug) => { const c = site.chapters.find((x) => x.slug === slug); setPage(c ? c.id : "index"); setView(c ? c.id : "brand"); }} />
   </div>`;
 }

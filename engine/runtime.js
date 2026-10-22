@@ -32,7 +32,13 @@ export const RUNTIME = `
       const a = e.target.closest("a[data-page]");
       if (a) { e.preventDefault(); closeDrawer(); parent.postMessage({ khorei: "page", page: a.dataset.page, hash: a.dataset.hash || "" }, "*"); return; }
       const ext = e.target.closest("a[href]");
-      if (!ext) return;
+      if (!ext) {
+        // Klik w treść podglądu → edytor otwiera formularz tej sekcji / bloku
+        if (e.target.closest("button, [data-copy], [data-copy-url], .sidebar, .topbar")) return;
+        const block = e.target.closest('[data-kh="block"]'), sec = e.target.closest('[data-kh="section"]');
+        if (sec) parent.postMessage({ khorei: "select", section: sec.dataset.khId, block: block ? block.dataset.khId : null }, "*");
+        return;
+      }
       e.preventDefault(); // podgląd nie może nawigować ramki (kotwica w srcdoc otworzyłaby edytor w ramce)
       const href = ext.getAttribute("href");
       if (href.startsWith("#") && href.length > 1) { closeDrawer(); const el = document.getElementById(decodeURIComponent(href.slice(1))); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: "smooth" }); }

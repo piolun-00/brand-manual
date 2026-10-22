@@ -242,6 +242,7 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 .block__text { max-width: 75ch; }
 .block__empty { color: var(--text-subtle); }
 .gallery .block__meta { margin-bottom: 0; }
+.gallery__module { display: flex; flex-direction: column; gap: var(--layout-image-gap); }
 
 /* Długie słowa (adresy, nazwy plików) łamią się zamiast rozpychać kolumnę */
 .section-header__text, .block__text, .gallery__caption, .specimen__caption, .swatch__name, .icon-tile__name { overflow-wrap: anywhere; }

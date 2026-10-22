@@ -132,3 +132,9 @@ button { cursor: pointer; }
 
 .menu__usage { color: var(--muted); padding: 0 8px 6px; font-size: 12px; }
 .menu__usage b { color: var(--fg); font-weight: 500; }
+
+.f__warn { color: #b25c00; font-size: 12px; }
+.file.is--drop { outline: 2px dashed var(--fg); outline-offset: 4px; }
+.card__grip { cursor: grab; color: var(--muted); padding: 9px 2px 9px 8px; user-select: none; letter-spacing: -2px; }
+.card.is--over, .nav li.is--over { box-shadow: 0 -2px 0 var(--fg); }
+.nav li[draggable] { cursor: grab; }
