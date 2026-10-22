@@ -46,11 +46,11 @@ function luminance(hex) {
     .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
-function paletteMap(site) {
-  const m = {};
-  for (const c of site.chapters) for (const s of c.sections) for (const b of s.blocks || [])
-    if (b.type === "palette") for (const i of b.items || []) if (i.name && i.hex) m[i.name.trim().toLowerCase()] = i.hex;
-  return m;
+// Kolory marki definiowane raz w „Marka i ustawienia” (brand.colors). Bloki odwołują się do nich po id.
+function brandColors(site) { return (site.brand.colors || []).filter((c) => c && c.hex); }
+function colorById(site, id) {
+  const all = brandColors(site);
+  return all.find((c) => c.id === id) || all.find((c) => (c.name || "").trim().toLowerCase() === String(id || "").trim().toLowerCase()) || null;
 }
 function contrast(hexA, hexB) {
   const a = luminance(hexA), b = luminance(hexB);
@@ -134,25 +134,53 @@ function imagesRow(ctx, b) {
   </div>`;
 }
 
+// Nagłówek bloku: pozioma linia + opcjonalna nazwa i opis (jak przy specimenach znaku).
+function blockMeta(b, always = true) {
+  const label = (b.label || "").trim(), text = (b.text || "").trim();
+  if (!always && !label && !text) return "";
+  return `<div class="block__meta">${label ? `<span class="block__label text-body">${t(label)}</span>` : ""}${text ? `<span class="block__text text-body-regular">${t(text)}</span>` : ""}</div>`;
+}
+
 const BLOCKS = {
   specimens: (ctx, b) => `<div class="specimens">${(b.items || []).map((s, i) => `
     <div class="specimen"><div class="specimen__meta"><span class="specimen__label text-body">${t(s.label)}</span><span class="specimen__caption text-body-regular">${t(s.caption)}</span></div>
     <div class="specimen__stage">${s.svg ? `<img class="specimen__svg" src="${esc(ctx.url(s.svg))}" alt="${esc(s.label)}">` : `<span class="specimen__svg is--placeholder" style="width:${i % 2 ? 72 / 9.24 : 320 / 9.24}%;height:auto;aspect-ratio:${i % 2 ? "1/1" : "5/1"}"></span>`}</div></div>`).join("")}</div>`,
 
-  palette: (ctx, b) => `<div class="palette">${(b.items || []).map((c) => `
+  palette: (ctx, b, site) => {
+    const all = brandColors(site);
+    const items = b.colors && b.colors.length ? b.colors.map((id) => colorById(site, id)).filter(Boolean) : all;
+    if (!items.length) return `<p class="block__empty text-small">Dodaj kolory w „Marka i ustawienia”.</p>`;
+    return `<div class="palette">${items.map((c) => `
     <div class="swatch${isLight(c.hex) ? " is--light" : ""}">
-      <button class="swatch__chip" type="button" data-copy="${esc(c.hex)}" style="background:${esc(c.hex || "#ccc")}" aria-label="Kopiuj ${esc(c.hex)}"><span class="swatch__copy"><span class="button is--copy text-body"><span class="button__label">Kopiuj HEX</span></span></span></button>
+      <button class="swatch__chip" type="button" data-copy="${esc(c.hex)}" style="background:${esc(c.hex)}" aria-label="Kopiuj ${esc(c.hex)}"><span class="swatch__copy"><span class="button is--copy text-body"><span class="button__label">Kopiuj HEX</span></span></span></button>
       <div class="swatch__info"><span class="swatch__name text-label">${t(c.name)}</span><dl class="swatch__values text-small-relaxed">${[["HEX", c.hex], ["RGB", c.rgb], ["CMYK", c.cmyk], ["Pantone", c.pantone], ["RAL", c.ral]].filter(([, v]) => v).map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl></div>
+    </div>`).join("")}</div>`;
+  },
+
+  contrast: (ctx, b, site) => `<div class="contrast">${(b.pairs || []).map((p) => {
+      const bgC = colorById(site, p.bg), fgC = colorById(site, p.fg);
+      if (!bgC || !fgC) return "";
+      const c = contrast(bgC.hex, fgC.hex);
+      return `<div class="contrast__pair"><div class="contrast__sample" style="background:${esc(bgC.hex)};color:${esc(fgC.hex)}"><span class="contrast__aa text-sample">Aa</span></div>
+      <div class="contrast__badge${c.pass ? "" : " is--fail"}"><span class="contrast__icon" aria-hidden="true">${c.pass ? "✓" : "✕"}</span><span class="contrast__level text-label">${c.level}</span><span class="contrast__ratio text-small">${c.ratio}:1</span></div>
+      <span class="contrast__names text-small">${t(bgC.name)} / ${t(fgC.name)}</span></div>`;
+    }).join("")}</div>`,
+
+  // Ikony: 8 w rzędzie na desktopie (jak siatka), kopiowanie kodu SVG
+  icons: (ctx, b) => `<div class="icons">${(b.items || []).map((i) => `
+    <div class="icon-tile">
+      <button class="icon-tile__chip" type="button"${i.svg ? ` data-copy-url="${esc(ctx.url(i.svg))}"` : ""} aria-label="Kopiuj SVG ${esc(i.name)}">
+        ${i.svg ? `<img class="icon-tile__svg" src="${esc(ctx.url(i.svg))}" alt="">` : `<span class="icon-tile__placeholder"></span>`}
+        <span class="swatch__copy"><span class="button is--copy text-body"><span class="button__label">Kopiuj</span></span></span>
+      </button>
+      <span class="icon-tile__name text-body">${t(i.name)}</span>
     </div>`).join("")}</div>`,
 
-  contrast: (ctx, b, site) => {
-    const pal = paletteMap(site);
-    const hex = (n) => pal[String(n || "").trim().toLowerCase()] || (String(n).startsWith("#") ? n : "#000000");
-    return `<div class="contrast">${(b.pairs || []).map((p) => {
-      const bg = hex(p.bg), fg = hex(p.fg), c = contrast(bg, fg);
-      return `<div class="contrast__pair"><div class="contrast__sample" style="background:${esc(bg)};color:${esc(fg)}"><span class="contrast__aa text-sample">Aa</span></div>
-      <div class="contrast__badge${c.pass ? "" : " is--fail"}"><span class="contrast__icon" aria-hidden="true">${c.pass ? "✓" : "✕"}</span><span class="contrast__level text-label">${c.level}</span><span class="contrast__ratio text-small">${c.ratio}:1</span></div></div>`;
-    }).join("")}</div>`;
+  // Animacja: plik MP4 (odtwarza się sam, bez dźwięku, w pętli) albo kod embed (np. Vimeo, Lottie, Rive)
+  video: (ctx, b) => {
+    const ratio = b.ratio && b.ratio !== "auto" ? ` style="aspect-ratio:${b.ratio}"` : "";
+    if (b.source === "embed") return `<div class="video is--embed"${ratio}>${b.embed || `<span class="gallery__placeholder text-small">Kod embed</span>`}</div>`;
+    return `<div class="video"${ratio}>${b.file ? `<video src="${esc(ctx.url(b.file))}" autoplay muted loop playsinline></video>` : `<span class="gallery__placeholder text-small">Animacja MP4</span>`}</div>`;
   },
 
   typeface: (ctx, b) => {
@@ -166,10 +194,8 @@ const BLOCKS = {
     </div></div>`;
   },
 
-  typeScale: (ctx, b) => `<div class="type-scale">${(b.levels || []).map((l) => `
-    <div class="type-scale__row"><span class="type-scale__level text-small-strong">${t(l.name)}</span>
-    <div class="type-scale__body"><span class="type-scale__sample" style="--sample-size:${Number(l.size) || 16}px;--sample-lh:${(Number(l.lineHeight) || 120) / 100}">${t(b.sample)}</span>
-    <span class="type-scale__params text-small"><span class="type-scale__px">${esc(l.size)} / ${esc(l.lineHeight)}% / ${esc(l.tracking)} / ${esc(l.weight)}</span><span class="type-scale__pt">${esc(l.pt)} pt</span></span></div></div>`).join("")}</div>`
+  // Skala typograficzna jako grafika (SVG/PNG) — bez webfontu klienta. Szerokość kolumny, wysokość z pliku.
+  typeScale: (ctx, b) => `<div class="graphic">${b.image ? `<img class="graphic__img" src="${esc(ctx.url(b.image))}" alt="${esc(b.label || "Skala typograficzna")}">` : `<span class="graphic__placeholder text-small">Skala typograficzna — SVG lub PNG, szerokość 924 px</span>`}</div>`
 };
 
 function section(ctx, s, site) {
@@ -181,11 +207,15 @@ function section(ctx, s, site) {
     else groups.push(b.type === "images" ? { type: "gallery", rows: [b] } : b);
   }
   return `<section class="section" id="${s.anchor}">${sectionHeader(ctx, s)}${groups.map((g) =>
-    g.type === "gallery" ? `<div class="block gallery">${g.rows.map((r) => imagesRow(ctx, r)).join("")}</div>`
-      : BLOCKS[g.type] ? `<div class="block">${BLOCKS[g.type](ctx, g, site)}</div>` : "").join("")}</section>`;
+    g.type === "gallery" ? `<div class="block gallery">${g.rows.map((r) => blockMeta(r, false) + imagesRow(ctx, r)).join("")}</div>`
+      : BLOCKS[g.type] ? `<div class="block is--${g.type}">${g.type === "specimens" ? blockMeta(g, false) : blockMeta(g)}${BLOCKS[g.type](ctx, g, site)}</div>` : "").join("")}</section>`;
 }
 
-// Single site: jedna okładka manuala na start, rozdziały bez okładek — same sekcje jedna pod drugą.
+// Single site: jedna okładka manuala, a rozdział = jedna sekcja (numer 01, 02…, bez podsekcji).
+function singleChapter(ctx, c, site) {
+  const s = { ...(c.sections?.[0] || {}), title: c.title, num: c.num, anchor: c.slug };
+  return section(ctx, s, site);
+}
 function chapterContent(ctx, c, site, single) {
   return `<div class="chapter"${single ? ` id="${c.slug}"` : ""}>
   ${single ? "" : cover(ctx, { kind: "chapter", first: c.num, second: c.title, image: c.cover })}
@@ -208,14 +238,12 @@ function footer(site) {
 }
 
 // ——— Style strony ———
-export function siteCss(project, figmaVars, baseCss, url) {
+// Cały manual w ABC Areal. Pliki webfontu dokłada studio (raz, w edytorze) — nie są częścią projektu klienta.
+export function siteCss(project, figmaVars, baseCss, url, studioFonts = []) {
   const b = project.brand || {};
   const overrides = {};
   if (b.accent) overrides["brand/accent"] = b.accent;
-  if (b.brandFont?.family) overrides["brand/font/family"] = b.brandFont.family;
-  if (b.uiFont?.family) overrides["font/ui/family"] = b.uiFont.family;
-  const ui = { family: b.uiFont?.family || "ABC Areal Variable", files: b.uiFont?.files || [] };
-  return [fontFaces([ui, b.brandFont], url), tokensCss(figmaVars, overrides), baseCss].join("\n");
+  return [fontFaces([{ family: "ABC Areal Variable", files: studioFonts }], url), tokensCss(figmaVars, overrides), baseCss].join("\n");
 }
 
 // ——— Strona ———
@@ -230,7 +258,7 @@ export function renderPage(project, page, ctx) {
   let content, showFooter = true;
   if (!chapter) {
     content = cover(ctx, { kind: "start", first: b.name, second: b.documentTitle, version: `Wersja ${b.version || ""} · ${b.date || ""}` })
-      + (single ? site.chapters.map((c) => chapterContent(ctx, c, site, true)).join("") : "");
+      + (single ? `<div class="main">${site.chapters.map((c) => singleChapter(ctx, c, site)).join("")}</div>` : "");
     showFooter = single;
   } else content = chapterContent(ctx, chapter, site, false);
 
@@ -260,12 +288,12 @@ ${showFooter ? footer(site) : ""}
 
 // ——— Cała strona do eksportu ———
 // Linki względne, więc strona działa z dowolnego folderu na serwerze (np. klient.pl/brandbook/).
-export function renderSite(project, figmaVars, baseCss) {
+export function renderSite(project, figmaVars, baseCss, studioFonts = []) {
   const site = prepare(project);
   const single = site.brand.mode === "single";
   const pages = ["index", ...(single ? [] : site.chapters.map((c) => c.slug))];
   const files = [];
-  const css = siteCss(project, figmaVars, baseCss, (p) => `../${p}`); // style.css leży w assets/
+  const css = siteCss(project, figmaVars, baseCss, (p) => `../${p}`, studioFonts); // style.css leży w assets/
   files.push({ path: "assets/style.css", content: css });
   for (const page of pages) {
     const root = page === "index" ? "" : "../";

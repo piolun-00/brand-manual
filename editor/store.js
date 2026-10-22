@@ -29,6 +29,7 @@ export const getProject = (id) => tx("projects", "readonly", (s) => s.get(id));
 export const putProject = (p) => tx("projects", "readwrite", (s) => s.put({ ...p, updated: Date.now() }));
 
 export const putAsset = (pid, path, blob) => tx("assets", "readwrite", (s) => s.put(blob, `${pid}/${path}`));
+export const deleteAsset = (pid, path) => tx("assets", "readwrite", (s) => s.delete(`${pid}/${path}`));
 export const getAsset = (pid, path) => tx("assets", "readonly", (s) => s.get(`${pid}/${path}`));
 export async function assetKeys(pid) {
   const keys = await tx("assets", "readonly", (s) => s.getAllKeys());

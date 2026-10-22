@@ -12,10 +12,11 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 // ——— Dane silnika ———
-const [FIGMA, BASE_CSS, SAMPLE] = await Promise.all([
+const [FIGMA, BASE_CSS, SAMPLE, SAMPLE_SINGLE] = await Promise.all([
   fetch("engine/figma-variables.json").then((r) => r.json()),
   fetch("engine/base.css").then((r) => r.text()),
-  fetch("engine/sample.json").then((r) => r.json())
+  fetch("engine/sample.json").then((r) => r.json()),
+  fetch("engine/sample-single.json").then((r) => r.json())
 ]);
 
 const BLOCK_TYPES = {
@@ -23,26 +24,52 @@ const BLOCK_TYPES = {
   specimens: "Specimeny znaku",
   palette: "Paleta",
   contrast: "Pary kontrastowe",
+  icons: "Ikony",
   typeface: "Krój",
-  typeScale: "Skala typograficzna"
+  typeScale: "Skala typograficzna (grafika)",
+  video: "Animacja / wideo"
 };
 const newBlock = (type) => ({
   images: { layout: "2-equal", ratio: "4/3", items: [{ image: null, caption: "" }, { image: null, caption: "" }] },
   specimens: { items: [{ label: "Logo", caption: "", svg: null }, { label: "Symbol", caption: "", svg: null }] },
-  palette: { items: [{ name: "", hex: "#000000", rgb: "", cmyk: "", pantone: "", ral: "" }] },
-  contrast: { pairs: [{ bg: "", fg: "" }] },
+  palette: { colors: [] },
+  contrast: { pairs: [] },
+  icons: { items: [{ name: "", svg: null }] },
+  video: { source: "file", file: null, embed: "", ratio: "16/9" },
   typeface: { name: "", foundry: "", weights: "", svg: null, license: { kind: "note", note: "Krój komercyjny — do użycia wymagana licencja.", linkLabel: "Przejdź do kroju", href: "", file: null } },
-  typeScale: { sample: "Marka w ruchu", levels: [{ name: "H1", size: 56, lineHeight: 110, tracking: "0", weight: "Medium", pt: 42 }] }
+  typeScale: { image: null }
 }[type]);
-const emptyProject = () => ({
-  version: 1,
-  brand: { ...clone(SAMPLE.brand), name: "Nazwa marki" },
-  chapters: SAMPLE.chapters.map((c) => ({ id: uid(), slug: c.slug, title: c.title, cover: null, downloadAll: null, sections: [] }))
-});
-const withIds = (p) => {
-  for (const c of p.chapters) { c.id ||= uid(); for (const s of c.sections || []) { s.id ||= uid(); for (const b of s.blocks || []) b.id ||= uid(); } }
+// Nowy rozdział / sekcja zaczyna się od tekstu i zdjęcia — nic więcej.
+const newSection = (title = "") => ({ id: uid(), title, text: [""], action: { kind: "none", label: "", file: null, href: "" },
+  blocks: [{ id: uid(), type: "images", label: "", text: "", ...newBlock("images"), layout: "1", items: [{ image: null, caption: "" }] }] });
+const newChapter = (title = "Nowy rozdział") => ({ id: uid(), slug: slugify(title), title, cover: null, downloadAll: null, sections: [newSection("Wprowadzenie")] });
+
+// Starsze projekty: kolory z bloków palety → kolory marki, pary kontrastowe po id, bez wyboru krojów.
+function migrate(p) {
+  const b = p.brand ||= {};
+  if (!Array.isArray(b.colors)) {
+    b.colors = [];
+    for (const c of p.chapters || []) for (const s of c.sections || []) for (const bl of s.blocks || [])
+      if (bl.type === "palette" && bl.items) for (const it of bl.items) if (!b.colors.some((x) => x.name === it.name)) b.colors.push({ id: uid(), ...it });
+  }
+  const byName = (n) => b.colors.find((x) => x.id === n || (x.name || "").toLowerCase() === String(n || "").toLowerCase())?.id || "";
+  for (const c of p.chapters || []) {
+    c.id ||= uid();
+    for (const s of c.sections || []) {
+      s.id ||= uid();
+      for (const bl of s.blocks || []) {
+        bl.id ||= uid();
+        if (bl.type === "palette" && bl.items) { delete bl.items; bl.colors = []; }
+        if (bl.type === "contrast") bl.pairs = (bl.pairs || []).map((x) => ({ bg: byName(x.bg), fg: byName(x.fg) }));
+        if (bl.type === "typeScale" && bl.levels) { delete bl.levels; delete bl.sample; bl.image ??= null; }
+      }
+    }
+  }
+  delete b.brandFont; delete b.uiFont;
+  p.version = 2;
   return p;
-};
+}
+const withIds = migrate;
 
 // ——— Pliki: obrazy zmniejszane do rozmiaru z szablonów eksportu (dłuższy bok 1848 px) ———
 const MAX = 1848;
@@ -162,33 +189,56 @@ function SpecimensBlock({ b, set, ctx }) {
         hint="Ramka 924×364 z Figmy, przezroczysta, znak na środku" onChange=${(p) => set((x) => { x.items[i].svg = p; })} />
     </div>`} />`;
 }
-function PaletteBlock({ b, set }) {
-  return html`<${ListBlock} items=${b.items || []} addLabel="Dodaj kolor"
-    add=${() => set((x) => { x.items.push({ name: "", hex: "#000000", rgb: "", cmyk: "", pantone: "", ral: "" }); })}
-    render=${(c, i) => html`<div class="sub">
-      <div class="sub__head"><b>${c.name || `Kolor ${i + 1}`}</b><span>
-        <button type="button" class="link" onClick=${() => set((x) => move(x.items, i, -1))}>↑</button>
-        <button type="button" class="link" onClick=${() => set((x) => move(x.items, i, 1))}>↓</button>
-        <button type="button" class="link" onClick=${() => set((x) => { x.items.splice(i, 1); })}>Usuń</button></span></div>
-      <div class="grid2"><${Text} label="Nazwa" value=${c.name} onInput=${(v) => set((x) => { x.items[i].name = v; })} />
-      <${Color} label="HEX (kopiowany po kliknięciu)" value=${c.hex} onInput=${(v) => set((x) => { x.items[i].hex = v; })} /></div>
-      <div class="grid2"><${Text} label="RGB" value=${c.rgb} placeholder="28 28 28" onInput=${(v) => set((x) => { x.items[i].rgb = v; })} />
-      <${Text} label="CMYK" value=${c.cmyk} placeholder="0 0 0 95" onInput=${(v) => set((x) => { x.items[i].cmyk = v; })} /></div>
-      <div class="grid2"><${Text} label="Pantone" value=${c.pantone} onInput=${(v) => set((x) => { x.items[i].pantone = v; })} />
-      <${Text} label="RAL" value=${c.ral} onInput=${(v) => set((x) => { x.items[i].ral = v; })} /></div>
-    </div>`} />`;
+function PaletteBlock({ b, set, ctx }) {
+  const all = ctx.colors;
+  const sel = b.colors || [];
+  if (!all.length) return html`<p class="note">Kolory dodajesz raz w „Marka i ustawienia” → Kolory marki. Tu wybierasz, które pokazać.</p>`;
+  return html`<span class="f__label">Pokaż kolory (nic nie zaznaczone = wszystkie)</span>
+    <div class="checks">${all.map((c) => html`<label class="check"><input type="checkbox" checked=${sel.includes(c.id)}
+      onChange=${(e) => set((x) => { const cur = x.colors || []; x.colors = e.target.checked ? all.map((k) => k.id).filter((id) => id === c.id || cur.includes(id)) : cur.filter((id) => id !== c.id); })} />
+      <span class="check__chip" style=${`background:${c.hex}`}></span>${c.name || c.hex}</label>`)}</div>`;
 }
 function ContrastBlock({ b, set, ctx }) {
-  const names = ctx.paletteNames;
-  const opts = [["", "— wybierz —"], ...names.map((n) => [n, n])];
-  return html`${!names.length && html`<p class="note">Najpierw dodaj blok „Paleta” w którejś sekcji — tu wybierasz kolory z niej.</p>`}
-    <${ListBlock} items=${b.pairs || []} addLabel="Dodaj parę"
-    add=${() => set((x) => { x.pairs.push({ bg: names[0] || "", fg: names[1] || "" }); })}
+  const all = ctx.colors;
+  const opts = [["", "— wybierz kolor —"], ...all.map((c) => [c.id, c.name || c.hex])];
+  if (!all.length) return html`<p class="note">Najpierw dodaj kolory w „Marka i ustawienia” → Kolory marki.</p>`;
+  return html`<${ListBlock} items=${b.pairs || []} addLabel="Dodaj parę"
+    add=${() => set((x) => { (x.pairs ||= []).push({ bg: "", fg: "" }); })}
     render=${(p, i) => html`<div class="sub grid2x">
       <${Select} label="Tło" value=${p.bg} options=${opts} onChange=${(v) => set((x) => { x.pairs[i].bg = v; })} />
       <${Select} label="Tekst" value=${p.fg} options=${opts} onChange=${(v) => set((x) => { x.pairs[i].fg = v; })} />
       <button type="button" class="link" onClick=${() => set((x) => { x.pairs.splice(i, 1); })}>Usuń</button>
-    </div>`} /><p class="note">Poziom WCAG liczy się sam.</p>`;
+    </div>`} /><p class="note">Poziom WCAG liczy się sam. Para pojawia się w podglądzie, gdy wybierzesz oba kolory.</p>`;
+}
+function IconsBlock({ b, set, ctx }) {
+  const ref = useRef();
+  return html`<${ListBlock} items=${b.items || []} addLabel="Dodaj ikonę"
+    add=${() => set((x) => { (x.items ||= []).push({ name: "", svg: null }); })}
+    render=${(it, i) => html`<div class="sub">
+      <div class="sub__head"><b>${it.name || `Ikona ${i + 1}`}</b><span>
+        <button type="button" class="link" onClick=${() => set((x) => move(x.items, i, -1))}>↑</button>
+        <button type="button" class="link" onClick=${() => set((x) => move(x.items, i, 1))}>↓</button>
+        <button type="button" class="link" onClick=${() => set((x) => { x.items.splice(i, 1); })}>Usuń</button></span></div>
+      <${Text} label="Nazwa" value=${it.name} onInput=${(v) => set((x) => { x.items[i].name = v; })} />
+      <${FileField} label="Plik SVG" value=${it.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} onChange=${(p) => set((x) => { x.items[i].svg = p; })} />
+    </div>`} />
+    <button type="button" class="btn is--add" onClick=${() => ref.current.click()}>+ Wgraj wiele SVG naraz</button>
+    <input ref=${ref} type="file" accept=".svg,image/svg+xml" multiple hidden onChange=${async (e) => {
+      const files = [...e.target.files]; e.target.value = "";
+      const added = [];
+      for (const f of files) added.push({ name: f.name.replace(/\.svg$/i, "").replace(/[-_]+/g, " "), svg: await ctx.addFile(f, "media") });
+      set((x) => { x.items = [...(x.items || []).filter((k) => k.svg || k.name), ...added]; });
+    }} />
+    <p class="note">8 w rzędzie na desktopie, 6 na tablecie, 4 na telefonie. Kliknięcie kopiuje kod SVG.</p>`;
+}
+function VideoBlock({ b, set, ctx }) {
+  return html`<div class="grid2">
+      <${Select} label="Źródło" value=${b.source || "file"} options=${[["file", "Plik MP4"], ["embed", "Kod embed (Vimeo, Lottie, Rive…)"]]} onChange=${(v) => set((x) => { x.source = v; })} />
+      <${Select} label="Proporcje" value=${b.ratio || "16/9"} options=${[["16/9", "16:9"], ["4/3", "4:3"], ["1/1", "1:1"], ["3/4", "3:4"], ["auto", "Z pliku"]]} onChange=${(v) => set((x) => { x.ratio = v; })} />
+    </div>
+    ${(b.source || "file") === "file"
+      ? html`<${FileField} label="Plik MP4" value=${b.file} accept="video/mp4,video/webm" folder="media" ctx=${ctx} hint="Odtwarza się sam, bez dźwięku, w pętli. Najlepiej do 10 MB." onChange=${(p) => set((x) => { x.file = p; })} />`
+      : html`<${Text} label="Kod embed" multiline value=${b.embed} placeholder="<iframe src=…></iframe>" hint="Wklej kod z serwisu. W podglądzie edytora część serwisów może się nie wyświetlić — w eksporcie zadziała." onInput=${(v) => set((x) => { x.embed = v; })} />`}`;
 }
 function TypefaceBlock({ b, set, ctx }) {
   const l = b.license || {};
@@ -204,32 +254,19 @@ function TypefaceBlock({ b, set, ctx }) {
       : html`<div class="grid2"><${Text} label="Tekst linku" value=${l.linkLabel} onInput=${(v) => set((x) => { x.license = { ...l, linkLabel: v }; })} />
         <${Text} label="Adres odlewni" value=${l.href} placeholder="https://" onInput=${(v) => set((x) => { x.license = { ...l, href: v }; })} /></div>`}`;
 }
-function TypeScaleBlock({ b, set }) {
-  return html`<${Text} label="Tekst próbki" value=${b.sample} onInput=${(v) => set((x) => { x.sample = v; })} />
-    <${ListBlock} items=${b.levels || []} addLabel="Dodaj stopień"
-    add=${() => set((x) => { x.levels.push({ name: "", size: 16, lineHeight: 140, tracking: "0", weight: "Regular", pt: 12 }); })}
-    render=${(l, i) => html`<div class="sub">
-      <div class="sub__head"><b>${l.name || `Stopień ${i + 1}`}</b><span>
-        <button type="button" class="link" onClick=${() => set((x) => move(x.levels, i, -1))}>↑</button>
-        <button type="button" class="link" onClick=${() => set((x) => move(x.levels, i, 1))}>↓</button>
-        <button type="button" class="link" onClick=${() => set((x) => { x.levels.splice(i, 1); })}>Usuń</button></span></div>
-      <div class="grid3"><${Text} label="Nazwa" value=${l.name} onInput=${(v) => set((x) => { x.levels[i].name = v; })} />
-      <${Num} label="Rozmiar px" value=${l.size} onInput=${(v) => set((x) => { x.levels[i].size = v; })} />
-      <${Num} label="Interlinia %" value=${l.lineHeight} onInput=${(v) => set((x) => { x.levels[i].lineHeight = v; })} /></div>
-      <div class="grid3"><${Text} label="Światło" value=${l.tracking} onInput=${(v) => set((x) => { x.levels[i].tracking = v; })} />
-      <${Text} label="Odmiana" value=${l.weight} onInput=${(v) => set((x) => { x.levels[i].weight = v; })} />
-      <${Num} label="Druk pt" value=${l.pt} onInput=${(v) => set((x) => { x.levels[i].pt = v; })} /></div>
-    </div>`} />`;
+function TypeScaleBlock({ b, set, ctx }) {
+  return html`<${FileField} label="Grafika skali (SVG lub PNG)" value=${b.image} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx}
+    hint="Szerokość 924 px (PNG: 1848 px), wysokość dowolna — strona dopasuje ją sama. Bez webfontu klienta, więc bez problemu z licencją." onChange=${(p) => set((x) => { x.image = p; })} />`;
 }
-const BLOCK_FORMS = { images: ImagesBlock, specimens: SpecimensBlock, palette: PaletteBlock, contrast: ContrastBlock, typeface: TypefaceBlock, typeScale: TypeScaleBlock };
+const BLOCK_FORMS = { images: ImagesBlock, specimens: SpecimensBlock, palette: PaletteBlock, contrast: ContrastBlock, icons: IconsBlock, typeface: TypefaceBlock, typeScale: TypeScaleBlock, video: VideoBlock };
 
 // ——— Sekcja ———
-function SectionForm({ s, set, ctx, open, setOpen }) {
+function SectionForm({ s, set, ctx, open, setOpen, noTitle }) {
   const text = s.text?.length ? s.text : [""];
   const twoCol = text.filter((x) => x.trim()).length > 1;
   const a = s.action || { kind: "none" };
   return html`
-    <${Text} label="Tytuł sekcji" value=${s.title} onInput=${(v) => set((x) => { x.title = v; })} />
+    ${!noTitle && html`<${Text} label="Tytuł sekcji" value=${s.title} onInput=${(v) => set((x) => { x.title = v; })} />`}
     <${Text} label="Akapit 1" multiline value=${text[0]} onInput=${(v) => set((x) => { x.text = [v, ...(text.slice(1))]; })} />
     ${text.length > 1
       ? html`<${Text} label="Akapit 2 — tekst w dwóch kolumnach" multiline value=${text[1]} onInput=${(v) => set((x) => { x.text = [text[0], v]; })} />
@@ -251,10 +288,12 @@ function SectionForm({ s, set, ctx, open, setOpen }) {
           sub=${b.type === "images" ? `${{ "2-equal": "2 równe", "wide-narrow": "szerokie + wąskie", "narrow-wide": "wąskie + szerokie", "1": "1 zdjęcie" }[b.layout]} · ${b.ratio === "auto" ? "oryginalne" : b.ratio.replace("/", ":")}` : ""}
           onUp=${i > 0 && (() => set((x) => move(x.blocks, i, -1)))} onDown=${i < s.blocks.length - 1 && (() => set((x) => move(x.blocks, i, 1)))}
           onRemove=${() => set((x) => { x.blocks.splice(i, 1); })}>
+          <div class="grid2"><${Text} label="Nazwa nad blokiem (opcjonalna)" value=${b.label} onInput=${(v) => setB((x) => { x.label = v; })} />
+          <${Text} label="Opis (opcjonalny)" value=${b.text} onInput=${(v) => setB((x) => { x.text = v; })} /></div>
           ${Form && html`<${Form} b=${b} set=${setB} ctx=${ctx} />`}
         <//>`;
       })}
-      <select class="add" value="" onChange=${(e) => { const type = e.target.value; e.target.value = ""; if (!type) return; const id = uid(); set((x) => { (x.blocks ||= []).push({ id, type, ...newBlock(type) }); }); setOpen(id); }}>
+      <select class="add" value="" onChange=${(e) => { const type = e.target.value; e.target.value = ""; if (!type) return; const id = uid(); set((x) => { (x.blocks ||= []).push({ id, type, label: "", text: "", ...newBlock(type) }); }); setOpen(id); }}>
         <option value="">+ Dodaj blok…</option>
         ${Object.entries(BLOCK_TYPES).map(([k, l]) => html`<option value=${k}>${l}</option>`)}
       </select>
@@ -262,8 +301,20 @@ function SectionForm({ s, set, ctx, open, setOpen }) {
 }
 
 // ——— Rozdział ———
-function ChapterForm({ c, set, ctx, num, onFocus }) {
+function ChapterForm({ c, set, ctx, num, onFocus, single }) {
   const [openS, _setOpenS] = useState(null);
+  const [openB1, setOpenB1] = useState(null);
+  if (single) {
+    // Single site: rozdział = jedna sekcja (tekst, przycisk, bloki)
+    const s = c.sections?.[0] || newSection();
+    return html`<div class="panel__inner">
+      <h2 class="h">${num} ${c.title || "Rozdział"}</h2>
+      <${Text} label="Tytuł rozdziału" value=${c.title} onInput=${(v) => set((x) => { x.title = v; if (!x.slugLocked) x.slug = slugify(v); })} />
+      <${SectionForm} s=${s} noTitle ctx=${ctx} open=${openB1} setOpen=${setOpenB1}
+        set=${(fn) => set((x) => { if (!x.sections?.length) x.sections = [newSection()]; fn(x.sections[0]); })} />
+      ${(c.sections?.length || 0) > 1 && html`<p class="note">Ten rozdział ma ${c.sections.length} sekcje z trybu multi site. W single site widać tylko pierwszą.</p>`}
+    </div>`;
+  }
   const setOpenS = (id) => { _setOpenS(id); onFocus(id ? c.sections.findIndex((s) => s.id === id) : -1); };
   const [openB, setOpenB] = useState(null);
   return html`<div class="panel__inner">
@@ -280,26 +331,12 @@ function ChapterForm({ c, set, ctx, num, onFocus }) {
         onRemove=${() => { if (confirm(`Usunąć sekcję „${s.title || "bez tytułu"}” razem z blokami?`)) set((x) => { x.sections.splice(i, 1); }); }}>
         <${SectionForm} s=${s} set=${(fn) => set((x) => fn(x.sections[i]))} ctx=${ctx} open=${openB} setOpen=${setOpenB} />
       <//>`)}
-      <button type="button" class="btn is--add" onClick=${() => { const id = uid(); set((x) => { (x.sections ||= []).push({ id, title: "", text: [""], action: { kind: "none", label: "", file: null, href: "" }, blocks: [] }); }); setOpenS(id); }}>+ Dodaj sekcję</button>
+      <button type="button" class="btn is--add" onClick=${() => { const ns = newSection(); set((x) => { (x.sections ||= []).push(ns); }); setOpenS(ns.id); }}>+ Dodaj sekcję</button>
     </div>
   </div>`;
 }
 
 // ——— Marka ———
-function FontForm({ label, font, set, ctx, hint }) {
-  const f = font || { family: "", files: [] };
-  const files = f.files || [];
-  const fileOf = (style) => files.find((x) => x.style === style)?.path || null;
-  const setFile = (style, p) => set((b) => { const nf = { ...f, files: files.filter((x) => x.style !== style) }; if (p) nf.files.push({ style, path: p }); return nf; });
-  return html`<div class="sub">
-    <b class="sub__title">${label}</b>
-    <${Text} label="Nazwa rodziny" value=${f.family} hint=${hint} onInput=${(v) => set(() => ({ ...f, family: v }))} />
-    <div class="grid2">
-      <${FileField} label="Plik — prosty" value=${fileOf("normal")} accept=".woff2,.woff,.ttf,.otf" folder="fonts" ctx=${ctx} onChange=${(p) => setFile("normal", p)} />
-      <${FileField} label="Plik — kursywa" value=${fileOf("italic")} accept=".woff2,.woff,.ttf,.otf" folder="fonts" ctx=${ctx} onChange=${(p) => setFile("italic", p)} />
-    </div>
-  </div>`;
-}
 function BrandForm({ b, set, ctx }) {
   const up = (fn) => set((x) => fn(x));
   return html`<div class="panel__inner">
@@ -312,16 +349,29 @@ function BrandForm({ b, set, ctx }) {
     <${FileField} label="Logo w sidebarze (SVG)" value=${b.logo} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} hint="Ramka 210×72 z Figmy, przezroczysta" onChange=${(p) => up((x) => { x.logo = p; })} />
     <${Text} label="E-mail w stopce" value=${b.contact} onInput=${(v) => up((x) => { x.contact = v; })} />
     <${Color} label="Kolor akcentu (token brand/accent)" value=${b.accent || "#000000"} onInput=${(v) => up((x) => { x.accent = v; })} />
-    <${FontForm} label="Krój marki (próbki w skali typograficznej)" font=${b.brandFont} ctx=${ctx} hint="Dokładnie jak w systemie, np. Aujournuit"
-      set=${(fn) => up((x) => { x.brandFont = fn(x.brandFont); })} />
-    <${FontForm} label="Krój manuala (interfejs)" font=${b.uiFont} ctx=${ctx} hint="Domyślnie ABC Areal Variable. Pliki tylko z licencją webową."
-      set=${(fn) => up((x) => { x.uiFont = fn(x.uiFont); })} />
+    <div class="blocks">
+      <span class="f__label">Kolory marki — z nich korzystają bloki „Paleta” i „Pary kontrastowe”</span>
+      ${(b.colors || []).map((c, i) => html`<div class="sub">
+        <div class="sub__head"><b><span class="check__chip" style=${`background:${c.hex}`}></span> ${c.name || `Kolor ${i + 1}`}</b><span>
+          <button type="button" class="link" onClick=${() => up((x) => move(x.colors, i, -1))}>↑</button>
+          <button type="button" class="link" onClick=${() => up((x) => move(x.colors, i, 1))}>↓</button>
+          <button type="button" class="link" onClick=${() => up((x) => { x.colors.splice(i, 1); })}>Usuń</button></span></div>
+        <div class="grid2"><${Text} label="Nazwa" value=${c.name} onInput=${(v) => up((x) => { x.colors[i].name = v; })} />
+        <${Color} label="HEX" value=${c.hex} onInput=${(v) => up((x) => { x.colors[i].hex = v; })} /></div>
+        <div class="grid2"><${Text} label="RGB" value=${c.rgb} placeholder="28 28 28" onInput=${(v) => up((x) => { x.colors[i].rgb = v; })} />
+        <${Text} label="CMYK" value=${c.cmyk} placeholder="0 0 0 95" onInput=${(v) => up((x) => { x.colors[i].cmyk = v; })} /></div>
+        <div class="grid2"><${Text} label="Pantone" value=${c.pantone} onInput=${(v) => up((x) => { x.colors[i].pantone = v; })} />
+        <${Text} label="RAL" value=${c.ral} onInput=${(v) => up((x) => { x.colors[i].ral = v; })} /></div>
+      </div>`)}
+      <button type="button" class="btn is--add" onClick=${() => up((x) => { (x.colors ||= []).push({ id: uid(), name: "", hex: "#000000", rgb: "", cmyk: "", pantone: "", ral: "" }); })}>+ Dodaj kolor</button>
+    </div>
+    <p class="note">Cały manual jest składany w ABC Areal — krój ustawiasz raz dla studia (menu projektu → Krój ABC Areal).</p>
   </div>`;
 }
 
 // ——— Podgląd ———
 const PRESETS = [390, 768, 1280, 1440, 1920, 2560];
-function Preview({ project, page, setPage, urls, focus }) {
+function Preview({ project, page, setPage, urls, focus, studio }) {
   const stage = useRef(), frame = useRef();
   const [width, setWidth] = useState(() => { try { return Number(localStorage.getItem("kh-preview-width")) || 1440; } catch { return 1440; } });
   const [box, setBox] = useState({ w: 800, h: 600 });
@@ -332,15 +382,15 @@ function Preview({ project, page, setPage, urls, focus }) {
   useEffect(() => { try { localStorage.setItem("kh-preview-width", String(width)); } catch {} }, [width]);
   const single = project.brand.mode === "single";
   const doc = useMemo(() => {
-    const url = (p) => urls[p] || p;
+    const url = (p) => urls[p] || studio.urls[p] || p;
     const ctx = {
       preview: true, url,
       link: (target) => target === "index" ? `href="#" data-page="index"` : single ? `href="#${target}"` : `href="#" data-page="${target}"`,
-      css: { inline: siteCss(project, FIGMA, BASE_CSS, url) }
+      css: { inline: siteCss(project, FIGMA, BASE_CSS, url, studio.fonts) }
     };
     const slug = page === "index" ? "index" : (prepare(project).chapters.find((c) => c.id === page)?.slug || "index");
     return renderPage(project, single ? "index" : slug, ctx);
-  }, [project, page, urls, single]);
+  }, [project, page, urls, single, studio]);
   const pending = useRef(null);
   const scrollTo = (anchor) => {
     if (!frame.current || frame.current.dataset.loading) return false;
@@ -402,14 +452,33 @@ function App() {
   const [status, setStatus] = useState("");
   const [menu, setMenu] = useState(false);
   const [focus, setFocus] = useState(-1);
+  const [studio, setStudio] = useState({ fonts: [], urls: {} }); // pliki ABC Areal — wspólne dla wszystkich projektów
   const saveTimer = useRef();
+
+  // Krój studia: pliki trzymane w przeglądarce pod kluczem „_studio”, trafiają do każdego eksportu
+  async function loadStudio() {
+    const fonts = [], u = {};
+    for (const path of await store.assetKeys("_studio")) {
+      const blob = await store.getAsset("_studio", path);
+      if (!blob) continue;
+      u[path] = URL.createObjectURL(blob);
+      fonts.push({ path, style: /italic/i.test(path) ? "italic" : "normal" });
+    }
+    setStudio({ fonts, urls: u });
+  }
+  async function setStudioFont(style, file) {
+    for (const f of studio.fonts.filter((x) => x.style === style)) await store.deleteAsset("_studio", f.path);
+    if (file) await store.putAsset("_studio", `fonts/abc-areal-${style}.${file.name.split(".").pop().toLowerCase()}`, file);
+    await loadStudio(); setStatus(file ? "Krój zapisany dla wszystkich projektów" : "Krój usunięty");
+  }
 
   const refreshList = useCallback(async () => setProjects(await store.listProjects()), []);
   useEffect(() => { (async () => {
     const list = await store.listProjects(); setProjects(list);
     let last; try { last = localStorage.getItem("kh-last"); } catch {}
     const id = list.find((p) => p.id === last)?.id || list[0]?.id;
-    if (id) open(id); else newProject(true);
+    loadStudio();
+    if (id) open(id); else newProject("multi");
   })(); }, []);
 
   async function open(id) {
@@ -421,9 +490,9 @@ function App() {
     setUrls(map); setPid(id); setProject(withIds(rec.data)); setView("brand"); setPage("index"); setMenu(false);
     try { localStorage.setItem("kh-last", id); } catch {}
   }
-  async function newProject(fromSample) {
+  async function newProject(kind) {
     const id = uid();
-    const data = withIds(fromSample ? clone(SAMPLE) : emptyProject());
+    const data = withIds(clone(kind === "single" ? SAMPLE_SINGLE : SAMPLE));
     await store.putProject({ id, name: data.brand.name, data });
     await refreshList(); await open(id);
   }
@@ -449,19 +518,21 @@ function App() {
   }, [pid]);
 
   const site = project && prepare(project);
+  const colors = (project?.brand?.colors || []).filter((c) => c.hex);
   const paletteNames = useMemo(() => {
     const n = [];
     for (const c of project?.chapters || []) for (const s of c.sections || []) for (const b of s.blocks || [])
       if (b.type === "palette") for (const i of b.items || []) if (i.name) n.push(i.name);
     return [...new Set(n)];
   }, [project]);
-  const ctx = { urls, addFile, paletteNames };
+  const ctx = { urls, addFile, paletteNames, colors };
 
   // ——— Eksport i backup ———
   async function exportZip() {
     setStatus("Przygotowuję eksport…");
     const zip = new JSZip();
-    for (const f of renderSite(project, FIGMA, BASE_CSS)) zip.file(f.path, f.content);
+    for (const f of renderSite(project, FIGMA, BASE_CSS, studio.fonts)) zip.file(f.path, f.content);
+    for (const f of studio.fonts) zip.file(f.path, await store.getAsset("_studio", f.path));
     const missing = [];
     for (const path of usedAssets(project)) { const blob = await store.getAsset(pid, path); blob ? zip.file(path, blob) : missing.push(path); }
     const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
@@ -500,10 +571,11 @@ function App() {
   async function remove() {
     if (!confirm(`Usunąć projekt „${project.brand.name}” z tej przeglądarki? Zrób najpierw backup, jeśli go potrzebujesz.`)) return;
     await store.deleteProject(pid); const list = await store.listProjects(); setProjects(list);
-    list[0] ? open(list[0].id) : newProject(true);
+    list[0] ? open(list[0].id) : newProject("multi");
   }
 
   if (!project) return html`<div class="loading">Ładuję edytor…</div>`;
+  const single = project.brand.mode === "single";
   const chapter = project.chapters.find((c) => c.id === view);
   const chapterIndex = project.chapters.indexOf(chapter);
 
@@ -516,8 +588,14 @@ function App() {
           <span class="menu__label">Projekty w tej przeglądarce</span>
           ${projects.map((p) => html`<button type="button" class=${p.id === pid ? "is--on" : ""} onClick=${() => open(p.id)}>${p.name || "Bez nazwy"}<small>${new Date(p.updated).toLocaleDateString("pl-PL")}</small></button>`)}
           <hr />
-          <button type="button" onClick=${() => newProject(true)}>+ Nowy z przykładową treścią</button>
-          <button type="button" onClick=${() => newProject(false)}>+ Nowy pusty (same rozdziały)</button>
+          <button type="button" onClick=${() => newProject("multi")}>+ Nowy multi site (21 rozdziałów: tekst + zdjęcie)</button>
+          <button type="button" onClick=${() => newProject("single")}>+ Nowy single site (komplet przykładów)</button>
+          <hr />
+          <span class="menu__label">Krój ABC Areal (webfont, dla wszystkich projektów)</span>
+          ${["normal", "italic"].map((st) => { const f = studio.fonts.find((x) => x.style === st); return html`<label class="menu__file">
+            <span>${st === "normal" ? "Prosty" : "Kursywa"}: <small>${f ? f.path.split("/").pop() : "brak — eksport użyje kroju z komputera odbiorcy"}</small></span>
+            <input type="file" accept=".woff2,.woff" onChange=${(e) => { const file = e.target.files[0]; e.target.value = ""; if (file) setStudioFont(st, file); }} /></label>`; })}
+          <hr />
           <button type="button" class="is--danger" onClick=${remove}>Usuń ten projekt</button>
         </div>`}
       </div>
@@ -532,22 +610,22 @@ function App() {
       <button type="button" class=${view === "brand" ? "is--on" : ""} onClick=${() => { setView("brand"); setPage("index"); }}>Marka i ustawienia</button>
       <span class="nav__label">Rozdziały</span>
       <ol>${site.chapters.map((c, i) => html`<li class=${view === c.id ? "is--on" : ""}>
-        <button type="button" onClick=${() => { setView(c.id); setPage(c.id); }}><span>${c.num}</span>${c.title || "Bez tytułu"}<em>${c.sections.length || ""}</em></button>
+        <button type="button" onClick=${() => { setView(c.id); setPage(c.id); }}><span>${c.num}</span>${c.title || "Bez tytułu"}<em>${single ? "" : c.sections.length || ""}</em></button>
         <span class="nav__tools">
           ${i > 0 && html`<button type="button" title="W górę" onClick=${() => update((p) => move(p.chapters, i, -1))}>↑</button>`}
           ${i < site.chapters.length - 1 && html`<button type="button" title="W dół" onClick=${() => update((p) => move(p.chapters, i, 1))}>↓</button>`}
           <button type="button" title="Usuń" onClick=${() => { if (confirm(`Usunąć rozdział „${c.title}”?`)) { update((p) => { p.chapters.splice(i, 1); }); setView("brand"); } }}>✕</button>
         </span>
       </li>`)}</ol>
-      <button type="button" class="btn is--add" onClick=${() => { const id = uid(); update((p) => { p.chapters.push({ id, slug: "nowy-rozdzial", title: "Nowy rozdział", cover: null, downloadAll: null, sections: [] }); }); setView(id); setPage(id); }}>+ Dodaj rozdział</button>
+      <button type="button" class="btn is--add" onClick=${() => { const nc = newChapter(); update((p) => { p.chapters.push(nc); }); setView(nc.id); setPage(nc.id); }}>+ Dodaj rozdział</button>
     </nav>
     <main class="panel">
       ${view === "brand" || !chapter
         ? html`<${BrandForm} b=${project.brand} ctx=${ctx} set=${(fn) => update((p) => fn(p.brand))} />`
-        : html`<${ChapterForm} key=${chapter.id} c=${chapter} num=${site.chapters[chapterIndex].num} ctx=${ctx}
+        : html`<${ChapterForm} key=${chapter.id + (single ? "s" : "m")} single=${single} c=${chapter} num=${site.chapters[chapterIndex].num} ctx=${ctx}
             onFocus=${setFocus} set=${(fn) => update((p) => { fn(p.chapters[chapterIndex]); })} />`}
     </main>
-    <${Preview} project=${project} page=${page} urls=${urls} focus=${focus}
+    <${Preview} project=${project} page=${page} urls=${urls} focus=${focus} studio=${studio}
       setPage=${(slug) => { const c = site.chapters.find((x) => x.slug === slug); setPage(c ? c.id : "index"); setView(c ? c.id : "brand"); }} />
   </div>`;
 }

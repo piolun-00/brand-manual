@@ -104,3 +104,10 @@ button { cursor: pointer; }
 @media (max-width: 1100px) {
   .app { grid-template-columns: 200px 1fr; grid-template-rows: 52px minmax(0, 1fr) 50vh; grid-template-areas: "top top" "nav panel" "preview preview"; }
 }
+
+.checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.check { display: flex; align-items: center; gap: 8px; }
+.check__chip { display: inline-block; width: 14px; height: 14px; border: 1px solid var(--line); vertical-align: -2px; flex: none; }
+.menu__file { display: grid; gap: 4px; padding: 6px 8px; }
+.menu__file small { color: var(--muted); }
+.menu__file input { font-size: 12px; }

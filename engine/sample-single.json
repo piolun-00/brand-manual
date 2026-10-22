@@ -1,0 +1,542 @@
+{
+ "version": 2,
+ "brand": {
+  "name": "Nazwa Marki",
+  "documentTitle": "Księga znaku",
+  "version": "1.0",
+  "date": "październik 2026",
+  "mode": "single",
+  "logo": null,
+  "contact": "studio@khorei.com",
+  "accent": "",
+  "colors": [
+   {
+    "id": "c1",
+    "name": "Grafit",
+    "hex": "#1C1C1C",
+    "rgb": "28 28 28",
+    "cmyk": "0 0 0 95",
+    "pantone": "Neutral Black C",
+    "ral": ""
+   },
+   {
+    "id": "c2",
+    "name": "Popiel",
+    "hex": "#6E6E6A",
+    "rgb": "110 110 106",
+    "cmyk": "0 0 4 65",
+    "pantone": "424 C",
+    "ral": ""
+   },
+   {
+    "id": "c3",
+    "name": "Kamień",
+    "hex": "#B7B8B2",
+    "rgb": "183 184 178",
+    "cmyk": "0 0 3 32",
+    "pantone": "Cool Gray 5 C",
+    "ral": ""
+   },
+   {
+    "id": "c4",
+    "name": "Biel",
+    "hex": "#FFFFFF",
+    "rgb": "255 255 255",
+    "cmyk": "0 0 0 0",
+    "pantone": "",
+    "ral": ""
+   }
+  ]
+ },
+ "chapters": [
+  {
+   "id": "s1s",
+   "slug": "",
+   "title": "Wprowadzenie",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s1t",
+     "title": "Wprowadzenie",
+     "text": [
+      "Identyfikacja to zestaw elementów, po których marka jest rozpoznawana: logo, symbol, logotyp oraz sposób, w jaki łączą się z kolorem i typografią. Ten rozdział opisuje każdy z nich osobno i pokazuje, jak ze sobą współpracują.",
+      "Zasady w tym rozdziale nie są ograniczeniem, tylko wspólnym językiem. Dzięki nim marka wygląda spójnie niezależnie od tego, kto i gdzie ją stosuje — w druku, na ekranie czy w przestrzeni."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": []
+    }
+   ]
+  },
+  {
+   "id": "s1x",
+   "slug": "",
+   "title": "Historia",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s1y",
+     "title": "Historia",
+     "text": [
+      "Znak ewoluował przez dekady, ale jego rdzeń pozostał ten sam. Krótka historia pokazuje, skąd pochodzą dzisiejsze zasady."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "s1u",
+       "type": "images",
+       "layout": "2-equal",
+       "ratio": "4/3",
+       "items": [
+        {
+         "caption": "Reklama prasowa, 1962"
+        },
+        {
+         "caption": "Katalog, 1964"
+        }
+       ],
+       "label": "",
+       "text": ""
+      },
+      {
+       "id": "s1v",
+       "type": "images",
+       "layout": "1",
+       "ratio": "4/3",
+       "items": [
+        {
+         "caption": "Plakat, 1968"
+        }
+       ],
+       "label": "",
+       "text": ""
+      },
+      {
+       "id": "s1w",
+       "type": "images",
+       "layout": "wide-narrow",
+       "ratio": "4/3",
+       "items": [
+        {
+         "caption": "Ulotka, 1972"
+        },
+        {
+         "caption": "Opakowanie, 1975"
+        }
+       ],
+       "label": "",
+       "text": ""
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s20",
+   "slug": "",
+   "title": "Social media",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s21",
+     "title": "Social media",
+     "text": [
+      "Szablony postów i relacji dla Instagrama i LinkedIna. Makiety do edycji są w osobnym pliku."
+     ],
+     "action": {
+      "kind": "external",
+      "label": "Makiety edycyjne",
+      "file": null,
+      "href": "https://www.figma.com"
+     },
+     "blocks": [
+      {
+       "id": "s1z",
+       "type": "images",
+       "layout": "1",
+       "ratio": "4/3",
+       "items": [
+        {}
+       ],
+       "label": "",
+       "text": ""
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s23",
+   "slug": "",
+   "title": "Archiwum",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s24",
+     "title": "Archiwum",
+     "text": [
+      "Pierwsze zastosowania znaku, które wyznaczyły kierunek dla obecnej identyfikacji."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "s22",
+       "type": "images",
+       "layout": "1",
+       "ratio": "4/3",
+       "items": [
+        {
+         "caption": "Reklama prasowa, 1962"
+        }
+       ],
+       "label": "",
+       "text": ""
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s26",
+   "slug": "",
+   "title": "Elementy identyfikacji",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s27",
+     "title": "Elementy identyfikacji",
+     "text": [
+      "Logo i symbol tworzą razem system identyfikacji. Logo stosujemy najczęściej, symbol tam, gdzie brakuje miejsca."
+     ],
+     "action": {
+      "kind": "download",
+      "label": "Pobierz",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "s25",
+       "type": "specimens",
+       "items": [
+        {
+         "label": "Logo",
+         "caption": "Najczęściej używany"
+        },
+        {
+         "label": "Symbol",
+         "caption": "Często używany",
+         "svg": null
+        }
+       ],
+       "label": "",
+       "text": ""
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s29",
+   "slug": "",
+   "title": "Paleta",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s2a",
+     "title": "Paleta",
+     "text": [
+      "Kolory marki z wartościami do ekranu i druku. Przycisk kopiuje wartość HEX."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "s28",
+       "type": "palette",
+       "label": "",
+       "text": "",
+       "colors": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s2c",
+   "slug": "",
+   "title": "Pary kontrastowe",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s2d",
+     "title": "Pary kontrastowe",
+     "text": [
+      "Dozwolone zestawienia tła i tekstu. Poziom zgodności z WCAG liczony automatycznie."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "s2b",
+       "type": "contrast",
+       "pairs": [
+        {
+         "bg": "c2",
+         "fg": "c4"
+        },
+        {
+         "bg": "c1",
+         "fg": "c3"
+        },
+        {
+         "bg": "c3",
+         "fg": "c1"
+        },
+        {
+         "bg": "c3",
+         "fg": "c2"
+        }
+       ],
+       "label": "",
+       "text": ""
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s2o",
+   "slug": "",
+   "title": "Ikony",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s2p",
+     "title": "Ikony",
+     "text": [
+      "Zestaw ikon marki. Kliknięcie kopiuje kod SVG."
+     ],
+     "action": {
+      "kind": "none",
+      "label": "",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "s2n",
+       "type": "icons",
+       "label": "",
+       "text": "",
+       "items": [
+        {
+         "name": "Ikona 1",
+         "svg": null
+        },
+        {
+         "name": "Ikona 2",
+         "svg": null
+        },
+        {
+         "name": "Ikona 3",
+         "svg": null
+        },
+        {
+         "name": "Ikona 4",
+         "svg": null
+        },
+        {
+         "name": "Ikona 5",
+         "svg": null
+        },
+        {
+         "name": "Ikona 6",
+         "svg": null
+        },
+        {
+         "name": "Ikona 7",
+         "svg": null
+        },
+        {
+         "name": "Ikona 8",
+         "svg": null
+        },
+        {
+         "name": "Ikona 9",
+         "svg": null
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s2f",
+   "slug": "",
+   "title": "Krój podstawowy",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s2g",
+     "title": "Krój podstawowy",
+     "text": [
+      "Krój do nagłówków i krótkich tekstów. Do użycia wymagana jest licencja."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "s2e",
+       "type": "typeface",
+       "name": "Nazwa kroju",
+       "foundry": "Odlewnia",
+       "weights": "Regular, Medium, Bold",
+       "license": {
+        "kind": "note",
+        "note": "Krój komercyjny — do użycia wymagana licencja.",
+        "linkLabel": "Przejdź do kroju",
+        "href": "https://example.com",
+        "file": null
+       },
+       "label": "",
+       "text": ""
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s2i",
+   "slug": "",
+   "title": "Krój uzupełniający",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s2j",
+     "title": "Krój uzupełniający",
+     "text": [
+      "Krój do dłuższych tekstów i materiałów roboczych. Dostępny na darmowej licencji."
+     ],
+     "action": {
+      "kind": "none",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "s2h",
+       "type": "typeface",
+       "name": "Nazwa kroju",
+       "foundry": "Odlewnia",
+       "weights": "Regular, Medium, Bold",
+       "license": {
+        "kind": "file",
+        "note": "Krój na darmowej licencji.",
+        "file": null
+       },
+       "label": "",
+       "text": ""
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s2l",
+   "slug": "",
+   "title": "Skala typograficzna",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s2m",
+     "title": "Skala typograficzna",
+     "text": [
+      "Hierarchia stopni z parametrami dla ekranu i druku. Plik ze stylami do pobrania."
+     ],
+     "action": {
+      "kind": "download",
+      "label": "Pobierz",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "s2k",
+       "type": "typeScale",
+       "label": "",
+       "text": "",
+       "image": null
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s2r",
+   "slug": "",
+   "title": "Animacje",
+   "cover": null,
+   "downloadAll": null,
+   "sections": [
+    {
+     "id": "s2s",
+     "title": "Animacje",
+     "text": [
+      "Ruch znaku i przejścia. Pliki MP4 odtwarzają się same, bez dźwięku."
+     ],
+     "action": {
+      "kind": "none",
+      "label": "",
+      "file": null,
+      "href": ""
+     },
+     "blocks": [
+      {
+       "id": "s2q",
+       "type": "video",
+       "label": "Animacja logo",
+       "text": "Wersja podstawowa, 3 s",
+       "source": "file",
+       "file": null,
+       "embed": "",
+       "ratio": "16/9"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -13,9 +13,13 @@ export const RUNTIME = `
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
 
   document.addEventListener("click", async (e) => {
-    const el = e.target.closest("[data-copy]");
+    const el = e.target.closest("[data-copy], [data-copy-url]");
     if (!el) return;
-    try { await navigator.clipboard.writeText(el.dataset.copy); } catch { return; }
+    try {
+      // Ikony: kopiujemy kod SVG (pobrany z pliku), kolory: wartość HEX
+      const text = el.dataset.copy ?? await fetch(el.dataset.copyUrl).then((r) => r.text());
+      await navigator.clipboard.writeText(text);
+    } catch { return; }
     const label = el.querySelector(".button__label");
     const prev = label ? label.textContent : null;
     el.classList.add("is--copied");
