@@ -6,6 +6,26 @@ export const RUNTIME = `
   const body = document.body;
   const preview = document.documentElement.hasAttribute("data-preview");
   const closeDrawer = () => body.classList.remove("is--drawer-open");
+
+  // Animacje Lottie: grają tylko, gdy są na ekranie; przy „ogranicz ruch” w systemie — pierwsza klatka
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const seen = "IntersectionObserver" in window ? new IntersectionObserver((list) => list.forEach((e) => {
+    const a = e.target.khAnim; if (!a || reduce) return;
+    e.isIntersecting ? a.play() : a.pause();
+  })) : null;
+  function initMedia() {
+    if (!window.lottie) return;
+    document.querySelectorAll("[data-lottie]:not([data-ready])").forEach((el) => {
+      el.dataset.ready = "1";
+      const a = window.lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: false, path: el.dataset.lottie });
+      el.khAnim = a;
+      a.addEventListener("DOMLoaded", () => { if (reduce || !seen) { reduce ? a.goToAndStop(0, true) : a.play(); } });
+      if (seen) seen.observe(el);
+    });
+  }
+  window.khInitMedia = initMedia;
+  if (document.readyState === "complete") initMedia();
+  else window.addEventListener("load", initMedia);
   document.addEventListener("click", (e) => {
     if (e.target.closest("[data-drawer-open]")) body.classList.add("is--drawer-open");
     else if (e.target.closest("[data-drawer-close], .sidebar__item")) closeDrawer();
@@ -88,6 +108,7 @@ export const RUNTIME = `
     });
     const logo = doc.querySelector(".sidebar__logo"); if (logo) document.querySelector(".sidebar__logo")?.setAttribute("href", new URL(logo.getAttribute("href"), url.href).pathname);
     if (doc.title) document.title = doc.title;
+    initMedia();
     if (push) history.pushState(null, "", url.href);
     const target = url.hash && document.getElementById(decodeURIComponent(url.hash.slice(1)));
     target ? target.scrollIntoView({ behavior: "instant" }) : window.scrollTo({ top: 0, behavior: "instant" });

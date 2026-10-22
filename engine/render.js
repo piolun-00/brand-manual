@@ -211,6 +211,24 @@ const BLOCKS = {
       <span class="icon-tile__name text-body">${t(i.name)}</span>
     </div>`).join("")}</div></div>`,
 
+  // Animacje Lottie (JSON z After Effects / LottieFiles): siatka jak ikony — 2 kolumny na animację (4 w rzędzie na desktopie)
+  lottie: (ctx, b) => {
+    const items = b.items || [];
+    const zip = items.some((i) => i.file) ? `<div class="icons__actions">${button(ctx, "download", ctx.lottieZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)")}</div>` : "";
+    return `<div class="lottie">${zip}<div class="lottie__grid">${items.map((i) => `
+    <div class="lottie-tile">
+      <div class="lottie-tile__stage">${i.file ? `<div class="lottie-tile__anim" data-lottie="${esc(ctx.url(i.file))}" role="img" aria-label="${esc(i.name || "Animacja")}"></div>` : `<span class="lottie-tile__placeholder text-small">Lottie JSON</span>`}</div>
+      <div class="lottie-tile__foot"><span class="lottie-tile__name text-body">${t(i.name)}</span>${i.file ? `<a class="lottie-tile__dl text-small" href="${esc(ctx.url(i.file))}" download>JSON</a>` : ""}</div>
+    </div>`).join("")}</div></div>`;
+  },
+
+  // Model 3D (GLB): obraca się sam, można go chwycić i obrócić; przewijanie strony nie zoomuje modelu
+  model: (ctx, b) => {
+    const ratio = b.ratio && b.ratio !== "auto" ? b.ratio.replace("/", " / ") : "16 / 9";
+    const viewer = b.file ? `<model-viewer src="${esc(ctx.url(b.file))}" alt="${esc(b.alt || b.label || "Model 3D")}" camera-controls disable-zoom touch-action="pan-y" interaction-prompt="none"${b.autoRotate === false ? "" : ` auto-rotate auto-rotate-delay="0" rotation-per-second="${b.speed || 20}deg"`} shadow-intensity="${b.shadow === false ? 0 : 0.7}" exposure="1"><div slot="progress-bar"></div></model-viewer>` : `<span class="gallery__placeholder text-small">Model 3D — GLB lub OBJ</span>`;
+    return `<div class="model${b.background === "transparent" ? " is--transparent" : ""}" style="aspect-ratio:${ratio}">${viewer}</div>${b.download && b.file ? `<div class="model__actions">${button(ctx, "download", b.file, "Pobierz model (GLB)")}</div>` : ""}`;
+  },
+
   // Animacja: plik MP4 (odtwarza się sam, bez dźwięku, w pętli) albo kod embed (np. Vimeo, Lottie, Rive)
   video: (ctx, b) => {
     const ratio = b.ratio && b.ratio !== "auto" ? ` style="aspect-ratio:${b.ratio}"` : "";
@@ -306,6 +324,12 @@ export function siteCss(project, figmaVars, baseCss, url, studioFonts = []) {
   return [faces, tokensCss(figmaVars, overrides), baseCss].join("\n");
 }
 
+// Czy któryś rozdział ma blok danego typu (skrypty Lottie / 3D ładujemy tylko wtedy — na każdej stronie,
+// bo przejścia między rozdziałami w eksporcie nie przeładowują strony)
+export function uses(site, type) {
+  return (site.chapters || []).some((c) => (c.sections || []).some((s) => (s.blocks || []).some((b) => b.type === type)));
+}
+
 // ——— Strona ———
 // page: "index" albo slug rozdziału.
 // ctx: { url(path) → adres pliku, link(target) → atrybuty linku, css: { inline } | { href }, preview }
@@ -329,6 +353,8 @@ export function renderPage(project, page, ctx) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>${esc(title)}</title>
+${uses(site, "lottie") ? `<script src="${esc(ctx.url("assets/lottie.min.js"))}" defer></script>` : ""}
+${uses(site, "model") ? `<script type="module" src="${esc(ctx.url("assets/model-viewer.min.js"))}"></script>` : ""}
 ${b.favicon ? `<link rel="icon" href="${esc(ctx.url(b.favicon))}">` : ""}
 <meta property="og:title" content="${esc(title)}">
 ${b.ogImage && b.siteUrl ? `<meta property="og:image" content="${esc(new URL(b.ogImage, b.siteUrl.replace(/\/?$/, "/")).href)}">` : ""}
@@ -352,7 +378,7 @@ ${showFooter ? footer(site) : ""}
 
 // ——— Cała strona do eksportu ———
 // Linki względne, więc strona działa z dowolnego folderu na serwerze (np. klient.pl/brandbook/).
-// extra: { variants: Map(ścieżka → {full, half}), posters: Set(ścieżek MP4), iconZips: Map(id bloku → ścieżka ZIP) }
+// extra: { variants: Map(ścieżka → {full, half}), posters: Set(ścieżek MP4), iconZips / lottieZips: Map(id bloku → ścieżka ZIP) }
 export function renderSite(project, figmaVars, baseCss, studioFonts = [], extra = {}) {
   const site = prepare(project);
   const single = site.brand.mode === "single";

@@ -8,9 +8,11 @@ import htm from "htm";
 // więc po aktualizacji przeglądarka nie zmiesza starych plików z nowymi.
 const VERSION = new URL(import.meta.url).searchParams.get("v") || "dev";
 const Q = `?v=${VERSION}`;
-const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets, GEIST_FILES, fontOf, variantOf } = await import("../engine/render.js" + Q);
+const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets, GEIST_FILES, fontOf, variantOf, uses } = await import("../engine/render.js" + Q);
 // Pliki kroju Geist leżą w silniku: w podglądzie ładowane z edytora, w eksporcie kopiowane do fonts/geist/
 const ENGINE_URL = (p) => new URL("../engine/" + p, import.meta.url).href;
+// Odtwarzacze dołączane do strony tylko, gdy manual ma blok Lottie / 3D (assets/… w eksporcie ← engine/vendor/…)
+const VENDOR_ASSETS = { "assets/lottie.min.js": "vendor/lottie.min.js", "assets/model-viewer.min.js": "vendor/model-viewer.min.js" };
 const store = await import("./store.js" + Q);
 const { lockKey, lockPage } = await import("../engine/lock.js" + Q);
 
@@ -47,7 +49,9 @@ const BLOCK_TYPES = {
   icons: "Ikony",
   typeface: "Krój",
   typeScale: "Skala typograficzna (grafika)",
-  video: "Animacja / wideo"
+  video: "Animacja / wideo",
+  lottie: "Animacje Lottie",
+  model: "Model 3D"
 };
 const newBlock = (type) => ({
   images: { layout: "2-equal", ratio: "4/3", items: [{ image: null, caption: "" }, { image: null, caption: "" }] },
@@ -56,6 +60,8 @@ const newBlock = (type) => ({
   contrast: { pairs: [] },
   icons: { items: [{ name: "", svg: null }] },
   video: { source: "file", file: null, embed: "", ratio: "16/9" },
+  lottie: { items: [{ name: "", file: null }] },
+  model: { file: null, ratio: "16/9", autoRotate: true, speed: 20, background: "surface", shadow: true, download: false, alt: "" },
   typeface: { name: "", foundry: "", weights: "", svg: null, license: { kind: "note", note: "Krój komercyjny — do użycia wymagana licencja.", linkLabel: "Przejdź do kroju", href: "", file: null } },
   typeScale: { image: null },
   text: { columns: 1, col1: "", col2: "" }
@@ -111,7 +117,7 @@ function fileName(file, blob) {
 }
 // ——— Folder na dysku (File System Access API — Chrome, Edge). Safari: tylko backup do pliku. ———
 const CAN_FOLDER = typeof window.showDirectoryPicker === "function";
-const MIME = { svg: "image/svg+xml", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", woff2: "font/woff2", woff: "font/woff", zip: "application/zip", mp4: "video/mp4", webm: "video/webm" };
+const MIME = { json: "application/json", glb: "model/gltf-binary", svg: "image/svg+xml", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", woff2: "font/woff2", woff: "font/woff", zip: "application/zip", mp4: "video/mp4", webm: "video/webm" };
 const mimeOf = (path) => MIME[path.split(".").pop().toLowerCase()] || "application/octet-stream";
 async function writeFile(dir, path, blob) {
   const parts = path.split("/");
@@ -374,6 +380,75 @@ function VideoBlock({ b, set, ctx }) {
       ? html`<${FileField} label="Plik MP4" value=${b.file} accept="video/mp4,video/webm" folder="media" ctx=${ctx} hint="Odtwarza się sam, bez dźwięku, w pętli. Najlepiej do 10 MB." onChange=${(p) => set((x) => { x.file = p; })} />`
       : html`<${Text} label="Kod embed" multiline value=${b.embed} placeholder="<iframe src=…></iframe>" hint="Wklej kod z serwisu (Vimeo, YouTube, Lottie, Rive). Zostaje tylko <iframe> z adresem https — skrypty są pomijane dla bezpieczeństwa strony klienta." onInput=${(v) => set((x) => { x.embed = v; })} />`}`;
 }
+// Lottie: plik JSON z After Effects (Bodymovin) albo LottieFiles. Sprawdzamy, czy to naprawdę animacja.
+async function checkLottie(file) {
+  try { const j = JSON.parse(await file.text()); if (j && j.v && Array.isArray(j.layers)) return { ok: true, w: j.w, h: j.h, sec: j.op && j.fr ? (j.op - (j.ip || 0)) / j.fr : null }; } catch {}
+  return { ok: false };
+}
+function LottieBlock({ b, set, ctx }) {
+  const ref = useRef();
+  const [warn, setWarn] = useState("");
+  const lctx = { ...ctx, addFile: async (f, folder) => {
+    if (/\.lottie$/i.test(f.name)) { setWarn("Plik .lottie to spakowany format — wyeksportuj animację jako JSON (LottieFiles: Download → Lottie JSON)."); return null; }
+    const c = await checkLottie(f); if (!c.ok) { setWarn(`„${f.name}” nie wygląda na animację Lottie (JSON z After Effects / LottieFiles).`); return null; }
+    setWarn(""); return ctx.addFile(f, folder);
+  } };
+  return html`<${ListBlock} items=${b.items || []} addLabel="Dodaj animację"
+    add=${() => set((x) => { (x.items ||= []).push({ name: "", file: null }); })}
+    render=${(it, i) => html`<div class="sub">
+      <div class="sub__head"><b>${it.name || `Animacja ${i + 1}`}</b><span>
+        <button type="button" class="link is--icon" title="W górę" aria-label="W górę" onClick=${() => set((x) => move(x.items, i, -1))}><${Icon} name="up" /></button>
+        <button type="button" class="link is--icon" title="W dół" aria-label="W dół" onClick=${() => set((x) => move(x.items, i, 1))}><${Icon} name="down" /></button>
+        <button type="button" class="link is--icon" title="Usuń" aria-label="Usuń" onClick=${() => set((x) => { x.items.splice(i, 1); })}><${Icon} name="close" /></button></span></div>
+      <${Text} label="Nazwa" value=${it.name} onInput=${(v) => set((x) => { x.items[i].name = v; })} />
+      <${FileField} label="Plik Lottie (JSON)" value=${it.file} accept=".json,application/json" folder="media" ctx=${lctx} onChange=${(p) => set((x) => { x.items[i].file = p; })} />
+    </div>`} />
+    <button type="button" class="btn is--add" onClick=${() => ref.current.click()}>+ Wgraj wiele JSON naraz</button>
+    <input ref=${ref} type="file" accept=".json,application/json" multiple hidden onChange=${async (e) => {
+      const files = [...e.target.files]; e.target.value = "";
+      const added = [];
+      for (const f of files) { const p = await lctx.addFile(f, "media"); if (p) added.push({ name: f.name.replace(/\.json$/i, "").replace(/[-_]+/g, " "), file: p }); }
+      set((x) => { x.items = [...(x.items || []).filter((k) => k.file || k.name), ...added]; });
+    }} />
+    ${warn && html`<p class="f__warn">${warn}</p>`}
+    <p class="note">Każda animacja zajmuje 2 kolumny: 4 w rzędzie na desktopie, 3 na tablecie, 2 na telefonie. Grają tylko, gdy są widoczne; przy włączonym „ograniczeniu ruchu” w systemie pokazuje się pierwsza klatka. W eksporcie: pobieranie pojedynczych JSON i „Pobierz wszystkie (ZIP)”.</p>`;
+}
+
+// 3D: GLB (najlepiej — jeden plik z materiałami) albo OBJ, który zamieniamy na GLB w przeglądarce (three.js, ładowane tylko wtedy).
+async function objToGlb(file) {
+  const THREE = await import("three");
+  const { OBJLoader } = await import("../vendor/three/loaders/OBJLoader.js");
+  const { GLTFExporter } = await import("../vendor/three/exporters/GLTFExporter.js");
+  const obj = new OBJLoader().parse(await file.text());
+  const mat = new THREE.MeshStandardMaterial({ color: 0xd9d9d6, roughness: 0.55, metalness: 0 });
+  obj.traverse((n) => { if (n.isMesh) { n.material = mat; if (!n.geometry.attributes.normal) n.geometry.computeVertexNormals(); } });
+  const glb = await new GLTFExporter().parseAsync(obj, { binary: true });
+  return new File([glb], file.name.replace(/\.obj$/i, ".glb"), { type: "model/gltf-binary" });
+}
+function ModelBlock({ b, set, ctx }) {
+  const [busy, setBusy] = useState("");
+  const mctx = { ...ctx, addFile: async (f, folder) => {
+    if (/\.obj$/i.test(f.name)) {
+      setBusy("Zamieniam OBJ na GLB…");
+      try { f = await objToGlb(f); } catch (e) { setBusy(""); alert("Nie udało się wczytać pliku OBJ: " + e.message); return null; }
+      setBusy("");
+    } else if (!/\.glb$/i.test(f.name)) { alert("Wgraj plik GLB (najlepiej) albo OBJ."); return null; }
+    return ctx.addFile(f, folder);
+  } };
+  return html`<${FileField} label="Model (GLB lub OBJ)" value=${b.file} accept=".glb,.obj,model/gltf-binary" folder="media" ctx=${mctx}
+      hint=${busy || "GLB niesie materiały i tekstury (Blender, Spline, Cinema 4D: Export → glTF Binary). OBJ to sama bryła — dostanie neutralny materiał. Najlepiej do 10 MB."} onChange=${(p) => set((x) => { x.file = p; })} />
+    <div class="grid2">
+      <${Select} label="Proporcje" value=${b.ratio || "16/9"} options=${[["16/9", "16:9"], ["4/3", "4:3"], ["1/1", "1:1"], ["3/4", "3:4"]]} onChange=${(v) => set((x) => { x.ratio = v; })} />
+      <${Select} label="Tło" value=${b.background || "surface"} options=${[["surface", "Białe pole"], ["transparent", "Przezroczyste"]]} onChange=${(v) => set((x) => { x.background = v; })} />
+    </div>
+    <div class="grid2">
+      <${Select} label="Obrót" value=${b.autoRotate === false ? "off" : String(b.speed || 20)} options=${[["off", "Bez obrotu"], ["10", "Wolny"], ["20", "Średni"], ["40", "Szybki"]]} onChange=${(v) => set((x) => { x.autoRotate = v !== "off"; if (v !== "off") x.speed = Number(v); })} />
+      <${Text} label="Opis dla czytników ekranu" value=${b.alt} placeholder="np. Butelka z etykietą" onInput=${(v) => set((x) => { x.alt = v; })} />
+    </div>
+    <label class="check"><input type="checkbox" checked=${b.shadow !== false} onChange=${(e) => set((x) => { x.shadow = e.target.checked; })} />Cień pod modelem</label>
+    <label class="check"><input type="checkbox" checked=${!!b.download} onChange=${(e) => set((x) => { x.download = e.target.checked; })} />Przycisk „Pobierz model (GLB)”</label>
+    <p class="note">Model można chwycić i obrócić. Kółko myszy przewija stronę, nie przybliża modelu — żeby nikt nie utknął w bloku.</p>`;
+}
 function TypefaceBlock({ b, set, ctx }) {
   const l = b.license || {};
   return html`
@@ -392,7 +467,7 @@ function TypeScaleBlock({ b, set, ctx }) {
   return html`<${FileField} label="Grafika skali (SVG lub PNG)" value=${b.image} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 924 }}
     hint="Szerokość 924 px (PNG: 1848 px), wysokość dowolna — strona dopasuje ją sama. Bez webfontu klienta, więc bez problemu z licencją." onChange=${(p) => set((x) => { x.image = p; })} />`;
 }
-const BLOCK_FORMS = { text: TextBlock, images: ImagesBlock, specimens: SpecimensBlock, palette: PaletteBlock, contrast: ContrastBlock, icons: IconsBlock, typeface: TypefaceBlock, typeScale: TypeScaleBlock, video: VideoBlock };
+const BLOCK_FORMS = { text: TextBlock, images: ImagesBlock, specimens: SpecimensBlock, palette: PaletteBlock, contrast: ContrastBlock, icons: IconsBlock, typeface: TypefaceBlock, typeScale: TypeScaleBlock, video: VideoBlock, lottie: LottieBlock, model: ModelBlock };
 
 // ——— Sekcja ———
 function SectionForm({ s, set, ctx, open, setOpen, noTitle }) {
@@ -550,7 +625,7 @@ function Preview({ project, page, setPage, urls, focus, studio, onSelect }) {
   useEffect(() => { try { localStorage.setItem("kh-preview-width", String(width)); } catch {} }, [width]);
   const single = project.brand.mode === "single";
   const doc = useMemo(() => {
-    const url = (p) => urls[p] || studio.urls[p] || (p.startsWith("fonts/geist/") ? ENGINE_URL(p) : p);
+    const url = (p) => urls[p] || studio.urls[p] || (p.startsWith("fonts/geist/") ? ENGINE_URL(p) : VENDOR_ASSETS[p] ? ENGINE_URL(VENDOR_ASSETS[p]) : p);
     const ctx = {
       preview: true, url,
       link: (target) => target === "index" ? `href="#" data-page="index"` : single ? `href="#${target}"` : `href="#" data-page="${target}"`,
@@ -575,12 +650,15 @@ function Preview({ project, page, setPage, urls, focus, studio, onSelect }) {
     // Ta sama strona: podmieniamy tylko treść dokumentu — bez przeładowania ramki,
     // więc przewinięcie zostaje dokładnie tam, gdzie było (także w Safari) i nic nie mruga.
     const d = f.contentDocument;
-    if (samePage && !f.dataset.loading && d?.body && d.documentElement.hasAttribute("data-preview")) {
-      const nd = new DOMParser().parseFromString(doc, "text/html");
+    const nd = new DOMParser().parseFromString(doc, "text/html");
+    // Nowy odtwarzacz (pierwszy blok Lottie / 3D) wymaga pełnego wczytania — skrypty z podmienionej treści się nie uruchamiają
+    const needsReload = d && ((nd.querySelector('script[src*="lottie"]') && !f.contentWindow?.lottie) || (nd.querySelector('script[src*="model-viewer"]') && !f.contentWindow?.customElements?.get("model-viewer")));
+    if (samePage && !needsReload && !f.dataset.loading && d?.body && d.documentElement.hasAttribute("data-preview")) {
       const y = f.contentWindow.scrollY;
       d.head.innerHTML = nd.head.innerHTML;
       d.body.innerHTML = nd.body.innerHTML; // skrypt strony już działa (zdarzenia na document), nie uruchamia się drugi raz
       f.contentWindow.scrollTo(0, y);
+      f.contentWindow.khInitMedia?.();
       if (pending.current) { scrollTo(pending.current); pending.current = null; }
       return;
     }
@@ -822,11 +900,12 @@ function App() {
     for (const path of usedAssets(project)) { const blob = await store.getAsset(pid, path); blob ? zip.file(path, blob) : missing.push(path); }
     // Zdjęcia z bloków „Rząd zdjęć”: wersja o połowę mniejsza dla telefonów (srcset)
     const walkBlocks = (fn) => { for (const c of project.chapters || []) for (const s of c.sections || []) for (const bl of s.blocks || []) fn(bl); };
-    const photos = new Set(), videos = new Set(), iconBlocks = [];
+    const photos = new Set(), videos = new Set(), iconBlocks = [], lottieBlocks = [];
     walkBlocks((bl) => {
       if (bl.type === "images") for (const it of bl.items || []) if (it.image && /\.(jpe?g|png|webp)$/i.test(it.image)) photos.add(it.image);
       if (bl.type === "video" && (bl.source || "file") === "file" && bl.file) videos.add(bl.file);
       if (bl.type === "icons" && (bl.items || []).some((i) => i.svg)) iconBlocks.push(bl);
+      if (bl.type === "lottie" && (bl.items || []).some((i) => i.file)) lottieBlocks.push(bl);
     });
     let n = 0;
     for (const path of photos) {
@@ -893,6 +972,23 @@ function App() {
       ].join("\n"));
     }
     if (lock) setStatus("Szyfruję strony…");
+    extra.lottieZips = new Map();
+    for (const bl of lottieBlocks) {
+      const lz = new JSZip(), names = new Set();
+      for (const it of bl.items) {
+        if (!it.file) continue;
+        const blob = await store.getAsset(pid, it.file); if (!blob) continue;
+        let name = slugify(it.name) || it.file.split("/").pop().replace(/\.json$/i, ""), k = 2;
+        while (names.has(name)) name = `${slugify(it.name)}-${k++}`;
+        names.add(name); lz.file(`${name}.json`, blob);
+      }
+      const zpath = `files/${slugify(project.brand.name) || "marka"}-animacje${lottieBlocks.length > 1 ? `-${lottieBlocks.indexOf(bl) + 1}` : ""}.zip`;
+      zip.file(zpath, await lz.generateAsync({ type: "blob", compression: "DEFLATE" }));
+      if (bl.id) extra.lottieZips.set(bl.id, zpath);
+    }
+    // Odtwarzacze: tylko gdy manual ich używa
+    const site = prepare(project);
+    for (const [asset, src] of Object.entries(VENDOR_ASSETS)) if (uses(site, asset.includes("lottie") ? "lottie" : "model")) zip.file(asset, await fetch(ENGINE_URL(src)).then((r) => r.blob()));
     for (const f of renderSite(project, FIGMA, BASE_CSS, studio.fonts, extra)) {
       zip.file(f.path, lock && f.path.endsWith(".html")
         ? await lockPage(f.content, lock, { title: `${project.brand.name || ""} · ${project.brand.documentTitle || ""}`, accent: "#111111" })
