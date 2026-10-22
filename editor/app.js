@@ -94,6 +94,32 @@ function fileName(file, blob) {
   const ext = blob.type === "image/jpeg" && !/\.jpe?g$/i.test(file.name) ? "jpg" : (file.name.split(".").pop() || "bin").toLowerCase();
   return `${base}-${uid().slice(0, 4)}.${ext}`;
 }
+// ——— Folder na dysku (File System Access API — Chrome, Edge). Safari: tylko backup do pliku. ———
+const CAN_FOLDER = typeof window.showDirectoryPicker === "function";
+const MIME = { svg: "image/svg+xml", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", woff2: "font/woff2", woff: "font/woff", zip: "application/zip", mp4: "video/mp4", webm: "video/webm" };
+const mimeOf = (path) => MIME[path.split(".").pop().toLowerCase()] || "application/octet-stream";
+async function writeFile(dir, path, blob) {
+  const parts = path.split("/");
+  let d = dir;
+  for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
+  const w = await (await d.getFileHandle(parts.at(-1), { create: true })).createWritable();
+  await w.write(blob); await w.close();
+}
+async function readTree(dir, prefix = "") {
+  const out = [];
+  for await (const [name, h] of dir.entries()) {
+    if (h.kind === "directory") out.push(...await readTree(h, `${prefix}${name}/`));
+    else out.push({ path: `${prefix}${name}`, getBlob: async () => { const f = await h.getFile(); return new Blob([await f.arrayBuffer()], { type: mimeOf(name) }); } });
+  }
+  return out;
+}
+const projectJson = (id, data) => JSON.stringify({ format: "khorei-brandmanual", version: 2, id, data }, null, 1);
+const ago = (t) => {
+  if (!t) return "nigdy";
+  const m = Math.round((Date.now() - t) / 60000);
+  return m < 1 ? "przed chwilą" : m < 60 ? `${m} min temu` : m < 1440 ? `${Math.round(m / 60)} h temu` : `${Math.round(m / 1440)} dni temu`;
+};
+
 function download(blob, name) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = name;
@@ -480,7 +506,12 @@ function App() {
   const [focus, setFocus] = useState(-1);
   const [studio, setStudio] = useState({ fonts: [], urls: {} }); // pliki ABC Areal — wspólne dla wszystkich projektów
   const saveTimer = useRef();
+  const folderRef = useRef(null);
   const [newVersion, setNewVersion] = useState(null);
+  const [folder, setFolder] = useState(null); // { handle, name, ok }
+  const [meta, setMetaState] = useState({});
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 60000); return () => clearInterval(t); }, []);
 
   // Nowa wersja edytora na serwerze → pasek z prośbą o odświeżenie
   useEffect(() => {
@@ -530,6 +561,11 @@ function App() {
     const map = {};
     for (const path of await store.assetKeys(id)) { const blob = await store.getAsset(id, path); if (blob) map[path] = URL.createObjectURL(blob); }
     setUrls(map); setPid(id); setProject(withIds(rec.data)); setView("brand"); setPage("index"); setMenu(false);
+    const m = await store.getMeta(id); setMetaState(m);
+    if (m.dir && CAN_FOLDER) {
+      const ok = (await m.dir.queryPermission({ mode: "readwrite" })) === "granted";
+      setFolder({ handle: m.dir, name: m.dir.name, ok });
+    } else setFolder(null);
     try { localStorage.setItem("kh-last", id); } catch {}
   }
   async function newProject(kind) {
@@ -545,7 +581,15 @@ function App() {
       clearTimeout(saveTimer.current); setStatus("Zapisuję…");
       saveTimer.current = setTimeout(async () => {
         await store.putProject({ id: pid, name: next.brand.name || "Bez nazwy", data: next });
-        setStatus("Zapisano w przeglądarce"); refreshList();
+        await store.setMeta(pid, { lastChange: Date.now() });
+        if (folderRef.current?.ok) {
+          try {
+            await writeFile(folderRef.current.handle, "project.json", new Blob([projectJson(pid, next)], { type: "application/json" }));
+            await store.setMeta(pid, { lastBackup: Date.now() });
+            setStatus(`Zapisano w przeglądarce i w folderze „${folderRef.current.name}”`);
+          } catch { setFolder((f) => f && { ...f, ok: false }); setStatus("Zapisano w przeglądarce — folder wymaga ponownej zgody"); }
+        } else setStatus("Zapisano w przeglądarce");
+        setMetaState(await store.getMeta(pid)); refreshList();
       }, 500);
       return next;
     });
@@ -555,6 +599,7 @@ function App() {
     const blob = await prepareFile(file);
     const path = `${folder}/${fileName(file, blob)}`;
     await store.putAsset(pid, path, blob);
+    if (folderRef.current?.ok) writeFile(folderRef.current.handle, `assets/${path}`, blob).catch(() => {});
     setUrls((u) => ({ ...u, [path]: URL.createObjectURL(blob) }));
     return path;
   }, [pid]);
@@ -583,31 +628,63 @@ function App() {
   }
   async function backup() {
     const zip = new JSZip();
-    zip.file("project.json", JSON.stringify({ format: "khorei-brandmanual", version: 1, id: pid, data: project }, null, 1));
+    zip.file("project.json", projectJson(pid, project));
     for (const path of await store.assetKeys(pid)) { if (!usedAssets(project).includes(path)) continue; zip.file(`assets/${path}`, await store.getAsset(pid, path)); }
     const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
     const d = new Date(), stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     download(blob, `${slugify(project.brand.name)}-${stamp}.khorei`);
+    await store.setMeta(pid, { lastBackup: Date.now() }); setMetaState(await store.getMeta(pid));
     setStatus("Backup pobrany");
+  }
+  // Wspólne wczytywanie: z pliku .khorei albo z folderu
+  async function importProject(meta, files, dirHandle) {
+    if (meta.format !== "khorei-brandmanual") throw new Error("To nie jest projekt KHOREI.");
+    let id = meta.id || uid();
+    if (projects.some((p) => p.id === id)) {
+      if (!confirm(`Projekt „${meta.data.brand?.name}” już jest w edytorze. Zastąpić go wersją z dysku?\n\nAnuluj = wczytaj jako kopię.`)) id = uid();
+      else await store.deleteProject(id);
+    }
+    for (const f of files) if (f.path.startsWith("assets/")) await store.putAsset(id, f.path.slice(7), await f.getBlob());
+    await store.putProject({ id, name: meta.data.brand?.name || "Projekt", data: withIds(meta.data) });
+    if (dirHandle) await store.setMeta(id, { dir: dirHandle, lastBackup: Date.now() });
+    await refreshList(); await open(id);
+  }
+  // Folder na dysku: od teraz każda zmiana zapisuje się też tam (project.json + assets/)
+  async function linkFolder() {
+    try {
+      const dir = await window.showDirectoryPicker({ id: "khorei-manual", mode: "readwrite" });
+      setStatus("Zapisuję projekt w folderze…");
+      await writeFile(dir, "project.json", new Blob([projectJson(pid, project)], { type: "application/json" }));
+      for (const path of await store.assetKeys(pid)) await writeFile(dir, `assets/${path}`, await store.getAsset(pid, path));
+      await store.setMeta(pid, { dir, lastBackup: Date.now() }); setMetaState(await store.getMeta(pid));
+      setFolder({ handle: dir, name: dir.name, ok: true });
+      setStatus(`Projekt zapisuje się w folderze „${dir.name}”`);
+    } catch (e) { if (e.name !== "AbortError") alert("Nie udało się zapisać w folderze: " + e.message); }
+  }
+  async function resumeFolder() {
+    if ((await folder.handle.requestPermission({ mode: "readwrite" })) === "granted") {
+      setFolder({ ...folder, ok: true });
+      await writeFile(folder.handle, "project.json", new Blob([projectJson(pid, project)], { type: "application/json" }));
+      setStatus(`Zapis do folderu „${folder.name}” wznowiony`);
+    }
+  }
+  async function openFolder() {
+    try {
+      const dir = await window.showDirectoryPicker({ id: "khorei-manual", mode: "readwrite" });
+      const files = await readTree(dir);
+      const pj = files.find((f) => f.path === "project.json");
+      if (!pj) throw new Error("W tym folderze nie ma pliku project.json.");
+      await importProject(JSON.parse(await (await pj.getBlob()).text()), files, dir);
+      setStatus(`Wczytano z folderu „${dir.name}” — zmiany zapisują się tam dalej`);
+    } catch (e) { if (e.name !== "AbortError") alert("Nie udało się wczytać folderu: " + e.message); }
   }
   async function restore(file) {
     try {
       const zip = await JSZip.loadAsync(file);
       const meta = JSON.parse(await zip.file("project.json").async("string"));
-      if (meta.format !== "khorei-brandmanual") throw new Error("To nie jest plik projektu KHOREI.");
-      let id = meta.id || uid();
-      if (projects.some((p) => p.id === id)) {
-        if (!confirm(`Projekt „${meta.data.brand?.name}” już jest w edytorze. Zastąpić go wersją z pliku?\n\nAnuluj = wczytaj jako kopię.`)) id = uid();
-        else await store.deleteProject(id);
-      }
-      for (const [name, entry] of Object.entries(zip.files)) {
-        if (entry.dir || !name.startsWith("assets/")) continue;
-        const path = name.slice(7);
-        const type = { svg: "image/svg+xml", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", woff2: "font/woff2", zip: "application/zip" }[path.split(".").pop().toLowerCase()] || "application/octet-stream";
-        await store.putAsset(id, path, new Blob([await entry.async("arraybuffer")], { type }));
-      }
-      await store.putProject({ id, name: meta.data.brand?.name || "Projekt", data: withIds(meta.data) });
-      await refreshList(); await open(id); setStatus("Backup wczytany");
+      const files = Object.entries(zip.files).filter(([, e]) => !e.dir).map(([name, e]) => ({ path: name, getBlob: async () => new Blob([await e.async("arraybuffer")], { type: mimeOf(name) }) }));
+      await importProject(meta, files);
+      setStatus("Backup wczytany");
     } catch (e) { alert("Nie udało się wczytać pliku: " + e.message); }
   }
   async function remove() {
@@ -616,7 +693,9 @@ function App() {
     list[0] ? open(list[0].id) : newProject("multi");
   }
 
+  folderRef.current = folder;
   if (!project) return html`<div class="loading">Ładuję edytor…</div>`;
+  const stale = !folder?.ok && meta.lastChange && (!meta.lastBackup || meta.lastChange - meta.lastBackup > 0) && Date.now() - (meta.lastBackup || 0) > 60 * 60000;
   const single = project.brand.mode === "single";
   const chapter = project.chapters.find((c) => c.id === view);
   const chapterIndex = project.chapters.indexOf(chapter);
@@ -640,11 +719,19 @@ function App() {
             <span>${st === "normal" ? "Prosty" : "Kursywa"}: <small>${f ? f.path.split("/").pop() : "brak — eksport użyje kroju z komputera odbiorcy"}</small></span>
             <input type="file" accept=".woff2,.woff" onChange=${(e) => { const file = e.target.files[0]; e.target.value = ""; if (file) setStudioFont(st, file); }} /></label>`; })}
           <hr />
+          ${CAN_FOLDER && html`<button type="button" onClick=${openFolder}>Otwórz projekt z folderu na dysku…</button>`}
           <button type="button" class="is--danger" onClick=${remove}>Usuń ten projekt</button>
         </div>`}
       </div>
       <span class="top__status">${status}</span>
       <span class="top__actions">
+        ${CAN_FOLDER
+          ? folder
+            ? folder.ok
+              ? html`<span class="saved" title="Każda zmiana zapisuje się też na dysku">Folder: ${folder.name} ✓</span>`
+              : html`<button type="button" class="btn is--warn" onClick=${resumeFolder}>Wznów zapis do folderu „${folder.name}”</button>`
+            : html`<button type="button" class="btn is--ghost" onClick=${linkFolder} title="Każda zmiana zapisze się też w wybranym folderze na dysku">Zapisuj w folderze…</button>`
+          : html`<span class=${`saved${stale ? " is--warn" : ""}`} title="Safari nie pozwala zapisywać prosto do folderu — rób backup na dysk">Backup: ${ago(meta.lastBackup)}</span>`}
         <label class="btn is--ghost">Wczytaj backup<input type="file" accept=".khorei,.zip" hidden onChange=${(e) => { const f = e.target.files[0]; e.target.value = ""; if (f) restore(f); }} /></label>
         <button type="button" class="btn is--ghost" onClick=${backup}>Backup na dysk</button>
         <button type="button" class="btn is--primary" onClick=${exportZip}>Eksport ZIP ↓</button>

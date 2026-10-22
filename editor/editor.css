@@ -121,3 +121,7 @@ button { cursor: pointer; }
 .app.has--banner { grid-template-rows: auto 52px minmax(0, 1fr); grid-template-areas: "banner banner banner" "top top top" "nav panel preview"; }
 .banner { grid-area: banner; display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: var(--on); color: var(--on-fg); }
 .banner .btn { margin-left: auto; background: var(--on-fg); color: var(--on); }
+
+.saved { color: var(--muted); align-self: center; white-space: nowrap; }
+.saved.is--warn { color: #b25c00; font-weight: 600; }
+.btn.is--warn { border-color: #b25c00; color: #b25c00; }

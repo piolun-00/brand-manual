@@ -3,10 +3,12 @@ const DB = "khorei-brandmanual";
 let dbp;
 function db() {
   dbp ??= new Promise((res, rej) => {
-    const r = indexedDB.open(DB, 1);
+    const r = indexedDB.open(DB, 2);
     r.onupgradeneeded = () => {
-      r.result.createObjectStore("projects", { keyPath: "id" });
-      r.result.createObjectStore("assets");
+      const names = r.result.objectStoreNames;
+      if (!names.contains("projects")) r.result.createObjectStore("projects", { keyPath: "id" });
+      if (!names.contains("assets")) r.result.createObjectStore("assets");
+      if (!names.contains("meta")) r.result.createObjectStore("meta"); // folder zapisu, data ostatniego backupu
     };
     r.onsuccess = () => res(r.result);
     r.onerror = () => rej(r.error);
@@ -39,3 +41,7 @@ export async function deleteProject(pid) {
   for (const path of await assetKeys(pid)) await tx("assets", "readwrite", (s) => s.delete(`${pid}/${path}`));
   await tx("projects", "readwrite", (s) => s.delete(pid));
 }
+
+// Metadane projektu: uchwyt folderu na dysku (Chrome), czas ostatniego backupu
+export const getMeta = async (pid) => (await tx("meta", "readonly", (s) => s.get(pid))) || {};
+export const setMeta = async (pid, patch) => { const cur = await getMeta(pid); return tx("meta", "readwrite", (s) => s.put({ ...cur, ...patch }, pid)); };
