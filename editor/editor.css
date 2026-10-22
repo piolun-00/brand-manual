@@ -111,3 +111,13 @@ button { cursor: pointer; }
 .menu__file { display: grid; gap: 4px; padding: 6px 8px; }
 .menu__file small { color: var(--muted); }
 .menu__file input { font-size: 12px; }
+
+/* Pola w rzędzie mają tę samą wysokość: etykieta w jednym wierszu, pola wyrównane do góry */
+.grid2, .grid3, .grid2x { align-items: start; }
+.f__label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grid2x { align-items: end; }
+
+.top__brand small { font-weight: 500; color: var(--muted); font-size: 11px; margin-left: 4px; }
+.app.has--banner { grid-template-rows: auto 52px minmax(0, 1fr); grid-template-areas: "banner banner banner" "top top top" "nav panel preview"; }
+.banner { grid-area: banner; display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: var(--on); color: var(--on-fg); }
+.banner .btn { margin-left: auto; background: var(--on-fg); color: var(--on); }

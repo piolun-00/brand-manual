@@ -2,8 +2,10 @@
 // Ten sam kod robi podgląd w edytorze i eksport gotowej strony — dlatego wynik jest identyczny.
 // Klasy = nazwy warstw w Figmie (BEM: blok__element is--modyfikator).
 
-import { tokensCss, fontFaces } from "./tokens.js";
-import { RUNTIME } from "./runtime.js";
+// Pliki silnika ładowane z tą samą wersją co ten moduł (?v=…) — patrz editor/app.js
+const VQ = new URL(import.meta.url).search;
+const { tokensCss, fontFaces } = await import("./tokens.js" + VQ);
+const { RUNTIME } = await import("./runtime.js" + VQ);
 
 // ——— Narzędzia ———
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");

@@ -4,8 +4,12 @@
 import { h, render } from "preact";
 import { useState, useEffect, useRef, useMemo, useCallback } from "preact/hooks";
 import htm from "htm";
-import { renderPage, renderSite, siteCss, prepare, slugify, usedAssets } from "../engine/render.js";
-import * as store from "./store.js";
+// Wersja edytora siedzi w adresie skryptu (index.html: app.js?v=…). Każdy plik ładujemy z tą samą wersją,
+// więc po aktualizacji przeglądarka nie zmiesza starych plików z nowymi.
+const VERSION = new URL(import.meta.url).searchParams.get("v") || "dev";
+const Q = `?v=${VERSION}`;
+const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets } = await import("../engine/render.js" + Q);
+const store = await import("./store.js" + Q);
 
 const html = htm.bind(h);
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -13,10 +17,10 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 
 // ——— Dane silnika ———
 const [FIGMA, BASE_CSS, SAMPLE, SAMPLE_SINGLE] = await Promise.all([
-  fetch("engine/figma-variables.json").then((r) => r.json()),
-  fetch("engine/base.css").then((r) => r.text()),
-  fetch("engine/sample.json").then((r) => r.json()),
-  fetch("engine/sample-single.json").then((r) => r.json())
+  fetch("engine/figma-variables.json" + Q).then((r) => r.json()),
+  fetch("engine/base.css" + Q).then((r) => r.text()),
+  fetch("engine/sample.json" + Q).then((r) => r.json()),
+  fetch("engine/sample-single.json" + Q).then((r) => r.json())
 ]);
 
 const BLOCK_TYPES = {
@@ -98,11 +102,11 @@ function download(blob, name) {
 }
 
 // ——— Pola formularza ———
-function Text({ label, value, onInput, hint, multiline, placeholder }) {
+function Text({ label, value, onInput, hint, multiline, placeholder, rows }) {
   return html`<label class="f">
     <span class="f__label">${label}</span>
     ${multiline
-      ? html`<textarea rows="4" value=${value || ""} placeholder=${placeholder || ""} onInput=${(e) => onInput(e.target.value)} />`
+      ? html`<textarea rows=${rows || 4} value=${value || ""} placeholder=${placeholder || ""} onInput=${(e) => onInput(e.target.value)} />`
       : html`<input type="text" value=${value ?? ""} placeholder=${placeholder || ""} onInput=${(e) => onInput(e.target.value)} />`}
     ${hint && html`<span class="f__hint">${hint}</span>`}
   </label>`;
@@ -296,8 +300,8 @@ function SectionForm({ s, set, ctx, open, setOpen, noTitle }) {
           onUp=${i > 0 && (() => set((x) => move(x.blocks, i, -1)))} onDown=${i < s.blocks.length - 1 && (() => set((x) => move(x.blocks, i, 1)))}
           onRemove=${() => set((x) => { x.blocks.splice(i, 1); })}>
           <label class="check is--line"><input type="checkbox" checked=${!!b.line} onChange=${(e) => setB((x) => { x.line = e.target.checked; })} />Linia nad blokiem</label>
-          <div class="grid2"><${Text} label="Nazwa nad blokiem (opcjonalna)" value=${b.label} onInput=${(v) => setB((x) => { x.label = v; })} />
-          <${Text} label="Opis (opcjonalny)" value=${b.text} onInput=${(v) => setB((x) => { x.text = v; })} /></div>
+          <${Text} label="Nazwa bloku (opcjonalna)" value=${b.label} onInput=${(v) => setB((x) => { x.label = v; })} />
+          <${Text} label="Opis bloku (opcjonalny)" multiline rows="2" value=${b.text} onInput=${(v) => setB((x) => { x.text = v; })} />
           ${Form && html`<${Form} b=${b} set=${setB} ctx=${ctx} />`}
         <//>`;
       })}
@@ -476,6 +480,22 @@ function App() {
   const [focus, setFocus] = useState(-1);
   const [studio, setStudio] = useState({ fonts: [], urls: {} }); // pliki ABC Areal — wspólne dla wszystkich projektów
   const saveTimer = useRef();
+  const [newVersion, setNewVersion] = useState(null);
+
+  // Nowa wersja edytora na serwerze → pasek z prośbą o odświeżenie
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const r = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
+        const { version } = await r.json();
+        if (VERSION !== "dev" && version && version !== VERSION) setNewVersion(version);
+      } catch {}
+    };
+    check();
+    const t = setInterval(check, 5 * 60 * 1000);
+    addEventListener("focus", check);
+    return () => { clearInterval(t); removeEventListener("focus", check); };
+  }, []);
 
   // Krój studia: pliki trzymane w przeglądarce pod kluczem „_studio”, trafiają do każdego eksportu
   async function loadStudio() {
@@ -601,9 +621,11 @@ function App() {
   const chapter = project.chapters.find((c) => c.id === view);
   const chapterIndex = project.chapters.indexOf(chapter);
 
-  return html`<div class="app">
+  return html`<div class=${`app${newVersion ? " has--banner" : ""}`}>
+    ${newVersion && html`<div class="banner">Jest nowa wersja edytora. Zapisz pracę i odśwież stronę skrótem <b>Cmd+Shift+R</b> — wszystkie projekty zostaną.
+      <button type="button" class="btn is--primary" onClick=${() => location.reload()}>Odśwież</button></div>`}
     <header class="top">
-      <span class="top__brand">KHOREI <span>brandmanual</span></span>
+      <span class="top__brand">KHOREI <span>brandmanual</span> <small>v${VERSION}</small></span>
       <div class="top__project">
         <button type="button" class="btn is--ghost" onClick=${() => setMenu(!menu)}>${project.brand.name || "Bez nazwy"} ▾</button>
         ${menu && html`<div class="menu" onMouseLeave=${() => setMenu(false)}>
