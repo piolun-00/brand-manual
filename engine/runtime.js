@@ -13,11 +13,26 @@ export const RUNTIME = `
     const a = e.target.khAnim; if (!a || reduce) return;
     e.isIntersecting ? a.play() : a.pause();
   })) : null;
+  const local = location.protocol === "file:";
   function initMedia() {
+    // Model 3D: wskaźnik ładowania znika po wczytaniu. Z dysku (file://) przeglądarka blokuje modele — informacja zamiast pustego pola.
+    document.querySelectorAll(".model:not([data-ready])").forEach((box) => {
+      box.dataset.ready = "1";
+      const mv = box.querySelector("model-viewer");
+      if (!mv) return;
+      if (local && !preview) { box.classList.add("is--local"); return; }
+      const done = () => box.classList.add("is--loaded");
+      if (mv.loaded) done();
+      mv.addEventListener("load", done);
+      mv.addEventListener("error", () => box.classList.add("is--error"));
+    });
     if (!window.lottie) return;
     document.querySelectorAll("[data-lottie]:not([data-ready])").forEach((el) => {
       el.dataset.ready = "1";
-      const a = window.lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: false, path: el.dataset.lottie });
+      // Dane animacji wbudowane w stronę (eksport) — działa też po otwarciu z dysku; w podglądzie plik z edytora
+      const inline = el.closest(".lottie-tile")?.querySelector("script.lottie-tile__data");
+      const src = inline ? { animationData: JSON.parse(inline.textContent) } : { path: el.dataset.lottie };
+      const a = window.lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: false, ...src });
       el.khAnim = a;
       a.addEventListener("DOMLoaded", () => { if (reduce || !seen) { reduce ? a.goToAndStop(0, true) : a.play(); } });
       if (seen) seen.observe(el);
@@ -25,7 +40,21 @@ export const RUNTIME = `
   }
   window.khInitMedia = initMedia;
   if (document.readyState === "complete") initMedia();
-  else window.addEventListener("load", initMedia);
+  else { document.addEventListener("DOMContentLoaded", initMedia); window.addEventListener("load", initMedia); }
+
+  // Pobieranie z manualu otwartego z dysku: przeglądarka ignoruje „download” dla plików lokalnych i otwiera plik
+  // zamiast manuala. Lottie pobieramy z danych wbudowanych w stronę, resztę otwieramy w nowej karcie.
+  if (local && !preview) document.addEventListener("click", (e) => {
+    const a = e.target.closest("a[download]");
+    if (!a || a.getAttribute("aria-disabled") || a.href.startsWith("blob:")) return; // blob: = nasz własny link pobierania
+    e.preventDefault();
+    const inline = a.closest(".lottie-tile")?.querySelector("script.lottie-tile__data");
+    if (inline) {
+      const url = URL.createObjectURL(new Blob([inline.textContent], { type: "application/json" }));
+      const t = document.createElement("a"); t.href = url; t.download = a.getAttribute("download") || "animacja.json";
+      document.body.appendChild(t); t.click(); t.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } else window.open(a.href, "_blank", "noopener");
+  });
   document.addEventListener("click", (e) => {
     if (e.target.closest("[data-drawer-open]")) body.classList.add("is--drawer-open");
     else if (e.target.closest("[data-drawer-close], .sidebar__item")) closeDrawer();
@@ -80,6 +109,8 @@ export const RUNTIME = `
     if (/\\/(files|media|fonts)\\//.test(url.pathname)) return null;
     return url;
   };
+  let shownPath = location.pathname;
+  const keep = (u) => u.pathname + u.search + u.hash; // adres z kotwicą — bez niej linki w spisie gubiły cel
   async function go(url, push) {
     let html;
     try {
@@ -91,7 +122,7 @@ export const RUNTIME = `
     if (!next) { location.href = url.href; return; }
     // Względne adresy z innej strony (../media/…) trzeba przeliczyć względem nowego adresu.
     const fix = (root) => root.querySelectorAll("[href],[src],[style]").forEach((el) => {
-      for (const at of ["href", "src"]) { const v = el.getAttribute(at); if (v && !/^(#|[a-z]+:|\\/)/i.test(v)) el.setAttribute(at, new URL(v, url.href).pathname); }
+      for (const at of ["href", "src"]) { const v = el.getAttribute(at); if (v && !/^(#|[a-z]+:|\\/)/i.test(v)) el.setAttribute(at, keep(new URL(v, url.href))); }
       const st = el.getAttribute("style"); if (st && st.includes("url(")) el.setAttribute("style", st.replace(/url\\((['"]?)(?![a-z]+:|\\/)([^'")]+)\\1\\)/gi, (m, q, p) => "url(" + q + new URL(p, url.href).pathname + q + ")"));
     });
     fix(next);
@@ -104,12 +135,13 @@ export const RUNTIME = `
       const on = items[i]?.classList.contains("is--active");
       el.classList.toggle("is--active", !!on);
       on ? el.setAttribute("aria-current", "page") : el.removeAttribute("aria-current");
-      if (items[i]) el.setAttribute("href", new URL(items[i].getAttribute("href"), url.href).pathname);
+      if (items[i]) el.setAttribute("href", keep(new URL(items[i].getAttribute("href"), url.href)));
     });
-    const logo = doc.querySelector(".sidebar__logo"); if (logo) document.querySelector(".sidebar__logo")?.setAttribute("href", new URL(logo.getAttribute("href"), url.href).pathname);
+    const logo = doc.querySelector(".sidebar__logo"); if (logo) document.querySelector(".sidebar__logo")?.setAttribute("href", keep(new URL(logo.getAttribute("href"), url.href)));
     if (doc.title) document.title = doc.title;
     initMedia();
     if (push) history.pushState(null, "", url.href);
+    shownPath = url.pathname;
     const target = url.hash && document.getElementById(decodeURIComponent(url.hash.slice(1)));
     target ? target.scrollIntoView({ behavior: "instant" }) : window.scrollTo({ top: 0, behavior: "instant" });
   }
@@ -123,6 +155,7 @@ export const RUNTIME = `
     const url = internal(e.target.closest?.("a[href]"));
     if (url) load(url.href.split("#")[0]).catch(() => {});
   });
-  window.addEventListener("popstate", () => go(new URL(location.href), false));
+  // Wstecz / dalej: przeładowujemy treść tylko przy zmianie strony; sama kotwica przewija przeglądarka
+  window.addEventListener("popstate", () => { if (location.pathname !== shownPath) go(new URL(location.href), false); });
 })();
 `;

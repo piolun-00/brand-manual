@@ -223,7 +223,8 @@ function FileField({ label, value, accept, hint, folder, ctx, onChange, expect }
   const ref = useRef();
   const [warn, setWarn] = useState("");
   const [drop, setDrop] = useState(false);
-  const name = value ? value.split("/").pop() : null;
+  // Nazwa pliku bez technicznego dopisku (-ab12), który edytor dodaje, żeby pliki o tej samej nazwie się nie nadpisały
+  const name = value ? value.split("/").pop().replace(/-[a-z0-9]{4}(\.[a-z0-9]+)$/i, "$1") : null;
   const isImg = value && /\.(svg|jpe?g|png|webp)$/i.test(value);
   useEffect(() => {
     setWarn("");
@@ -243,7 +244,7 @@ function FileField({ label, value, accept, hint, folder, ctx, onChange, expect }
     });
     return () => { live = false; };
   }, [value, ctx.urls[value], expect && JSON.stringify(expect)]);
-  const take = async (f) => { const path = f && await ctx.addFile(f, folder); if (path) onChange(path); };
+  const take = async (f) => { const path = f && await ctx.addFile(f, folder); if (path) onChange(path, f); };
   return html`<div class="f">
     <span class="f__label">${label}</span>
     <div class=${`file${drop ? " is--drop" : ""}`}
@@ -309,6 +310,8 @@ function ImagesBlock({ b, set, ctx }) {
       <${Text} label="Tekst alternatywny (czytniki ekranu)" value=${it.alt} placeholder=${it.caption || "Co widać na zdjęciu"} onInput=${(v) => set((x) => { x.items = items.map((o) => ({ ...o })); x.items[i].alt = v; })} />
     </div>`)}`;
 }
+// Nazwa z pliku: dokładnie tak, jak plik się nazywa, tylko bez rozszerzenia — dalej do edycji w polu „Nazwa”
+const baseName = (fileName) => String(fileName || "").replace(/\.[a-z0-9]+$/i, "");
 function ListBlock({ items, add, render: r, addLabel }) {
   return html`${items.map(r)}<button type="button" class="btn is--add" onClick=${add}>+ ${addLabel}</button>`;
 }
@@ -320,7 +323,7 @@ function SpecimensBlock({ b, set, ctx }) {
       <div class="grid2"><${Text} label="Nazwa" value=${it.label} placeholder="np. Logo" onInput=${(v) => set((x) => { x.items[i].label = v; })} />
       <${Text} label="Opis" value=${it.caption} placeholder="np. Najczęściej używany" onInput=${(v) => set((x) => { x.items[i].caption = v; })} /></div>
       <${FileField} label="Plik SVG" value=${it.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} expect=${{ w: 924, h: 364 }}
-        hint="Ramka 924×364 z Figmy, przezroczysta, znak na środku" onChange=${(p) => set((x) => { x.items[i].svg = p; })} />
+        hint="Ramka 924×364 z Figmy, przezroczysta, znak na środku" onChange=${(p, f) => set((x) => { x.items[i].svg = p; if (f && !(x.items[i].label || "").trim()) x.items[i].label = baseName(f.name); })} />
     </div>`} />`;
 }
 function PaletteBlock({ b, set, ctx }) {
@@ -359,13 +362,13 @@ function IconsBlock({ b, set, ctx }) {
         <button type="button" class="link is--icon" title="W dół" aria-label="W dół" onClick=${() => set((x) => move(x.items, i, 1))}><${Icon} name="down" /></button>
         <button type="button" class="link is--icon" title="Usuń" aria-label="Usuń" onClick=${() => set((x) => { x.items.splice(i, 1); })}><${Icon} name="close" /></button></span></div>
       <${Text} label="Nazwa" value=${it.name} onInput=${(v) => set((x) => { x.items[i].name = v; })} />
-      <${FileField} label="Plik SVG" value=${it.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} onChange=${(p) => set((x) => { x.items[i].svg = p; })} />
+      <${FileField} label="Plik SVG" value=${it.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} onChange=${(p, f) => set((x) => { x.items[i].svg = p; if (f && !(x.items[i].name || "").trim()) x.items[i].name = baseName(f.name); })} />
     </div>`} />
     <button type="button" class="btn is--add" onClick=${() => ref.current.click()}>+ Wgraj wiele SVG naraz</button>
     <input ref=${ref} type="file" accept=".svg,image/svg+xml" multiple hidden onChange=${async (e) => {
       const files = [...e.target.files]; e.target.value = "";
       const added = [];
-      for (const f of files) { const svg = await ctx.addFile(f, "media"); if (svg) added.push({ name: f.name.replace(/\.svg$/i, "").replace(/[-_]+/g, " "), svg }); }
+      for (const f of files) { const svg = await ctx.addFile(f, "media"); if (svg) added.push({ name: baseName(f.name), svg }); }
       set((x) => { x.items = [...(x.items || []).filter((k) => k.svg || k.name), ...added]; });
     }} />
     <label class="check"><input type="checkbox" checked=${!!b.currentColor} onChange=${(e) => set((x) => { x.currentColor = e.target.checked; })} />Pliki SVG z kolorem currentColor (ikona przejmie kolor tekstu w kodzie strony)</label>
@@ -401,13 +404,13 @@ function LottieBlock({ b, set, ctx }) {
         <button type="button" class="link is--icon" title="W dół" aria-label="W dół" onClick=${() => set((x) => move(x.items, i, 1))}><${Icon} name="down" /></button>
         <button type="button" class="link is--icon" title="Usuń" aria-label="Usuń" onClick=${() => set((x) => { x.items.splice(i, 1); })}><${Icon} name="close" /></button></span></div>
       <${Text} label="Nazwa" value=${it.name} onInput=${(v) => set((x) => { x.items[i].name = v; })} />
-      <${FileField} label="Plik Lottie (JSON)" value=${it.file} accept=".json,application/json" folder="media" ctx=${lctx} onChange=${(p) => set((x) => { x.items[i].file = p; })} />
+      <${FileField} label="Plik Lottie (JSON)" value=${it.file} accept=".json,application/json" folder="media" ctx=${lctx} onChange=${(p, f) => set((x) => { x.items[i].file = p; if (f && !(x.items[i].name || "").trim()) x.items[i].name = baseName(f.name); })} />
     </div>`} />
     <button type="button" class="btn is--add" onClick=${() => ref.current.click()}>+ Wgraj wiele JSON naraz</button>
     <input ref=${ref} type="file" accept=".json,application/json" multiple hidden onChange=${async (e) => {
       const files = [...e.target.files]; e.target.value = "";
       const added = [];
-      for (const f of files) { const p = await lctx.addFile(f, "media"); if (p) added.push({ name: f.name.replace(/\.json$/i, "").replace(/[-_]+/g, " "), file: p }); }
+      for (const f of files) { const p = await lctx.addFile(f, "media"); if (p) added.push({ name: baseName(f.name), file: p }); }
       set((x) => { x.items = [...(x.items || []).filter((k) => k.file || k.name), ...added]; });
     }} />
     ${warn && html`<p class="f__warn">${warn}</p>`}
@@ -426,17 +429,17 @@ async function objToGlb(file) {
   return new File([glb], file.name.replace(/\.obj$/i, ".glb"), { type: "model/gltf-binary" });
 }
 function ModelBlock({ b, set, ctx }) {
-  const [busy, setBusy] = useState("");
   const mctx = { ...ctx, addFile: async (f, folder) => {
     if (/\.obj$/i.test(f.name)) {
-      setBusy("Zamieniam OBJ na GLB…");
-      try { f = await objToGlb(f); } catch (e) { setBusy(""); alert("Nie udało się wczytać pliku OBJ: " + e.message); return null; }
-      setBusy("");
+      ctx.setBusy({ title: "Przygotowuję model 3D", detail: "Zamieniam OBJ na GLB…", p: null });
+      try { f = await objToGlb(f); } catch (e) { ctx.setBusy(null); alert("Nie udało się wczytać pliku OBJ: " + e.message); return null; }
+      ctx.setBusy({ title: "Przygotowuję model 3D", detail: "Zapisuję model…", p: null });
+      try { return await ctx.addFile(f, folder); } finally { ctx.setBusy(null); }
     } else if (!/\.glb$/i.test(f.name)) { alert("Wgraj plik GLB (najlepiej) albo OBJ."); return null; }
     return ctx.addFile(f, folder);
   } };
   return html`<${FileField} label="Model (GLB lub OBJ)" value=${b.file} accept=".glb,.obj,model/gltf-binary" folder="media" ctx=${mctx}
-      hint=${busy || "GLB niesie materiały i tekstury (Blender, Spline, Cinema 4D: Export → glTF Binary). OBJ to sama bryła — dostanie neutralny materiał. Najlepiej do 10 MB."} onChange=${(p) => set((x) => { x.file = p; })} />
+      hint=${"GLB niesie materiały i tekstury (Blender, Spline, Cinema 4D: Export → glTF Binary). OBJ to sama bryła — dostanie neutralny materiał. Najlepiej do 10 MB."} onChange=${(p) => set((x) => { x.file = p; })} />
     <div class="grid2">
       <${Select} label="Proporcje" value=${b.ratio || "16/9"} options=${[["16/9", "16:9"], ["4/3", "4:3"], ["1/1", "1:1"], ["3/4", "3:4"]]} onChange=${(v) => set((x) => { x.ratio = v; })} />
       <${Select} label="Tło" value=${b.background || "surface"} options=${[["surface", "Białe pole"], ["transparent", "Przezroczyste"]]} onChange=${(v) => set((x) => { x.background = v; })} />
@@ -572,6 +575,7 @@ function BrandForm({ b, set, ctx }) {
     <${Text} label="Data" value=${b.date} placeholder="październik 2026" onInput=${(v) => up((x) => { x.date = v; })} /></div>
     <${Select} label="Tryb strony" value=${b.mode} options=${[["multi", "Multi site — osobna strona na rozdział"], ["single", "Single site — wszystko na jednej stronie"]]} onChange=${(v) => ctx.switchMode(v)} />
     <${FileField} label="Logo w sidebarze (SVG)" value=${b.logo} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 210, h: 72 }} hint="Ramka 210×72 z Figmy, przezroczysta" onChange=${(p) => up((x) => { x.logo = p; })} />
+    <${FileField} label="Zdjęcie okładki manuala (opcjonalne)" value=${b.cover} accept="image/jpeg,image/png,image/webp" folder="media" ctx=${ctx} hint="Szablon z Figmy: 1440×900, eksport 2x. Bez zdjęcia okładka ma kolor tła." onChange=${(p) => up((x) => { x.cover = p; })} />
     <${Text} label="E-mail w stopce" value=${b.contact} onInput=${(v) => up((x) => { x.contact = v; })} />
     <div class="sub">
       <b class="sub__title">Dostęp</b>
@@ -714,6 +718,7 @@ function App() {
   const [view, setView] = useState("brand"); // "brand" | id rozdziału
   const [page, setPage] = useState("index");
   const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(null); // { title, detail, p } — nakładka „Przygotowuję manual” przy dłuższych operacjach
   const [menu, setMenu] = useState(false);
   const [focus, setFocus] = useState(-1);
   const [navOver, setNavOver] = useState(null);
@@ -889,15 +894,20 @@ function App() {
     }
     setView("brand"); setPage("index");
   }
-  const ctx = { urls, addFile, paletteNames, colors, switchMode };
+  const ctx = { urls, addFile, paletteNames, colors, switchMode, setBusy };
 
   // ——— Eksport i backup ———
   async function exportZip() {
-    setStatus("Przygotowuję eksport…");
+    const title = "Przygotowuję manual";
+    let lastP = 0;
+    const step = (detail, p) => { lastP = p ?? lastP; setBusy({ title, detail, p: lastP }); setStatus(detail); };
+    step("Zbieram pliki…", 0.02);
+    try {
     const zip = new JSZip();
     const font = fontOf(project), missing = [];
     const extra = { variants: new Map(), posters: new Set(), iconZips: new Map() };
-    for (const path of usedAssets(project)) { const blob = await store.getAsset(pid, path); blob ? zip.file(path, blob) : missing.push(path); }
+    const all = usedAssets(project);
+    for (const [k, path] of all.entries()) { if (k % 10 === 0) step(`Zbieram pliki… ${k + 1}/${all.length}`, 0.02 + 0.13 * k / Math.max(1, all.length)); const blob = await store.getAsset(pid, path); blob ? zip.file(path, blob) : missing.push(path); }
     // Zdjęcia z bloków „Rząd zdjęć”: wersja o połowę mniejsza dla telefonów (srcset)
     const walkBlocks = (fn) => { for (const c of project.chapters || []) for (const s of c.sections || []) for (const bl of s.blocks || []) fn(bl); };
     const photos = new Set(), videos = new Set(), iconBlocks = [], lottieBlocks = [];
@@ -909,16 +919,17 @@ function App() {
     });
     let n = 0;
     for (const path of photos) {
-      setStatus(`Przygotowuję zdjęcia dla telefonów… ${++n}/${photos.size}`);
+      step(`Zmniejszam zdjęcia dla telefonów… ${++n}/${photos.size}`, 0.15 + 0.3 * (n - 1) / Math.max(1, photos.size));
       const blob = await store.getAsset(pid, path); if (!blob) continue;
       try { const r = await halfSize(blob); if (r) { zip.file(variantOf(path), r.blob); extra.variants.set(path, { full: r.full, half: r.half }); } } catch {}
     }
     for (const path of videos) {
-      setStatus("Przygotowuję klatki startowe animacji…");
+      step("Wycinam klatki startowe animacji…", 0.47);
       const blob = await store.getAsset(pid, path); if (!blob) continue;
       try { const poster = await posterOf(blob); if (poster) { zip.file(path.replace(/\.[a-z0-9]+$/i, "-poster.jpg"), poster); extra.posters.add(path); } } catch {}
     }
     const toCurrent = (txt) => txt.replace(/((?:fill|stroke)\s*[=:]\s*["']?)(#[0-9a-f]{3,8}|rgba?\([^)]*\)|black|white)/gi, "$1currentColor");
+    if (iconBlocks.length) step("Pakuję ikony…", 0.55);
     for (const bl of iconBlocks) {
       const iz = new JSZip(), names = new Set();
       for (const it of bl.items) {
@@ -973,8 +984,8 @@ function App() {
         ""
       ].join("\n"));
     }
-    if (lock) setStatus("Szyfruję strony…");
-    extra.lottieZips = new Map();
+    extra.lottieZips = new Map(); extra.lottieData = new Map();
+    if (lottieBlocks.length) step("Pakuję animacje Lottie…", 0.6);
     for (const bl of lottieBlocks) {
       const lz = new JSZip(), names = new Set();
       for (const it of bl.items) {
@@ -983,6 +994,7 @@ function App() {
         let name = slugify(it.name) || it.file.split("/").pop().replace(/\.json$/i, ""), k = 2;
         while (names.has(name)) name = `${slugify(it.name)}-${k++}`;
         names.add(name); lz.file(`${name}.json`, blob);
+        extra.lottieData.set(it.file, await blob.text()); // animacja wbudowana w stronę — działa też po otwarciu z dysku
       }
       const zpath = `files/${slugify(project.brand.name) || "marka"}-animacje${lottieBlocks.length > 1 ? `-${lottieBlocks.indexOf(bl) + 1}` : ""}.zip`;
       zip.file(zpath, await lz.generateAsync({ type: "blob", compression: "DEFLATE" }));
@@ -991,6 +1003,7 @@ function App() {
     // Odtwarzacze: tylko gdy manual ich używa
     const site = prepare(project);
     for (const [asset, src] of Object.entries(VENDOR_ASSETS)) if (uses(site, asset.includes("lottie") ? "lottie" : "model")) zip.file(asset, await fetch(ENGINE_URL(src)).then((r) => r.blob()));
+    step(lock ? "Składam i szyfruję strony…" : "Składam strony…", 0.66);
     for (const f of renderSite(project, FIGMA, BASE_CSS, studio.fonts, extra)) {
       zip.file(f.path, lock && f.path.endsWith(".html")
         ? await lockPage(f.content, lock, { title: `${project.brand.name || ""} · ${project.brand.documentTitle || ""}`, accent: "#111111" })
@@ -1001,9 +1014,13 @@ function App() {
       for (const p of GEIST_FILES) zip.file(p, await fetch(ENGINE_URL(p)).then((r) => r.blob()));
       zip.file("fonts/geist/LICENSE.txt", await fetch(ENGINE_URL("fonts/geist/LICENSE.txt")).then((r) => r.blob()));
     }
-    const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+    let tick = 0;
+    const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" }, (m) => { const now = Date.now(); if (now - tick > 120) { tick = now; step(`Pakuję ZIP… ${Math.round(m.percent)}%`, 0.7 + 0.3 * m.percent / 100); } });
+    step("Gotowe", 1);
     download(blob, `${slugify(project.brand.name)}-brandmanual-${(project.brand.version || "1.0").replace(/[^0-9a-z.]/gi, "")}.zip`);
     setStatus(missing.length ? `Eksport gotowy — brakuje ${missing.length} plików` : "Eksport gotowy");
+    } catch (e) { alert("Eksport się nie udał: " + e.message); setStatus("Eksport przerwany"); }
+    finally { setTimeout(() => setBusy(null), 400); }
   }
   async function backup() {
     const zip = new JSZip();
@@ -1082,6 +1099,14 @@ function App() {
   return html`<div class=${`app${newVersion ? " has--banner" : ""}`}>
     ${newVersion && html`<div class="banner">Jest nowa wersja edytora. Zapisz pracę i odśwież stronę skrótem <b>Cmd+Shift+R</b> — wszystkie projekty zostaną.
       <button type="button" class="btn is--primary" onClick=${() => location.reload()}>Odśwież</button></div>`}
+    ${busy && html`<div class="busy" role="status" aria-live="polite">
+      <div class="busy__card">
+        <span class="busy__mark" aria-hidden="true"><span></span></span>
+        <b class="busy__title">${busy.title}</b>
+        <span class="busy__detail">${busy.detail}</span>
+        ${busy.p != null ? html`<span class="busy__bar"><span style=${`transform:scaleX(${Math.max(0.02, busy.p)})`}></span></span>` : html`<span class="busy__bar is--loop"><span></span></span>`}
+      </div>
+    </div>`}
     <header class="top">
       <span class="top__brand">KHOREI <span>brandmanual</span> <small>v${VERSION}</small></span>
       <div class="top__project">

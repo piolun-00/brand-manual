@@ -235,6 +235,7 @@ const BLOCKS = {
         <span class="lottie-tile__anim" data-lottie="${esc(ctx.url(i.file))}" role="img" aria-label="${esc(i.name || "Animacja")}"></span>
         <span class="swatch__copy"><span class="button is--download text-body"><span class="button__label">Pobierz</span><span class="button__icon">${icon("download")}</span></span></span>
       </a>` : `<span class="lottie-tile__stage"><span class="lottie-tile__placeholder text-small">Lottie JSON</span></span>`}
+      ${i.file && ctx.lottieData?.has?.(i.file) ? `<script type="application/json" class="lottie-tile__data">${ctx.lottieData.get(i.file).replace(/<\//g, "<\\/")}</script>` : ""}
       <span class="lottie-tile__name text-body">${t(i.name)}</span>
       ${i.file ? `<span class="lottie-tile__dl">${button(ctx, "download", i.file, "Pobierz")}</span>` : ""}
     </div>`).join("")}</div></div>`;
@@ -243,7 +244,9 @@ const BLOCKS = {
   // Model 3D (GLB): obraca się sam, można go chwycić i obrócić; przewijanie strony nie zoomuje modelu
   model: (ctx, b) => {
     const ratio = b.ratio && b.ratio !== "auto" ? b.ratio.replace("/", " / ") : "16 / 9";
-    const viewer = b.file ? `<model-viewer src="${esc(ctx.url(b.file))}" alt="${esc(b.alt || b.label || "Model 3D")}" camera-controls disable-zoom touch-action="pan-y" interaction-prompt="none"${b.autoRotate === false ? "" : ` auto-rotate auto-rotate-delay="0" rotation-per-second="${b.speed || 20}deg"`} shadow-intensity="${b.shadow === false ? 0 : 0.7}" exposure="1"><div slot="progress-bar"></div></model-viewer>` : `<span class="gallery__placeholder text-small">Model 3D — GLB lub OBJ</span>`;
+    const viewer = b.file ? `<model-viewer src="${esc(ctx.url(b.file))}" alt="${esc(b.alt || b.label || "Model 3D")}" camera-controls disable-zoom touch-action="pan-y" interaction-prompt="none"${b.autoRotate === false ? "" : ` auto-rotate auto-rotate-delay="0" rotation-per-second="${b.speed || 20}deg"`} shadow-intensity="${b.shadow === false ? 0 : 0.7}" exposure="1"><div slot="progress-bar"></div></model-viewer>
+      <span class="model__loader" aria-hidden="true"><span></span></span>
+      <span class="model__note text-small">Model 3D wyświetli się po wgraniu manuala na serwer — przeglądarka nie otwiera modeli z dysku.</span>` : `<span class="gallery__placeholder text-small">Model 3D — GLB lub OBJ</span>`;
     return `<div class="model${b.background === "transparent" ? " is--transparent" : ""}" style="aspect-ratio:${ratio}">${viewer}</div>${b.download && b.file && ctx.headerTaken !== b.id ? `<div class="model__actions">${button(ctx, "download", b.file, "Pobierz model (GLB)")}</div>` : ""}`;
   },
 
@@ -361,7 +364,7 @@ export function renderPage(project, page, ctx) {
   const title = `${chapter ? `${chapter.title} — ` : ""}${b.name || ""} · ${b.documentTitle || ""}`;
   let content, showFooter = true;
   if (!chapter) {
-    content = cover(ctx, { kind: "start", first: b.name, second: b.documentTitle, version: `Wersja ${b.version || ""} · ${b.date || ""}` })
+    content = cover(ctx, { kind: "start", first: b.name, second: b.documentTitle, version: `Wersja ${b.version || ""} · ${b.date || ""}`, image: b.cover })
       + (single ? `<div class="main">${site.chapters.map((c) => singleChapter(ctx, c, site)).join("")}</div>` : "");
     showFooter = single;
   } else content = chapterContent(ctx, chapter, site, false);
@@ -398,6 +401,7 @@ ${showFooter ? footer(site) : ""}
 
 // ——— Cała strona do eksportu ———
 // Linki względne, więc strona działa z dowolnego folderu na serwerze (np. klient.pl/brandbook/).
+// extra.lottieData: Map(ścieżka JSON → treść) — animacje wbudowane w stronę, działają też po otwarciu z dysku
 // extra: { variants: Map(ścieżka → {full, half}), posters: Set(ścieżek MP4), iconZips / lottieZips: Map(id bloku → ścieżka ZIP) }
 export function renderSite(project, figmaVars, baseCss, studioFonts = [], extra = {}) {
   const site = prepare(project);
