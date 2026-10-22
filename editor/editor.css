@@ -129,3 +129,6 @@ button { cursor: pointer; }
 .top__history { display: flex; gap: 4px; }
 .top__history .btn { padding: 6px 9px; }
 .btn:disabled { opacity: .35; cursor: default; }
+
+.menu__usage { color: var(--muted); padding: 0 8px 6px; font-size: 12px; }
+.menu__usage b { color: var(--fg); font-weight: 500; }

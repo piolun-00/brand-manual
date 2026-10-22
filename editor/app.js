@@ -113,6 +113,7 @@ async function readTree(dir, prefix = "") {
   }
   return out;
 }
+const fmtMB = (b) => b >= 1073741824 ? `${(b / 1073741824).toFixed(1)} GB` : `${Math.max(0.1, b / 1048576).toFixed(b < 10485760 ? 1 : 0)} MB`;
 const projectJson = (id, data) => JSON.stringify({ format: "khorei-brandmanual", version: 2, id, data }, null, 1);
 const ago = (t) => {
   if (!t) return "nigdy";
@@ -166,7 +167,8 @@ function FileField({ label, value, accept, hint, folder, ctx, onChange }) {
       ${value && html`<button type="button" class="btn is--ghost" onClick=${() => onChange(null)}>Usuń</button>`}
       <input ref=${ref} type="file" accept=${accept} hidden onChange=${async (e) => {
         const f = e.target.files[0]; e.target.value = "";
-        if (f) onChange(await ctx.addFile(f, folder));
+        const path = f && await ctx.addFile(f, folder);
+        if (path) onChange(path);
       }} />
     </div>
     ${hint && html`<span class="f__hint">${hint}</span>`}
@@ -263,7 +265,7 @@ function IconsBlock({ b, set, ctx }) {
     <input ref=${ref} type="file" accept=".svg,image/svg+xml" multiple hidden onChange=${async (e) => {
       const files = [...e.target.files]; e.target.value = "";
       const added = [];
-      for (const f of files) added.push({ name: f.name.replace(/\.svg$/i, "").replace(/[-_]+/g, " "), svg: await ctx.addFile(f, "media") });
+      for (const f of files) { const svg = await ctx.addFile(f, "media"); if (svg) added.push({ name: f.name.replace(/\.svg$/i, "").replace(/[-_]+/g, " "), svg }); }
       set((x) => { x.items = [...(x.items || []).filter((k) => k.svg || k.name), ...added]; });
     }} />
     <p class="note">8 w rzędzie na desktopie, 6 na tablecie, 4 na telefonie. Kliknięcie kopiuje kod SVG.</p>`;
@@ -509,6 +511,11 @@ function App() {
   const folderRef = useRef(null);
   const [newVersion, setNewVersion] = useState(null);
   const [folder, setFolder] = useState(null); // { handle, name, ok }
+  const [sizes, setSizes] = useState({}); // ścieżka pliku → bajty (ten projekt)
+  const [quota, setQuota] = useState(null);
+  const refreshQuota = async () => { try { const e = await navigator.storage.estimate(); setQuota(e); } catch {} };
+  // Prośba, żeby przeglądarka nie czyściła danych edytora przy braku miejsca
+  useEffect(() => { navigator.storage?.persist?.().catch(() => {}); refreshQuota(); }, []);
   const [meta, setMetaState] = useState({});
   const [, tick] = useState(0);
   useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 60000); return () => clearInterval(t); }, []);
@@ -559,7 +566,9 @@ function App() {
     if (!rec) return;
     Object.values(urls).forEach((u) => URL.revokeObjectURL(u));
     const map = {};
-    for (const path of await store.assetKeys(id)) { const blob = await store.getAsset(id, path); if (blob) map[path] = URL.createObjectURL(blob); }
+    const sz = {};
+    for (const path of await store.assetKeys(id)) { const blob = await store.getAsset(id, path); if (blob) { map[path] = URL.createObjectURL(blob); sz[path] = blob.size; } }
+    setSizes(sz); refreshQuota();
     undoStack.current = []; redoStack.current = [];
     setUrls(map); setPid(id); setProject(withIds(rec.data)); setView("brand"); setPage("index"); setMenu(false);
     const m = await store.getMeta(id); setMetaState(m);
@@ -626,11 +635,15 @@ function App() {
 
 
   const addFile = useCallback(async (file, folder) => {
+    const mb = file.size / 1048576;
+    if (/^video\//.test(file.type) && mb > 10 && !confirm(`Plik „${file.name}” ma ${mb.toFixed(0)} MB. Manual będzie się długo ładował, a projekt zajmie dużo miejsca.\n\nNajlepiej skompresować animację do ok. 5–10 MB (np. HandBrake, 1080p). Wgrać mimo to?`)) return null;
+    if (!/^(video|image)\//.test(file.type) && mb > 50 && !confirm(`Plik „${file.name}” ma ${mb.toFixed(0)} MB. Wgrać mimo to?`)) return null;
     const blob = await prepareFile(file);
     const path = `${folder}/${fileName(file, blob)}`;
     await store.putAsset(pid, path, blob);
     if (folderRef.current?.ok) writeFile(folderRef.current.handle, `assets/${path}`, blob).catch(() => {});
     setUrls((u) => ({ ...u, [path]: URL.createObjectURL(blob) }));
+    setSizes((x) => ({ ...x, [path]: blob.size })); refreshQuota();
     return path;
   }, [pid]);
 
@@ -739,6 +752,7 @@ function App() {
         <button type="button" class="btn is--ghost" onClick=${() => setMenu(!menu)}>${project.brand.name || "Bez nazwy"} ▾</button>
         ${menu && html`<div class="menu" onMouseLeave=${() => setMenu(false)}>
           <span class="menu__label">Projekty w tej przeglądarce</span>
+          <span class="menu__usage">Ten projekt: <b>${fmtMB(usedAssets(project).reduce((n, p) => n + (sizes[p] || 0), 0))}</b>${quota ? html` · edytor razem: ${fmtMB(quota.usage)} z ${fmtMB(quota.quota)}` : ""}</span>
           ${projects.map((p) => html`<button type="button" class=${p.id === pid ? "is--on" : ""} onClick=${() => open(p.id)}>${p.name || "Bez nazwy"}<small>${new Date(p.updated).toLocaleDateString("pl-PL")}</small></button>`)}
           <hr />
           <button type="button" onClick=${() => newProject("multi")}>+ Nowy multi site (21 rozdziałów: tekst + zdjęcie)</button>
