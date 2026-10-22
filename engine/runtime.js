@@ -28,7 +28,10 @@ export const RUNTIME = `
       const a = e.target.closest("a[data-page]");
       if (a) { e.preventDefault(); closeDrawer(); parent.postMessage({ khorei: "page", page: a.dataset.page, hash: a.dataset.hash || "" }, "*"); return; }
       const ext = e.target.closest("a[href]");
-      if (ext && !ext.getAttribute("href").startsWith("#")) e.preventDefault();
+      if (!ext) return;
+      e.preventDefault(); // podgląd nie może nawigować ramki (kotwica w srcdoc otworzyłaby edytor w ramce)
+      const href = ext.getAttribute("href");
+      if (href.startsWith("#") && href.length > 1) { closeDrawer(); document.getElementById(decodeURIComponent(href.slice(1)))?.scrollIntoView({ behavior: "smooth" }); }
     });
     return;
   }

@@ -341,23 +341,37 @@ function Preview({ project, page, setPage, urls, focus }) {
     const slug = page === "index" ? "index" : (prepare(project).chapters.find((c) => c.id === page)?.slug || "index");
     return renderPage(project, single ? "index" : slug, ctx);
   }, [project, page, urls, single]);
+  const pending = useRef(null);
+  const scrollTo = (anchor) => {
+    if (!frame.current || frame.current.dataset.loading) return false;
+    const el = frame.current.contentDocument?.getElementById(anchor);
+    if (el) { el.scrollIntoView({ block: "start" }); return true; }
+    return false;
+  };
   // Podmiana treści ramki z zachowaniem przewinięcia
   useEffect(() => {
     const f = frame.current; if (!f) return;
     const y = f.contentWindow?.scrollY || 0;
     const samePage = f.dataset.page === page;
     f.dataset.page = page;
+    f.dataset.loading = "1";
     f.srcdoc = doc;
-    f.onload = () => { if (samePage) f.contentWindow.scrollTo(0, y); };
+    f.onload = () => {
+      delete f.dataset.loading;
+      if (pending.current) { scrollTo(pending.current); pending.current = null; }
+      else if (samePage) f.contentWindow.scrollTo(0, y);
+    };
   }, [doc]);
   // Otwarta sekcja w formularzu = podgląd przewija się do niej
   useEffect(() => {
-    if (focus == null || focus < 0 || page === "index") return;
+    if (page === "index") return;
     const c = prepare(project).chapters.find((x) => x.id === page);
-    const anchor = c?.sections[focus]?.anchor;
-    const go = () => frame.current?.contentDocument?.getElementById(anchor)?.scrollIntoView({ block: "start" });
-    setTimeout(go, 150);
-  }, [focus, page]);
+    // Single site: wybór rozdziału przewija do niego; otwarta sekcja — do sekcji
+    const anchor = focus != null && focus >= 0 ? c?.sections[focus]?.anchor : single ? c?.slug : null;
+    if (!anchor) return;
+    // Jeśli ramka akurat się przeładowuje (inny rozdział w multi), przewinięcie czeka na załadowanie
+    if (!scrollTo(anchor)) pending.current = anchor;
+  }, [focus, page, single]);
   useEffect(() => {
     const on = (e) => { if (e.data?.khorei === "page" && e.source === frame.current?.contentWindow) setPage(e.data.page); };
     addEventListener("message", on); return () => removeEventListener("message", on);

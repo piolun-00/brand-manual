@@ -185,9 +185,10 @@ function section(ctx, s, site) {
       : BLOCKS[g.type] ? `<div class="block">${BLOCKS[g.type](ctx, g, site)}</div>` : "").join("")}</section>`;
 }
 
+// Single site: jedna okładka manuala na start, rozdziały bez okładek — same sekcje jedna pod drugą.
 function chapterContent(ctx, c, site, single) {
   return `<div class="chapter"${single ? ` id="${c.slug}"` : ""}>
-  ${cover(ctx, { kind: "chapter", first: c.num, second: c.title, image: c.cover, full: single })}
+  ${single ? "" : cover(ctx, { kind: "chapter", first: c.num, second: c.title, image: c.cover })}
   ${c.sections.length ? `<div class="main">${single ? "" : toc(ctx, c)}${c.sections.map((s) => section(ctx, s, site)).join("")}</div>` : ""}
 </div>`;
 }
