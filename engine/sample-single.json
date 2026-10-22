@@ -340,7 +340,7 @@
      "id": "s2p",
      "title": "Ikony",
      "text": [
-      "Zestaw ikon marki. Kliknięcie kopiuje kod SVG."
+      "Zestaw ikon marki. Kliknięcie w ikonę pobiera plik SVG."
      ],
      "action": {
       "kind": "none",

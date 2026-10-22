@@ -114,12 +114,25 @@ function toc(ctx, chapter) {
 </nav>`;
 }
 
-function sectionHeader(ctx, s) {
+// Przycisk bloku w nagłówku sekcji (po prawej od tekstu, jak przyciski sekcji): „Pobierz wszystkie (ZIP)” ikon i Lottie,
+// „Pobierz model (GLB)”. Tylko gdy sekcja nie ma własnego przycisku i ma jeden akapit — inaczej przycisk zostaje w bloku.
+function headerBlockAction(ctx, s) {
+  const text = (s.text || []).filter((x) => x && x.trim());
+  if (text.length > 1 || (s.action && s.action.kind && s.action.kind !== "none")) return null;
+  for (const b of s.blocks || []) {
+    if (b.type === "icons" && (b.items || []).some((i) => i.svg)) return { id: b.id, html: button(ctx, "download", ctx.iconZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)") };
+    if (b.type === "lottie" && (b.items || []).some((i) => i.file)) return { id: b.id, html: button(ctx, "download", ctx.lottieZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)") };
+    if (b.type === "model" && b.download && b.file) return { id: b.id, html: button(ctx, "download", b.file, "Pobierz model (GLB)") };
+  }
+  return null;
+}
+function sectionHeader(ctx, s, blockAction) {
   const text = (s.text || []).filter((x) => x && x.trim());
   const twoCol = text.length > 1;
   const a = s.action || {};
   const action = !twoCol && a.kind && a.kind !== "none"
-    ? `<div class="section-header__action">${button(ctx, a.kind, a.kind === "download" ? a.file : a.href, a.label || (a.kind === "download" ? "Pobierz" : "Przejdź"))}</div>` : "";
+    ? `<div class="section-header__action">${button(ctx, a.kind, a.kind === "download" ? a.file : a.href, a.label || (a.kind === "download" ? "Pobierz" : "Przejdź"))}</div>`
+    : blockAction ? `<div class="section-header__action">${blockAction.html}</div>` : "";
   return `<header class="section-header${twoCol ? " is--2col" : ""}">
   <div class="section-header__label"><span class="section-header__num text-body">${s.num}</span><h2 class="section-header__title text-body">${t(s.title)}</h2></div>
   <div class="section-header__body">${text.map((p) => `<p class="section-header__text text-body">${t(p)}</p>`).join("")}${action}</div>
@@ -202,19 +215,20 @@ const BLOCKS = {
   // Ikony: 8 w rzędzie na desktopie (jak siatka), kopiowanie kodu SVG
   // currentColor: przy kopiowaniu kolory w SVG zamieniane na currentColor (ikona przejmuje kolor tekstu w kodzie odbiorcy).
   // ctx.iconZips: ścieżka ZIP-a ze wszystkimi ikonami bloku (robi go eksport).
-  icons: (ctx, b) => `<div class="icons">${(b.items || []).some((i) => i.svg) ? `<div class="icons__actions">${button(ctx, "download", ctx.iconZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)")}</div>` : ""}<div class="icons__grid">${(b.items || []).map((i) => `
+  // Kliknięcie w ikonę pobiera plik SVG; przycisk „Pobierz” widoczny po najechaniu
+  icons: (ctx, b) => `<div class="icons">${(b.items || []).some((i) => i.svg) && ctx.headerTaken !== b.id ? `<div class="icons__actions">${button(ctx, "download", ctx.iconZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)")}</div>` : ""}<div class="icons__grid">${(b.items || []).map((i) => `
     <div class="icon-tile">
-      <button class="icon-tile__chip" type="button"${i.svg ? ` data-copy-url="${esc(ctx.url(i.svg))}"${b.currentColor ? " data-current-color" : ""}` : ""} aria-label="Kopiuj SVG ${esc(i.name)}">
+      ${i.svg ? `<a class="icon-tile__chip" href="${esc(ctx.url(i.svg))}" download="${esc((slugify(i.name) || "ikona") + ".svg")}" aria-label="Pobierz SVG ${esc(i.name)}">` : `<span class="icon-tile__chip">`}
         ${i.svg ? `<img class="icon-tile__svg" src="${esc(ctx.url(i.svg))}" alt="">` : `<span class="icon-tile__placeholder"></span>`}
-        <span class="swatch__copy"><span class="button is--copy text-body"><span class="button__label">Kopiuj</span></span></span>
-      </button>
+        ${i.svg ? `<span class="swatch__copy"><span class="button is--download text-body"><span class="button__label">Pobierz</span><span class="button__icon">${icon("download")}</span></span></span>` : ""}
+      ${i.svg ? `</a>` : `</span>`}
       <span class="icon-tile__name text-body">${t(i.name)}</span>
     </div>`).join("")}</div></div>`,
 
   // Animacje Lottie (JSON z After Effects / LottieFiles): siatka jak ikony — 2 kolumny na animację (4 w rzędzie na desktopie)
   lottie: (ctx, b) => {
     const items = b.items || [];
-    const zip = items.some((i) => i.file) ? `<div class="icons__actions">${button(ctx, "download", ctx.lottieZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)")}</div>` : "";
+    const zip = items.some((i) => i.file) && ctx.headerTaken !== b.id ? `<div class="icons__actions">${button(ctx, "download", ctx.lottieZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)")}</div>` : "";
     return `<div class="lottie">${zip}<div class="lottie__grid">${items.map((i) => `
     <div class="lottie-tile">
       <div class="lottie-tile__stage">${i.file ? `<div class="lottie-tile__anim" data-lottie="${esc(ctx.url(i.file))}" role="img" aria-label="${esc(i.name || "Animacja")}"></div>` : `<span class="lottie-tile__placeholder text-small">Lottie JSON</span>`}</div>
@@ -226,7 +240,7 @@ const BLOCKS = {
   model: (ctx, b) => {
     const ratio = b.ratio && b.ratio !== "auto" ? b.ratio.replace("/", " / ") : "16 / 9";
     const viewer = b.file ? `<model-viewer src="${esc(ctx.url(b.file))}" alt="${esc(b.alt || b.label || "Model 3D")}" camera-controls disable-zoom touch-action="pan-y" interaction-prompt="none"${b.autoRotate === false ? "" : ` auto-rotate auto-rotate-delay="0" rotation-per-second="${b.speed || 20}deg"`} shadow-intensity="${b.shadow === false ? 0 : 0.7}" exposure="1"><div slot="progress-bar"></div></model-viewer>` : `<span class="gallery__placeholder text-small">Model 3D — GLB lub OBJ</span>`;
-    return `<div class="model${b.background === "transparent" ? " is--transparent" : ""}" style="aspect-ratio:${ratio}">${viewer}</div>${b.download && b.file ? `<div class="model__actions">${button(ctx, "download", b.file, "Pobierz model (GLB)")}</div>` : ""}`;
+    return `<div class="model${b.background === "transparent" ? " is--transparent" : ""}" style="aspect-ratio:${ratio}">${viewer}</div>${b.download && b.file && ctx.headerTaken !== b.id ? `<div class="model__actions">${button(ctx, "download", b.file, "Pobierz model (GLB)")}</div>` : ""}`;
   },
 
   // Animacja: plik MP4 (odtwarza się sam, bez dźwięku, w pętli) albo kod embed (np. Vimeo, Lottie, Rive)
@@ -265,7 +279,9 @@ function section(ctx, s, site) {
   }
   // W podglądzie edytora elementy dostają data-kh — klik otwiera ich formularz.
   const kh = (kind, id) => ctx.preview && id ? ` data-kh="${kind}" data-kh-id="${esc(id)}"` : "";
-  return `<section class="section" id="${s.anchor}"${kh("section", s.id)}>${sectionHeader(ctx, s)}${groups.map((g) =>
+  const ba = headerBlockAction(ctx, s);
+  if (ba) ctx = { ...ctx, headerTaken: ba.id };
+  return `<section class="section" id="${s.anchor}"${kh("section", s.id)}>${sectionHeader(ctx, s, ba)}${groups.map((g) =>
     g.type === "gallery" ? `<div class="block gallery">${g.rows.map((r) => `<div class="gallery__module"${kh("block", r.id)}>${blockMeta(r) + imagesRow(ctx, r)}</div>`).join("")}</div>`
       : BLOCKS[g.type] ? `<div class="block is--${g.type}"${kh("block", g.id)}>${blockMeta(g)}${BLOCKS[g.type](ctx, g, site)}</div>` : "").join("")}</section>`;
 }

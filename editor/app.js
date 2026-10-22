@@ -368,8 +368,8 @@ function IconsBlock({ b, set, ctx }) {
       for (const f of files) { const svg = await ctx.addFile(f, "media"); if (svg) added.push({ name: f.name.replace(/\.svg$/i, "").replace(/[-_]+/g, " "), svg }); }
       set((x) => { x.items = [...(x.items || []).filter((k) => k.svg || k.name), ...added]; });
     }} />
-    <label class="check"><input type="checkbox" checked=${!!b.currentColor} onChange=${(e) => set((x) => { x.currentColor = e.target.checked; })} />Kopiuj z kolorem currentColor (ikona przejmie kolor tekstu w kodzie)</label>
-    <p class="note">8 w rzędzie na desktopie, 6 na tablecie, 4 na telefonie. Kliknięcie kopiuje kod SVG. W eksporcie pojawia się przycisk „Pobierz wszystkie (ZIP)”.</p>`;
+    <label class="check"><input type="checkbox" checked=${!!b.currentColor} onChange=${(e) => set((x) => { x.currentColor = e.target.checked; })} />Pliki SVG z kolorem currentColor (ikona przejmie kolor tekstu w kodzie strony)</label>
+    <p class="note">8 w rzędzie na desktopie, 6 na tablecie, 4 na telefonie. Kliknięcie w ikonę pobiera plik SVG (przycisk „Pobierz” po najechaniu). „Pobierz wszystkie (ZIP)” stoi w nagłówku sekcji, po prawej od tekstu — chyba że sekcja ma już własny przycisk albo dwa akapity, wtedy nad ikonami.</p>`;
 }
 function VideoBlock({ b, set, ctx }) {
   return html`<div class="grid2">
@@ -918,11 +918,13 @@ function App() {
       const blob = await store.getAsset(pid, path); if (!blob) continue;
       try { const poster = await posterOf(blob); if (poster) { zip.file(path.replace(/\.[a-z0-9]+$/i, "-poster.jpg"), poster); extra.posters.add(path); } } catch {}
     }
+    const toCurrent = (txt) => txt.replace(/((?:fill|stroke)\s*[=:]\s*["']?)(#[0-9a-f]{3,8}|rgba?\([^)]*\)|black|white)/gi, "$1currentColor");
     for (const bl of iconBlocks) {
       const iz = new JSZip(), names = new Set();
       for (const it of bl.items) {
         if (!it.svg) continue;
-        const blob = await store.getAsset(pid, it.svg); if (!blob) continue;
+        let blob = await store.getAsset(pid, it.svg); if (!blob) continue;
+        if (bl.currentColor) { blob = new Blob([toCurrent(await blob.text())], { type: "image/svg+xml" }); zip.file(it.svg, blob); }
         let name = slugify(it.name) || it.svg.split("/").pop().replace(/\.svg$/i, ""), k = 2;
         while (names.has(name)) name = `${slugify(it.name)}-${k++}`;
         names.add(name); iz.file(`${name}.svg`, blob);
