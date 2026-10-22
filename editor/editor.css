@@ -66,14 +66,14 @@ button { cursor: pointer; }
 .f input:focus, .f select:focus, .f textarea:focus, .add:focus { outline: 2px solid var(--fg); outline-offset: -1px; }
 .color { display: flex; gap: 6px; }
 .color input[type=color] { width: 38px; height: 34px; padding: 2px; border: 1px solid var(--line); background: var(--panel); border-radius: 2px; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .grid2x { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
 
 .file { display: flex; align-items: center; gap: 8px; }
 .file__thumb { width: 44px; height: 34px; object-fit: contain; background: var(--soft) repeating-conic-gradient(#e8e8e4 0 25%, transparent 0 50%) 0 0 / 10px 10px; border: 1px solid var(--line); flex: none; }
 .file__thumb.is--empty { background: var(--soft); }
-.file__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.file__name { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 
 .blocks { display: grid; gap: 8px; }
 .card { border: 1px solid var(--line); background: var(--panel); border-radius: 2px; }
@@ -144,3 +144,8 @@ button { cursor: pointer; }
 .card__grip:hover { color: var(--fg); }
 .card.is--over, .nav li.is--over { box-shadow: 0 -2px 0 var(--fg); }
 .nav li[draggable] { cursor: grab; }
+
+/* Siatki formularza: kolumna nie może być szersza niż panel — długie nazwy plików ucinają się wielokropkiem zamiast rozpychać kartę */
+.panel__inner, .blocks, .card__body, .sub { grid-template-columns: minmax(0, 1fr); }
+.card, .sub, .f, .file { min-width: 0; }
+.file .btn { flex: none; }

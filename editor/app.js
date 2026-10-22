@@ -245,7 +245,7 @@ function FileField({ label, value, accept, hint, folder, ctx, onChange, expect }
       onDragLeave=${() => setDrop(false)}
       onDrop=${(e) => { if (!e.dataTransfer.files.length) return; e.preventDefault(); setDrop(false); take(e.dataTransfer.files[0]); }}>
       ${isImg && ctx.urls[value] ? html`<img class="file__thumb" src=${ctx.urls[value]} alt="" />` : html`<span class="file__thumb is--empty"></span>`}
-      <span class="file__name">${name || "Brak pliku — przeciągnij tutaj"}</span>
+      <span class="file__name" title=${name || ""}>${name || "Brak pliku — przeciągnij tutaj"}</span>
       <button type="button" class="btn" onClick=${() => ref.current.click()}>${value ? "Zmień" : "Wgraj"}</button>
       ${value && html`<button type="button" class="btn is--ghost" onClick=${() => onChange(null)}>Usuń</button>`}
       <input ref=${ref} type="file" accept=${accept} hidden onChange=${(e) => { const f = e.target.files[0]; e.target.value = ""; take(f); }} />
