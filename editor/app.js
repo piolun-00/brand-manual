@@ -278,6 +278,7 @@ function App() {
     return out;
   }
   async function startExport() {
+    if (busy || checks) return; // drugi klik w trakcie eksportu nie uruchamia drugiego ZIP-a
     setStatus("Sprawdzam manual…");
     let items = [];
     try { items = await exportChecks(); } catch (e) { console.warn(e); }

@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
-import { ROOT, FIX, OUT, JSZip, base, browser, editor, openGroup, setPassword, exportManual, chapter, addBlock } from "./helpers.mjs";
+import { FIX, OUT, JSZip, browser, editor, openGroup, setPassword, exportManual, chapter, addBlock } from "./helpers.mjs";
 const require = createRequire(import.meta.url);
 
 // ——— testy ———

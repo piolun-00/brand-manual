@@ -36,11 +36,13 @@ export const slugify = (s) => String(s || "").toLowerCase()
   .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "rozdzial";
 
 // Numeracja rozdziałów i sekcji wynika z kolejności — nigdzie się jej nie wpisuje.
+// Foldery eksportu — rozdział o takiej nazwie dostałby podstronę w środku folderu z plikami
+const RESERVED = new Set(["index", "media", "files", "fonts", "assets", "licenses"]);
 export function prepare(project) {
   const used = new Set();
   const chapters = (project.chapters || []).map((c, i) => {
     let slug = slugify(c.slug || c.title), n = 2;
-    while (used.has(slug) || slug === "index" || slug === "media" || slug === "files" || slug === "fonts") slug = `${slugify(c.slug || c.title)}-${n++}`;
+    while (used.has(slug) || RESERVED.has(slug)) slug = `${slugify(c.slug || c.title)}-${n++}`;
     used.add(slug);
     return {
       ...c, slug,

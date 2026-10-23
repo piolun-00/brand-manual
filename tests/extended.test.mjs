@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { ROOT, OUT, JSZip, base, browser, editor, openGroup, setPassword, exportManual, chapter, loadProject, viewer } from "./helpers.mjs";
+import { ROOT, OUT, JSZip, base, browser, editor, openGroup, setPassword, exportManual, loadProject, viewer } from "./helpers.mjs";
 const require = createRequire(import.meta.url);
 const bcrypt = require(path.join(ROOT, "vendor/bcrypt.min.js"));
 
@@ -275,4 +275,14 @@ test("Marka: ciemny pasek bez akcentu nie wysypuje formularza (regresja)", async
   assert.equal(await p.locator(".safe").count(), 0, "bez bezpiecznika");
   assert.deepEqual(p.errors, []);
   await p.context().close();
+});
+
+test("multi site: rozdziały o nazwach folderów eksportu dostają bezpieczny adres", async () => {
+  const p = await editor("multi");
+  await loadProject(p, { kind: "multi", edit: (d) => { d.chapters[0].title = "Assets"; d.chapters[0].slug = ""; d.chapters[1].title = "Media"; d.chapters[1].slug = ""; d.chapters[2].title = "Licenses"; d.chapters[2].slug = ""; } });
+  const { zip, url } = await exportManual(p, "slugi");
+  for (const f of ["assets-2/index.html", "media-2/index.html", "licenses-2/index.html", "assets/style.css"]) assert.ok(zip.files[f], f);
+  const v = await viewer(url + "assets-2/");
+  assert.ok(await v.$(".sidebar"), "podstrona działa"); assert.deepEqual(v.missing, []);
+  await v.context().close(); await p.context().close();
 });
