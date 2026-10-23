@@ -417,18 +417,18 @@ function App() {
       const dir = demoPath(bl);
       const fonts = font === "geist" ? demoFonts((p) => "../../" + p) : "";
       // Każdy plik dema dostaje notę licencyjną i sygnaturę — także po skopiowaniu z manuala
-      const lic = demoLicense(bl, project.brand, extra.legal), H = legal.demoHeaders(lic);
-      const css = `${H.code}\n\n${bl.css || ""}`, js = `${H.code}\n\n${bl.js || ""}`;
+      const lic = demoLicense(bl, project.brand, extra.legal), H = lic ? legal.demoHeaders(lic) : null;
+      const css = H ? `${H.code}\n\n${bl.css || ""}` : bl.css || "", js = H ? `${H.code}\n\n${bl.js || ""}` : bl.js || "";
       zip.file(dir + "index.html", demoDoc(bl, { fonts, inline: false, lic }));
       zip.file(dir + "style.css", css);
       zip.file(dir + "script.js", js);
-      zip.file(dir + "LICENSE.txt", legal.demoLicenseText(lic));
+      if (lic) zip.file(dir + "LICENSE.txt", legal.demoLicenseText(lic));
       if (bl.download === false) continue;
       const cz = new JSZip();
       cz.file("index.html", demoDoc(bl, { inline: false, lic }));
       cz.file("style.css", css); cz.file("script.js", js);
-      cz.file("LICENSE.txt", legal.demoLicenseText(lic));
-      cz.file("CZYTAJ.txt", `${bl.label || "Demo kodu"} — ${project.brand.name || ""}\n\nLicencja: ${legal.CODE_LICENSES[lic.mode]} — warunki w LICENSE.txt. Pobranie paczki nie jest udzieleniem licencji.\n\nOtwórz index.html w przeglądarce. Kod: index.html (treść), style.css, script.js.\nKrój Geist (OFL) nie jest dołączony — strona użyje kroju systemowego, dopóki nie podłączysz własnego.\n`);
+      if (lic) cz.file("LICENSE.txt", legal.demoLicenseText(lic));
+      cz.file("CZYTAJ.txt", `${bl.label || "Demo kodu"} — ${project.brand.name || ""}\n\n${lic ? `Licencja: ${legal.CODE_LICENSES[lic.mode]} — warunki w LICENSE.txt. Pobranie paczki nie jest udzieleniem licencji.\n\n` : ""}Otwórz index.html w przeglądarce. Kod: index.html (treść), style.css, script.js.\nKrój Geist (OFL) nie jest dołączony — strona użyje kroju systemowego, dopóki nie podłączysz własnego.\n`);
       const zpath = `files/${slugify(project.brand.name) || "marka"}-${slugify(bl.label || "") || "demo"}-kod.zip`;
       zip.file(zpath, await cz.generateAsync({ type: "blob", compression: "DEFLATE" }));
       extra.codeZips.set(bl.id, zpath);

@@ -160,20 +160,23 @@ export function LottieBlock({ b, set, ctx }) {
 export function CodeBlock({ b, set, ctx }) {
   const ref = useRef();
   const [note, setNote] = useState("");
+  const lm = b.license === "custom" || b.license === "brand" || b.license === "view" || b.license === "owned" ? b.license : "none";
   const load = async (files) => {
     const by = (re) => files.filter((f) => re.test(f.name));
     const read = async (list) => (await Promise.all(list.map((f) => f.text()))).join("\n\n");
-    const html = by(/\.html?$/i), css = by(/\.css$/i), js = by(/\.m?js$/i), skipped = files.filter((f) => !/\.(html?|css|m?js)$/i.test(f.name));
+    const isLic = (f) => /^(licen[cs]e|licencja|copying)(\.(txt|md))?$/i.test(f.name);
+    const html = by(/\.html?$/i), css = by(/\.css$/i), js = by(/\.m?js$/i), lic = files.filter(isLic), skipped = files.filter((f) => !/\.(html?|css|m?js)$/i.test(f.name) && !isLic(f));
+    const licText = lic.length ? await read(lic) : null;
     const rawHtml = html.length ? await read(html) : "";
     const h = html.length ? demoParts(rawHtml) : null;
     const title = (rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1]?.trim();
     const c = css.length ? await read(css) : null, j = js.length ? await read(js) : null;
-    set((x) => { if (h) x.html = (h.head ? h.head + "\n" : "") + h.body.trim(); if (c != null) x.css = c; if (j != null) x.js = j; if (!(x.label || "").trim() || x.label === "Demo kodu") x.label = title || [baseName((html[0] || css[0] || js[0] || {}).name || "")].find((n) => n && !/^(index|main|script|style)$/i.test(n)) || x.label; });
-    setNote([`Wczytano: ${[...html, ...css, ...js].map((f) => f.name).join(", ") || "nic"}.`, skipped.length && `Pominięte (obrazki i fonty dodaj jako adresy https albo wbuduj w CSS): ${skipped.map((f) => f.name).join(", ")}.`].filter(Boolean).join(" "));
+    set((x) => { if (h) x.html = (h.head ? h.head + "\n" : "") + h.body.trim(); if (c != null) x.css = c; if (j != null) x.js = j; if (licText != null) { x.licenseText = licText; x.license = "custom"; } if (!(x.label || "").trim() || x.label === "Demo kodu") x.label = title || [baseName((html[0] || css[0] || js[0] || {}).name || "")].find((n) => n && !/^(index|main|script|style)$/i.test(n)) || x.label; });
+    setNote([`Wczytano: ${[...html, ...css, ...js, ...lic].map((f) => f.name).join(", ") || "nic"}.`, skipped.length && `Pominięte (obrazki i fonty dodaj jako adresy https albo wbuduj w CSS): ${skipped.map((f) => f.name).join(", ")}.`].filter(Boolean).join(" "));
   };
   return html`
-    <button type="button" class="btn is--add" onClick=${() => ref.current.click()}>Wgraj pliki (HTML, CSS, JS)</button>
-    <input ref=${ref} type="file" accept=".html,.htm,.css,.js,.mjs,text/html,text/css,text/javascript" multiple hidden onChange=${async (e) => { const files = [...e.target.files]; e.target.value = ""; if (files.length) await load(files); }} />
+    <button type="button" class="btn is--add" onClick=${() => ref.current.click()}>Wgraj pliki (HTML, CSS, JS, LICENSE)</button>
+    <input ref=${ref} type="file" data-code-files multiple hidden onChange=${async (e) => { const files = [...e.target.files]; e.target.value = ""; if (files.length) await load(files); }} />
     ${note && html`<p class="note">${note}</p>`}
     <${Text} label="HTML (treść strony, bez <head>)" multiline code rows="8" value=${b.html} onInput=${(v) => set((x) => { x.html = v; })} />
     <${Text} label="CSS" multiline code rows="8" value=${b.css} onInput=${(v) => set((x) => { x.css = v; })} />
@@ -183,12 +186,14 @@ export function CodeBlock({ b, set, ctx }) {
       <label class="check is--line"><input type="checkbox" checked=${b.download !== false} onChange=${(e) => set((x) => { x.download = e.target.checked; })} />Pobieranie kodu (ZIP)</label>
     </div>
     <b class="group__sub">Licencja kodu</b>
-    <${Select} label="Licencja" value=${b.license || "view"} options=${[["brand", "Do stosowania w marce zamawiającego"], ["view", "Tylko do wglądu — pokaz rozwiązania"], ["owned", "Prawa przeniesione na zamawiającego (umowa)"]]} onChange=${(v) => set((x) => { x.license = v; if (v === "view") x.download = false; })} />
-    <div class="grid2">
+    <${Select} label="Licencja" value=${lm} options=${[["none", "Bez licencji — bez zakładki „Licencja”"], ["brand", "Do stosowania w marce zamawiającego"], ["view", "Tylko do wglądu — pokaz rozwiązania"], ["owned", "Prawa przeniesione na zamawiającego (umowa)"], ["custom", "Własny tekst licencji (wklej albo wgraj LICENSE)"]]} onChange=${(v) => set((x) => { x.license = v; if (v === "view") x.download = false; })} />
+    ${lm === "custom" && html`<${Text} label="Treść licencji" multiline code rows="8" value=${b.licenseText} placeholder="Wklej tekst licencji albo wgraj plik LICENSE razem z kodem" onInput=${(v) => set((x) => { x.licenseText = v; })} />`}
+    ${lm !== "none" && html`<div class="grid2">
       <${Text} label="Autor kodu" value=${b.author} placeholder="Radosław Prośniak (KHOREI)" onInput=${(v) => set((x) => { x.author = v; })} />
-      ${(b.license || "view") === "owned" ? html`<${Text} label="Umowa (nr / data)" value=${b.contract} placeholder="np. umowa z 12.10.2026" onInput=${(v) => set((x) => { x.contract = v; })} />` : html`<label class="check is--line"><input type="checkbox" checked=${b.showCode !== false} onChange=${(e) => set((x) => { x.showCode = e.target.checked; })} />Pokazuj kod w zakładkach</label>`}
-    </div>
-    <p class="note">${{ brand: "Zamawiający może używać kodu tylko w kanałach swojej marki (także przez swoich wykonawców); bez innych marek, odsprzedaży i publikowania źródeł.", view: "Kod tylko do obejrzenia: bez prawa kopiowania i użycia — także dla zamawiającego. W manualu nie ma przycisku „Kopiuj”, a kodu nie da się zaznaczyć myszą.", owned: "Prawa majątkowe ma zamawiający; Ty zachowujesz autorstwo. Osoby oglądające manual i tak nie dostają żadnych praw." }[b.license || "view"]} Każdy plik dema dostaje notę i sygnaturę, paczka ZIP — plik LICENSE.txt. To utrudnia i daje podstawę prawną, ale kodu działającego w przeglądarce nie da się w pełni ukryć.</p>
+      ${lm === "owned" ? html`<${Text} label="Umowa (nr / data)" value=${b.contract} placeholder="np. umowa z 12.10.2026" onInput=${(v) => set((x) => { x.contract = v; })} />` : null}
+    </div>`}
+    <label class="check is--line"><input type="checkbox" checked=${b.showCode !== false} onChange=${(e) => set((x) => { x.showCode = e.target.checked; })} />Pokazuj kod w zakładkach</label>
+    <p class="note">${{ none: "Bez licencji demo ma zakładki Podgląd / HTML / CSS / JS, a pliki nie dostają not.", brand: "Zakładka „Licencja” obok kodu. Zamawiający może używać kodu tylko w kanałach swojej marki (także przez swoich wykonawców); bez innych marek, odsprzedaży i publikowania źródeł.", view: "Zakładka „Licencja” obok kodu. Kod tylko do obejrzenia: bez prawa kopiowania i użycia — także dla zamawiającego. Bez przycisku „Kopiuj”, kodu nie da się zaznaczyć myszą.", owned: "Zakładka „Licencja” obok kodu. Prawa majątkowe ma zamawiający; Ty zachowujesz autorstwo. Osoby oglądające manual nie dostają żadnych praw.", custom: "Zakładka „Licencja” pokazuje Twój tekst; trafia też do LICENSE.txt w paczce." }[lm]}${lm !== "none" ? " Każdy plik dema dostaje notę i sygnaturę." : ""}</p>
     <p class="note">Demo działa na żywo w ramce — w podglądzie i w manualu. W eksporcie trafia też do folderu demos/ jako osobna, działająca strona (backup rozwiązania dla klienta). Krój manuala jest dostępny w demo jako „Geist”. Obrazki i fonty spoza kodu dodawaj jako pełne adresy https.</p>`;
 }
 

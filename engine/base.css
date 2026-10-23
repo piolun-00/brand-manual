@@ -348,4 +348,6 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 /* Tylko do wglądu: bez zaznaczania i kopiowania myszą (to utrudnienie, nie zabezpieczenie — prawo daje nota) */
 .code-demo__code.is--locked { -webkit-user-select: none; user-select: none; }
 .code-demo__license { margin: 0; padding: var(--space-8) var(--space-12); border-top: 1px solid var(--border-subtle); color: var(--text-subtle); }
+/* Zakładka „Licencja”: tekst noty łamany do szerokości, bez przewijania w bok */
+.code-demo__code.code-demo__licence { white-space: pre-wrap; font-size: 11px; color: var(--text-subtle); }
 .code-demo__actions { display: flex; justify-content: flex-end; margin-top: var(--space-12); }

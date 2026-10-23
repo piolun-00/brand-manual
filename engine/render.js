@@ -15,7 +15,7 @@
 const VQ = new URL(import.meta.url).search;
 const { tokensCss, fontFaces } = await import("./tokens.js" + VQ);
 const { RUNTIME } = await import("./runtime.js" + VQ);
-const { htmlHeader, codeHeader, metaTags, demoHeaders, demoSig, CODE_LICENSES } = await import("./legal.js" + VQ);
+const { htmlHeader, codeHeader, metaTags, demoHeaders, demoSig, demoLicenseText, CODE_LICENSES } = await import("./legal.js" + VQ);
 
 // ——— Narzędzia ———
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -144,7 +144,9 @@ const hasMeta = (b) => !!(b.line || (b.label || "").trim() || (b.text || "").tri
 // ——— Demo kodu ———
 // Dane do noty licencyjnej dema (sygnatura z manuala + znacznik bloku; w podglądzie sygnatura jeszcze nie istnieje)
 export function demoLicense(b, brand = {}, legal = null) {
-  return { label: b.label || "Demo kodu", brand: brand.name || "", author: b.author || "", mode: b.license || "view", contract: b.contract || "",
+  // Bez licencji (domyślnie) demo nie ma zakładki „Licencja”, not w plikach ani LICENSE.txt
+  if (!b.license || b.license === "none" || (b.license === "custom" && !(b.licenseText || "").trim())) return null;
+  return { label: b.label || "Demo kodu", brand: brand.name || "", author: b.author || "", mode: b.license, contract: b.contract || "", text: b.licenseText || "",
     year: legal?.year || new Date().getFullYear(), sig: demoSig(legal?.sig || "KHOREI-BM-PODGLAD", b.id), url: (brand.siteUrl || "").trim(), contact: brand.contact || "" };
 }
 export const demoPath = (b) => `demos/${slugify(b.label || "") || "demo"}-${String(b.id || "x").slice(0, 6)}/`;
@@ -364,7 +366,7 @@ const BLOCKS = {
   // Demo kodu: działający przykład (HTML / CSS / JS) w ramce + podgląd kodu w zakładkach.
   // W eksporcie każde demo to osobny folder demos/<id>/ — da się go otworzyć i skopiować w całości.
   code: (ctx, b, site) => {
-    const lic = demoLicense(b, site?.brand || {}, ctx.legal), H = demoHeaders(lic);
+    const lic = demoLicense(b, site?.brand || {}, ctx.legal), H = lic ? demoHeaders(lic) : null;
     const showCode = b.showCode !== false;
     const parts = [["html", "HTML", b.html], ["css", "CSS", b.css], ["js", "JS", b.js]].filter(([, , v]) => (v || "").trim());
     if (!parts.length) return `<div class="code-demo is--empty"><span class="gallery__placeholder text-small">Demo kodu — wklej albo wgraj HTML, CSS i JS</span></div>`;
@@ -374,15 +376,16 @@ const BLOCKS = {
       : `src="${esc(ctx.url(demoPath(b) + "index.html"))}" loading="lazy"`;
     const tab = (key, label, on) => `<button type="button" class="code-demo__tab text-small${on ? " is--on" : ""}" role="tab" aria-selected="${on}" aria-controls="${id}-${key}" data-code-tab="${key}">${label}</button>`;
     return `<div class="code-demo" data-code-demo>
-  <div class="code-demo__bar" role="tablist">${tab("run", "Podgląd", true)}${showCode ? parts.map(([k, l]) => tab(k, l, false)).join("") : ""}
+  <div class="code-demo__bar" role="tablist">${tab("run", "Podgląd", true)}${showCode ? parts.map(([k, l]) => tab(k, l, false)).join("") : ""}${lic ? tab("license", "Licencja", false) : ""}
     <span class="code-demo__tools">
       <button type="button" class="code-demo__tool text-small" data-code-restart>Uruchom ponownie</button>
-      ${lic.mode === "view" ? "" : `<button type="button" class="code-demo__tool text-small" data-code-copy hidden>Kopiuj</button>`}
+      ${lic?.mode === "view" ? "" : `<button type="button" class="code-demo__tool text-small" data-code-copy hidden>Kopiuj</button>`}
       ${ctx.preview ? "" : `<a class="code-demo__tool text-small" href="${esc(ctx.url(demoPath(b) + "index.html"))}" target="_blank" rel="noopener">Otwórz ↗</a>`}
     </span></div>
   <div class="code-demo__panel" id="${id}-run" role="tabpanel"><iframe class="code-demo__frame" title="${esc(b.label || "Demo kodu")}" style="height:${h}px" ${src}></iframe></div>
-  ${showCode ? parts.map(([k, l, v]) => `<pre class="code-demo__panel code-demo__code${lic.mode === "view" ? " is--locked" : ""}" id="${id}-${k}" role="tabpanel" aria-label="${l}" tabindex="0" hidden><code>${esc((k === "html" ? H.html : H.code) + "\n\n" + v)}</code></pre>`).join("") : ""}
-  <p class="code-demo__license text-small">© ${lic.year} ${esc(lic.author || "Radosław Prośniak (KHOREI)")} · ${esc(CODE_LICENSES[lic.mode])} · ${lic.mode === "view" ? "kodu nie wolno kopiować ani wykorzystywać" : lic.mode === "brand" ? "tylko w kanałach marki " + esc(lic.brand) : "prawa: " + esc(lic.brand)} · warunki w LICENSE.txt w paczce kodu</p>
+  ${showCode ? parts.map(([k, l, v]) => `<pre class="code-demo__panel code-demo__code${lic?.mode === "view" ? " is--locked" : ""}" id="${id}-${k}" role="tabpanel" aria-label="${l}" tabindex="0" hidden><code>${esc((H ? (k === "html" ? H.html : H.code) + "\n\n" : "") + v)}</code></pre>`).join("") : ""}
+  ${lic ? `<pre class="code-demo__panel code-demo__code code-demo__licence" id="${id}-license" role="tabpanel" aria-label="Licencja" tabindex="0" hidden>${esc(demoLicenseText(lic))}</pre>
+  <p class="code-demo__license text-small">© ${lic.year} ${esc(lic.author || "Radosław Prośniak (KHOREI)")} · ${esc(CODE_LICENSES[lic.mode])} · ${lic.mode === "view" ? "kodu nie wolno kopiować ani wykorzystywać · " : lic.mode === "brand" ? "tylko w kanałach marki " + esc(lic.brand) + " · " : lic.mode === "owned" ? "prawa: " + esc(lic.brand) + " · " : ""}warunki w zakładce „Licencja”</p>` : ""}
 </div>${b.download !== false && !ctx.placed?.has?.(b.id) ? `<div class="code-demo__actions">${button(ctx, "download", ctx.codeZips?.get?.(b.id || "") || null, "Pobierz kod (ZIP)")}</div>` : ""}`;
   },
 

@@ -190,7 +190,8 @@ W sprawie licencji wykraczającej poza zakres z punktu 2 — kontakt z autorem.
 export const CODE_LICENSES = {
   view: "Tylko do wglądu",
   brand: "Do stosowania w marce zamawiającego",
-  owned: "Prawa przeniesione na zamawiającego"
+  owned: "Prawa przeniesione na zamawiającego",
+  custom: "Licencja autora"
 };
 // Sygnatura dema: sygnatura manuala + krótki znacznik bloku (stały dla tego dema)
 export function demoSig(sig, id) {
@@ -202,6 +203,7 @@ const wrapLines = (lines, w = 74, indent = "") => lines.flatMap((l) => { if (!l)
 const codeOwner = (o) => clean(o.author) || AUTHOR;
 function codeTerms(o) {
   const brand = clean(o.brand) || "zamawiającej marki";
+  if (o.mode === "custom") return [`Warunki korzystania z kodu: zakładka „Licencja” w manualu i plik LICENSE.txt w paczce kodu.`];
   if (o.mode === "owned") return [
     `Autorskie prawa majątkowe do tego kodu przysługują zamawiającemu (${brand})${clean(o.contract) ? ` na podstawie umowy: ${clean(o.contract)}` : " na podstawie odrębnej umowy"}.`,
     `Autor zachowuje autorskie prawa osobiste, w tym prawo do oznaczenia autorstwa.`,
@@ -228,6 +230,7 @@ export function demoHeaders(o) {
   };
 }
 export function demoLicenseText(o) {
+  if (o.mode === "custom") return `${String(o.text || "").trim()}\n\n---\nSygnatura: ${o.sig}\n`;
   return `${clean(o.label) || "Demo kodu"} — ${clean(o.brand)}
 Copyright © ${o.year} ${codeOwner(o)}. Wszelkie prawa zastrzeżone.
 Sygnatura: ${o.sig}

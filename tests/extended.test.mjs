@@ -358,9 +358,10 @@ test("demo kodu: wgranie plików, podgląd na żywo, zakładki, eksport z folder
   const p = await editor("single");
   await chapter(p, "Animacje"); await p.selectOption(".panel select.add", "code"); await p.waitForTimeout(400);
   const F = (n) => path.join(ROOT, "tests/fixtures/demo", n);
-  await p.setInputFiles('.panel input[type=file][accept*=".css"]', [F("index.html"), F("styles.css"), F("main.js")]); await p.waitForTimeout(800);
+  await p.setInputFiles('.panel input[type=file][data-code-files]', [F("index.html"), F("styles.css"), F("main.js")]); await p.waitForTimeout(800);
   const html = await p.inputValue('.panel .f:has-text("HTML") textarea');
   assert.match(html, /class="licznik"/); assert.doesNotMatch(html, /<head|main\.js|styles\.css/, "z całego dokumentu zostaje treść body");
+  await p.selectOption('.panel .f:has-text("Licencja") select', "brand"); await p.waitForTimeout(300);
   // podgląd w edytorze: ramka z działającym kodem
   const prev = p.frames().find((f) => f !== p.mainFrame());
   const demoFrame = async (page) => { for (let i = 0; i < 30; i++) { const f = page.frames().find((x) => x.url().includes("demos/") || x.url() === "about:srcdoc" && x.parentFrame() && x.parentFrame() !== page.mainFrame()); if (f) { try { if (await f.evaluate(() => window.__demo)) return f; } catch {} } await page.waitForTimeout(200); } return null; };
@@ -393,6 +394,9 @@ test("demo kodu: wgranie plików, podgląd na żywo, zakładki, eksport z folder
   assert.match(await v.$eval(".code-demo__code:not([hidden])", (e) => e.textContent), /\.licznik/);
   assert.match(await v.$eval(".code-demo__code:not([hidden])", (e) => e.textContent), /^\/\* [\s\S]*Wszelkie prawa zastrzeżone/, "kod w zakładce zaczyna się od noty");
   assert.match(await v.$eval(".code-demo__license", (e) => e.textContent), /Do stosowania w marce/);
+  await v.click('.code-demo [data-code-tab="license"]');
+  assert.match(await v.$eval(".code-demo__licence:not([hidden])", (e) => e.textContent), /Licencja: Do stosowania w marce zamawiającego[\s\S]*nie oznaczają udzielenia licencji/, "zakładka Licencja z pełną notą");
+  assert.ok(await v.$eval("[data-code-copy]", (b) => b.hidden), "na zakładce Licencja bez Kopiuj");
   assert.deepEqual([...v.errors, ...v.missing], []);
   await v.context().close(); await p.context().close();
 });
@@ -422,9 +426,30 @@ test("demo kodu „Tylko do wglądu”: bez kopiowania, kod niezaznaczalny; opcj
   const v = await viewer(url);
   const demos = await v.$$(".code-demo");
   assert.equal(await demos[0].$("[data-code-copy]"), null, "bez przycisku Kopiuj");
-  assert.equal(await demos[0].$eval(".code-demo__code", (e) => getComputedStyle(e).userSelect), "none");
+  assert.equal(await demos[0].$eval(".code-demo__code:not(.code-demo__licence)", (e) => getComputedStyle(e).userSelect), "none");
   assert.match(await demos[0].$eval(".code-demo__license", (e) => e.textContent), /Tylko do wglądu/);
-  assert.equal((await demos[1].$$("[data-code-tab]")).length, 1, "ukryty kod: tylko zakładka Podgląd");
-  assert.equal(await demos[1].$(".code-demo__code"), null);
+  assert.deepEqual(await demos[1].$$eval("[data-code-tab]", (t) => t.map((x) => x.dataset.codeTab)), ["run", "license"], "ukryty kod: Podgląd i Licencja");
+  assert.equal(await demos[1].$(".code-demo__code:not(.code-demo__licence)"), null);
   await v.context().close(); await p.context().close();
+});
+
+test("demo kodu: bez licencji brak zakładki i not; własna licencja z pliku LICENSE", async () => {
+  const p = await editor("single");
+  await chapter(p, "Animacje"); await p.selectOption(".panel select.add", "code"); await p.waitForTimeout(400);
+  const F = (n) => path.join(ROOT, "tests/fixtures/demo", n);
+  await p.setInputFiles('.panel input[type=file][data-code-files]', [F("index.html"), F("styles.css"), F("main.js")]); await p.waitForTimeout(600);
+  const prev = p.frames().find((f) => f !== p.mainFrame());
+  assert.deepEqual(await prev.$$eval(".code-demo [data-code-tab]", (t) => t.map((x) => x.dataset.codeTab)), ["run", "html", "css", "js"], "bez licencji — bez zakładki Licencja");
+  let { zip } = await exportManual(p, "demo-bez-licencji");
+  let inner = await JSZip.loadAsync(await zip.file(Object.keys(zip.files).find((f) => /-kod\.zip$/.test(f))).async("nodebuffer"));
+  assert.ok(!inner.files["LICENSE.txt"], "bez LICENSE.txt"); assert.doesNotMatch(await inner.file("style.css").async("string"), /Wszelkie prawa/, "bez noty w pliku");
+  // własna licencja: wgrana razem z kodem
+  await p.setInputFiles('.panel input[type=file][data-code-files]', [F("LICENSE.txt")]); await p.waitForTimeout(600);
+  assert.equal(await p.inputValue('.panel .f:has-text("Licencja") select'), "custom");
+  await p.waitForTimeout(400);
+  assert.deepEqual(await prev.$$eval(".code-demo [data-code-tab]", (t) => t.map((x) => x.dataset.codeTab)), ["run", "html", "css", "js", "license"]);
+  ({ zip } = await exportManual(p, "demo-wlasna-licencja"));
+  inner = await JSZip.loadAsync(await zip.file(Object.keys(zip.files).find((f) => /-kod\.zip$/.test(f))).async("nodebuffer"));
+  assert.match(await inner.file("LICENSE.txt").async("string"), /Licencja testowa autora[\s\S]*Sygnatura: KHOREI-BM/);
+  await p.context().close();
 });

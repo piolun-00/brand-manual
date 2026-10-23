@@ -71,7 +71,7 @@ export const newBlock = (type) => ({
   video: { source: "file", file: null, embed: "", ratio: "16/9" },
   lottie: { line: true, label: "Animacje Lottie", items: [{ name: "", file: null }] },
   model: { file: null, ratio: "16/9", autoRotate: true, speed: 20, background: "surface", shadow: true, download: false, alt: "" },
-  code: { line: true, label: "Demo kodu", html: "", css: "", js: "", height: 480, download: true, license: "brand", author: "", contract: "", showCode: true },
+  code: { line: true, label: "Demo kodu", html: "", css: "", js: "", height: 480, download: true, license: "none", licenseText: "", author: "", contract: "", showCode: true },
   typeface: { name: "", foundry: "", weights: "", svg: null, license: { kind: "note", note: "Krój komercyjny — do użycia wymagana licencja.", linkLabel: "Przejdź do kroju", href: "", file: null } },
   typeScale: { image: null },
   text: { columns: 1, col1: "", col2: "" }
