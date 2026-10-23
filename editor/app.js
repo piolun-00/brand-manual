@@ -22,7 +22,7 @@ function Safe({ children, label }) {
 }
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
-const { BASE_CSS, CAN_FOLDER, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, uid, usedAssets, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
+const { BASE_CSS, CAN_FOLDER, demoDoc, demoFonts, demoPath, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, uid, usedAssets, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
 const { ChapterForm } = await import("./blocks.js" + Q);
 const { BrandForm, PublishForm, StudioForm, brandWarnings } = await import("./forms.js" + Q);
 const { Preview } = await import("./preview.js" + Q);
@@ -53,6 +53,20 @@ function App() {
   const refreshQuota = async () => { try { const e = await navigator.storage.estimate(); setQuota(e); } catch {} };
   // Prośba, żeby przeglądarka nie czyściła danych edytora przy braku miejsca
   useEffect(() => { navigator.storage?.persist?.().catch(() => {}); refreshQuota(); }, []);
+  // Shift+Spacja = twarda spacja (spójniki, liczby z jednostkami, „Nazwa Marki” w jednym wierszu).
+  // Tylko w polach tekstowych — w polach kodu twarda spacja by szkodziła.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== " " || !e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+      const el = e.target;
+      if (!(el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && el.type === "text")) || el.classList.contains("is--code")) return;
+      e.preventDefault();
+      el.setRangeText("\u00A0", el.selectionStart, el.selectionEnd, "end");
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
   const [meta, setMetaState] = useState({});
   const [, tick] = useState(0);
   useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 60000); return () => clearInterval(t); }, []);
@@ -394,6 +408,25 @@ function App() {
       const zpath = `files/${slugify(project.brand.name) || "marka"}-animacje${lottieBlocks.length > 1 ? `-${lottieBlocks.indexOf(bl) + 1}` : ""}.zip`;
       zip.file(zpath, await lz.generateAsync({ type: "blob", compression: "DEFLATE" }));
       if (bl.id) extra.lottieZips.set(bl.id, zpath);
+    }
+    // Demo kodu: każde jako działający folder demos/<…>/ (ramka w manualu) + paczka ZIP do pobrania
+    extra.codeZips = new Map();
+    const codeBlocks = []; walkBlocks((bl) => { if (bl.type === "code" && [bl.html, bl.css, bl.js].some((x) => (x || "").trim())) codeBlocks.push(bl); });
+    if (codeBlocks.length) step("Pakuję dema kodu…", 0.66);
+    for (const bl of codeBlocks) {
+      const dir = demoPath(bl);
+      const fonts = font === "geist" ? demoFonts((p) => "../../" + p) : "";
+      zip.file(dir + "index.html", demoDoc(bl, { fonts, inline: false }));
+      zip.file(dir + "style.css", bl.css || "");
+      zip.file(dir + "script.js", bl.js || "");
+      if (bl.download === false) continue;
+      const cz = new JSZip();
+      cz.file("index.html", demoDoc(bl, { inline: false }));
+      cz.file("style.css", bl.css || ""); cz.file("script.js", bl.js || "");
+      cz.file("CZYTAJ.txt", `${bl.label || "Demo kodu"} — ${project.brand.name || ""}\n\nOtwórz index.html w przeglądarce. Kod: index.html (treść), style.css, script.js.\nKrój Geist (OFL) nie jest dołączony — strona użyje kroju systemowego, dopóki nie podłączysz własnego.\n`);
+      const zpath = `files/${slugify(project.brand.name) || "marka"}-${slugify(bl.label || "") || "demo"}-kod.zip`;
+      zip.file(zpath, await cz.generateAsync({ type: "blob", compression: "DEFLATE" }));
+      extra.codeZips.set(bl.id, zpath);
     }
     // Odtwarzacze: tylko gdy manual ich używa
     const site = prepare(project);

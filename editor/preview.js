@@ -11,7 +11,7 @@
 import { useState, useEffect, useRef, useMemo } from "preact/hooks";
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
-const { BASE_CSS, ENGINE_URL, FIGMA, VENDOR_ASSETS, html, prepare, renderPage, siteCss } = await import("./core.js" + Q);
+const { BASE_CSS, ENGINE_URL, FIGMA, VENDOR_ASSETS, html, prepare, renderPage, siteCss, demoFonts } = await import("./core.js" + Q);
 // ——— Podgląd ———
 export const PRESETS = [390, 768, 1280, 1440, 1920, 2560];
 export function Preview({ project, page, setPage, urls, focus, studio, onSelect, svgText, spotOn }) {
@@ -36,7 +36,8 @@ export function Preview({ project, page, setPage, urls, focus, studio, onSelect,
     const ctx = {
       preview: true, url, svgText,
       link: (target) => target === "index" ? `href="#" data-page="index"` : single ? `href="#${target}"` : `href="#" data-page="${target}"`,
-      css: { inline: css }
+      css: { inline: css },
+      demoFonts: demoFonts(url)
     };
     const slug = page === "index" ? "index" : (prepare(project).chapters.find((c) => c.id === page)?.slug || "index");
     return renderPage(project, single ? "index" : slug, ctx);

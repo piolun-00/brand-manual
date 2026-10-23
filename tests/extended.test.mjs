@@ -295,11 +295,11 @@ test("okładka: jednolity kolor z palety i własny kolor tekstu, ostrzeżenie pr
   const c = await v.$eval(".cover.is--start", (e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e.querySelector("h1")).color, !!e.querySelector("img")]);
   assert.equal(c[0], "rgb(28, 28, 28)", "tło = Grafit"); assert.equal(c[1], "rgb(255, 255, 255)", "tekst = Biel"); assert.equal(c[2], false, "w trybie koloru bez zdjęcia");
   await v.context().close();
-  // domyślnie: zdjęcie i czarny tekst
+  // domyślnie: ciemnoszare pole pod zdjęcie i biały tekst
   const q = await editor("single");
   const { url: u2 } = await exportManual(q, "okladka-domyslna");
   const w = await viewer(u2);
-  assert.equal(await w.$eval(".cover.is--start h1", (h) => getComputedStyle(h).color), "rgb(0, 0, 0)");
+  assert.deepEqual(await w.$eval(".cover.is--start", (e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e.querySelector("h1")).color]), ["rgb(60, 60, 58)", "rgb(255, 255, 255)"], "domyślnie ciemnoszare tło i biały tekst");
   await w.context().close(); await q.context().close();
   // słaby kontrast → ostrzeżenie w Marce i na liście przed eksportem
   await loadProject(p, { edit: (d) => { d.brand.coverMode = "color"; d.brand.coverColor = "c2"; d.brand.coverText = "c3"; } });
@@ -333,5 +333,73 @@ test("Lottie: ostrzeżenie o wyrażeniach i obrazkach spoza JSON, zwykły plik b
   await p.setInputFiles(multi, [path.join(ROOT, "tests/fixtures/lottie-wyrazenia.json"), path.join(ROOT, "tests/fixtures/lottie-obrazek.json")]); await p.waitForTimeout(800);
   const warn = await p.locator(".panel .f__warn").innerText();
   assert.match(warn, /lottie-wyrazenia\.json.*wyrażeń/s); assert.match(warn, /lottie-obrazek\.json.*osobnych plikach/s);
+  await p.context().close();
+});
+
+test("okładka: nazwa marki łamie się dopiero po zajęciu połowy szerokości okładki", async () => {
+  const p = await editor("single");
+  await loadProject(p, { edit: (d) => { d.brand.name = "Bardzo długa nazwa marki, która musi się złamać w pół drogi"; } });
+  const { url } = await exportManual(p, "okladka-50");
+  for (const w of [1280, 1440, 1920, 2560]) {
+    const v = await viewer(url, { viewport: { width: w, height: 900 } });
+    const r = await v.$eval(".cover.is--start", (c) => { const head = c.querySelector(".cover__head").getBoundingClientRect(), b = c.querySelector(".cover__brand"), br = b.getBoundingClientRect(); return { share: br.width / head.width, lines: Math.round(br.height / parseFloat(getComputedStyle(b).lineHeight)) }; });
+    assert.ok(r.share <= 0.51, `${w}: nazwa zajmuje ${(r.share * 100).toFixed(0)}%`);
+    assert.ok(r.lines >= 2, `${w}: długa nazwa się łamie`);
+    await v.context().close();
+  }
+  // krótka nazwa — jedna linia
+  const q = await editor("single"); const { url: u2 } = await exportManual(q, "okladka-krotka");
+  const k = await viewer(u2, { viewport: { width: 1280, height: 900 } });
+  assert.equal(await k.$eval(".cover__brand", (b) => Math.round(b.getBoundingClientRect().height / parseFloat(getComputedStyle(b).lineHeight))), 1);
+  await k.context().close(); await q.context().close(); await p.context().close();
+});
+
+test("demo kodu: wgranie plików, podgląd na żywo, zakładki, eksport z folderem demos/ i ZIP", async () => {
+  const p = await editor("single");
+  await chapter(p, "Animacje"); await p.selectOption(".panel select.add", "code"); await p.waitForTimeout(400);
+  const F = (n) => path.join(ROOT, "tests/fixtures/demo", n);
+  await p.setInputFiles('.panel input[type=file][accept*=".css"]', [F("index.html"), F("styles.css"), F("main.js")]); await p.waitForTimeout(800);
+  const html = await p.inputValue('.panel .f:has-text("HTML") textarea');
+  assert.match(html, /class="licznik"/); assert.doesNotMatch(html, /<head|main\.js|styles\.css/, "z całego dokumentu zostaje treść body");
+  // podgląd w edytorze: ramka z działającym kodem
+  const prev = p.frames().find((f) => f !== p.mainFrame());
+  const demoFrame = async (page) => { for (let i = 0; i < 30; i++) { const f = page.frames().find((x) => x.url().includes("demos/") || x.url() === "about:srcdoc" && x.parentFrame() && x.parentFrame() !== page.mainFrame()); if (f) { try { if (await f.evaluate(() => window.__demo)) return f; } catch {} } await page.waitForTimeout(200); } return null; };
+  await prev.evaluate(() => document.querySelector(".code-demo").scrollIntoView());
+  const df = await demoFrame(p);
+  assert.ok(df, "demo działa w podglądzie");
+  // eksport
+  const { zip, url } = await exportManual(p, "demo-kodu");
+  const dir = Object.keys(zip.files).find((f) => /^demos\/.+\/index\.html$/.test(f));
+  assert.ok(dir, "folder demos/ w eksporcie");
+  assert.match(await zip.file(dir).async("string"), /fonts\/geist/, "demo ma dostęp do kroju manuala");
+  const zpath = Object.keys(zip.files).find((f) => /^files\/.*-kod\.zip$/.test(f));
+  const inner = await JSZip.loadAsync(await zip.file(zpath).async("nodebuffer"));
+  assert.deepEqual(Object.keys(inner.files).sort(), ["CZYTAJ.txt", "index.html", "script.js", "style.css"]);
+  const v = await viewer(url);
+  await v.evaluate(() => document.querySelector(".code-demo").scrollIntoView()); await v.waitForTimeout(800);
+  const ef = await demoFrame(v);
+  assert.ok(ef, "demo działa w manualu");
+  await ef.click(".licznik"); await ef.click(".licznik");
+  assert.equal(await ef.$eval(".licznik b", (b) => b.textContent), "2");
+  await v.click('.code-demo [data-code-tab="css"]');
+  assert.ok(await v.isVisible(".code-demo__code:not([hidden])")); assert.ok(!(await v.isVisible(".code-demo iframe")));
+  assert.match(await v.$eval(".code-demo__code:not([hidden])", (e) => e.textContent), /\.licznik/);
+  assert.deepEqual([...v.errors, ...v.missing], []);
+  await v.context().close(); await p.context().close();
+});
+
+test("Shift+Spacja wstawia twardą spację w polach tekstowych (nie w polach kodu)", async () => {
+  const p = await editor("single");
+  await p.click('.nav > button:has-text("Marka")');
+  const f = '.f:has-text("Nazwa marki") input';
+  await p.fill(f, "Nazwa"); await p.focus(f); await p.keyboard.press("End");
+  await p.keyboard.press("Shift+Space"); await p.keyboard.type("Marki"); await p.waitForTimeout(500);
+  assert.equal(await p.inputValue(f), "Nazwa Marki");
+  const fr = p.frames().find((x) => x !== p.mainFrame());
+  assert.match(await fr.$eval(".cover__brand", (e) => e.textContent), /Nazwa Marki/, "twarda spacja trafia do manuala");
+  await chapter(p, "Animacje"); await p.selectOption(".panel select.add", "code"); await p.waitForTimeout(400);
+  const c = '.panel .f:has-text("CSS") textarea';
+  await p.focus(c); await p.keyboard.type("a"); await p.keyboard.press("Shift+Space"); await p.keyboard.type("b");
+  assert.equal(await p.inputValue(c), "a b", "w polu kodu zwykła spacja");
   await p.context().close();
 });

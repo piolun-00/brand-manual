@@ -13,11 +13,11 @@ import { useState, useEffect, useRef } from "preact/hooks";
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
 const { Grip, Icon, html } = await import("./core.js" + Q);
 // ——— Pola formularza ———
-export function Text({ label, value, onInput, hint, multiline, placeholder, rows }) {
+export function Text({ label, value, onInput, hint, multiline, placeholder, rows, code }) {
   return html`<label class="f">
     <span class="f__label">${label}</span>
     ${multiline
-      ? html`<textarea rows=${rows || 4} value=${value || ""} placeholder=${placeholder || ""} onInput=${(e) => onInput(e.target.value)} />`
+      ? html`<textarea class=${code ? "is--code" : ""} spellcheck=${code ? "false" : undefined} rows=${rows || 4} value=${value || ""} placeholder=${placeholder || ""} onInput=${(e) => onInput(e.target.value)} />`
       : html`<input type="text" value=${value ?? ""} placeholder=${placeholder || ""} onInput=${(e) => onInput(e.target.value)} />`}
     ${hint && html`<span class="f__hint">${hint}</span>`}
   </label>`;

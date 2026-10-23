@@ -15,7 +15,7 @@ import htm from "htm";
 // więc po aktualizacji przeglądarka nie zmiesza starych plików z nowymi.
 export const VERSION = new URL(import.meta.url).searchParams.get("v") || "dev";
 export const Q = `?v=${VERSION}`;
-export const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets, GEIST_FILES, fontOf, variantOf, uses, sidebarTheme, contrastRatio, accentOf, coverTheme } = await import("../engine/render.js" + Q);
+export const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets, GEIST_FILES, fontOf, variantOf, uses, sidebarTheme, contrastRatio, accentOf, coverTheme, demoDoc, demoPath, demoParts, demoFonts } = await import("../engine/render.js" + Q);
 // Pliki kroju Geist leżą w silniku: w podglądzie ładowane z edytora, w eksporcie kopiowane do fonts/geist/
 export const ENGINE_URL = (p) => new URL("../engine/" + p, import.meta.url).href;
 // Odtwarzacze dołączane do strony tylko, gdy manual ma blok Lottie / 3D (assets/… w eksporcie ← engine/vendor/…)
@@ -59,7 +59,8 @@ export const BLOCK_TYPES = {
   typeScale: "Skala typograficzna (grafika)",
   video: "Animacja / wideo",
   lottie: "Animacje Lottie",
-  model: "Model 3D"
+  model: "Model 3D",
+  code: "Demo kodu (HTML / CSS / JS)"
 };
 export const newBlock = (type) => ({
   images: { layout: "2-equal", ratio: "4/3", items: [{ image: null, caption: "" }, { image: null, caption: "" }] },
@@ -70,6 +71,7 @@ export const newBlock = (type) => ({
   video: { source: "file", file: null, embed: "", ratio: "16/9" },
   lottie: { line: true, label: "Animacje Lottie", items: [{ name: "", file: null }] },
   model: { file: null, ratio: "16/9", autoRotate: true, speed: 20, background: "surface", shadow: true, download: false, alt: "" },
+  code: { line: true, label: "Demo kodu", html: "", css: "", js: "", height: 480, download: true },
   typeface: { name: "", foundry: "", weights: "", svg: null, license: { kind: "note", note: "Krój komercyjny — do użycia wymagana licencja.", linkLabel: "Przejdź do kroju", href: "", file: null } },
   typeScale: { image: null },
   text: { columns: 1, col1: "", col2: "" }
@@ -208,6 +210,7 @@ export function blockInfo(b) {
     case "palette": sub = (b.colors || []).length ? plural(b.colors.length, "kolor", "kolory", "kolorów") : "wszystkie kolory marki"; break;
     case "contrast": sub = plural((b.pairs || []).length, "para", "pary", "par"); break;
     case "text": sub = b.columns === 2 ? "2 kolumny" : "1 kolumna"; if (!(b.col1 || "").trim()) holes = 1; break;
+    case "code": { const langs = [["HTML", b.html], ["CSS", b.css], ["JS", b.js]].filter(([, v]) => (v || "").trim()).map(([l]) => l); sub = langs.join(" · "); holes = langs.length ? 0 : 1; break; }
   }
   if (b.label) sub = b.label + (sub ? " · " + sub : "");
   return { sub, holes, warn: holes ? plural(holes, "puste pole", "puste pola", "pustych pól") : "" };

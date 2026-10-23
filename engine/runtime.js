@@ -105,6 +105,31 @@ export const RUNTIME = `
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
 
+  // Demo kodu: zakładki Podgląd / HTML / CSS / JS, kopiowanie widocznego kodu, ponowne uruchomienie ramki
+  document.addEventListener("click", async (e) => {
+    const demo = e.target.closest("[data-code-demo]");
+    if (!demo) return;
+    const tab = e.target.closest("[data-code-tab]");
+    if (tab) {
+      demo.querySelectorAll("[data-code-tab]").forEach((t) => { const on = t === tab; t.classList.toggle("is--on", on); t.setAttribute("aria-selected", String(on)); });
+      demo.querySelectorAll('[role="tabpanel"]').forEach((p) => { p.hidden = p.id !== tab.getAttribute("aria-controls"); });
+      demo.querySelector("[data-code-copy]").hidden = tab.dataset.codeTab === "run";
+      demo.querySelector("[data-code-restart]").hidden = tab.dataset.codeTab !== "run";
+      return;
+    }
+    if (e.target.closest("[data-code-restart]")) {
+      const f = demo.querySelector("iframe");
+      if (f.hasAttribute("srcdoc")) f.srcdoc = f.srcdoc; else f.src = f.src;
+      return;
+    }
+    const copy = e.target.closest("[data-code-copy]");
+    if (copy) {
+      const code = demo.querySelector(".code-demo__code:not([hidden])");
+      try { await navigator.clipboard.writeText(code.textContent); } catch { return; }
+      copy.textContent = "Skopiowano"; setTimeout(() => { copy.textContent = "Kopiuj"; }, 1500);
+    }
+  });
+
   document.addEventListener("click", async (e) => {
     const el = e.target.closest("[data-copy], [data-copy-url]");
     if (!el) return;

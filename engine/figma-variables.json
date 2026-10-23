@@ -78,6 +78,20 @@
      }
     },
     {
+     "name": "color/neutral/700",
+     "type": "COLOR",
+     "values": {
+      "Value": "#666666"
+     }
+    },
+    {
+     "name": "color/neutral/800",
+     "type": "COLOR",
+     "values": {
+      "Value": "#3c3c3a"
+     }
+    },
+    {
      "name": "color/red/500",
      "type": "COLOR",
      "values": {
@@ -328,6 +342,15 @@
      }
     },
     {
+     "name": "bg/cover",
+     "type": "COLOR",
+     "values": {
+      "Light": {
+       "alias": "color/neutral/800"
+      }
+     }
+    },
+    {
      "name": "bg/logo",
      "type": "COLOR",
      "values": {
@@ -365,6 +388,15 @@
     },
     {
      "name": "text/on-media",
+     "type": "COLOR",
+     "values": {
+      "Light": {
+       "alias": "color/white"
+      }
+     }
+    },
+    {
+     "name": "text/cover",
      "type": "COLOR",
      "values": {
       "Light": {

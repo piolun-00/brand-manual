@@ -16,6 +16,8 @@ Każdy manual to osobna instancja: uzupełniasz w edytorze → **Eksport ZIP** �
 
 Projekty zapisują się same w tej przeglądarce (IndexedDB). Nic nie trafia na serwer.
 
+Skrót: **Shift+Spacja** w polu tekstowym wstawia twardą spację (np. „Nazwa Marki” w jednym wierszu, „10 mm”).
+
 ## Bloki
 | Blok | Co pokazuje |
 | --- | --- |
@@ -28,6 +30,7 @@ Projekty zapisują się same w tej przeglądarce (IndexedDB). Nic nie trafia na 
 | Animacja / wideo | MP4 (z klatką startową) lub embed |
 | Animacje Lottie | 2 kolumny na animację, pobieranie JSON i ZIP |
 | Model 3D | GLB lub OBJ (konwersja do GLB w edytorze), obrót 360° |
+| Demo kodu | działający HTML / CSS / JS w ramce + zakładki z kodem; w eksporcie folder `demos/` i ZIP (backup rozwiązań klienta) |
 
 Przycisk akcji bloku (ZIP, GLB) stoi w jego belce opisu; bez belki — w nagłówku sekcji.
 
@@ -50,7 +53,7 @@ Przycisk akcji bloku (ZIP, GLB) stoi w jego belce opisu; bez belki — w nagłó
 | `vendor/` | biblioteki edytora: Preact, htm, JSZip, bcryptjs, DOMPurify, three.js (konwersja OBJ) |
 
 ## Testy
-`cd tests && npm install && npm test` — 29 scenariuszy w Playwright (ok. 7 min); uruchamiają się też same przy każdej publikacji — czerwone testy blokują wdrożenie:
+`cd tests && npm install && npm test` — 33 scenariusze w Playwright (ok. 7 min); uruchamiają się też same przy każdej publikacji — czerwone testy blokują wdrożenie:
 - `e2e.test.mjs` — edytor i eksport: lista kontrolna, hasło i szyfrowanie, backup bez hasła, kotwice, Lottie z dysku, OBJ → GLB, sprzątanie plików, axe (WCAG), podsumowania kart.
 - `extended.test.mjs` — eksport na gotowych projektach (wczytywanych jak backup): nawigacja multi site, `.htaccess` + bcrypt, bezpieczeństwo (znaczniki w nazwach, złośliwe SVG), kontrast paska dla kolorów marki, ikony i ZIP, zdjęcia @1x i klatka MP4, backup w obie strony, cofnij / przywróć, responsywność 360–2560 px, pliki prawne, stopka i kopiowanie HEX, Areal, położenie przycisków bloków, wydajność.
 

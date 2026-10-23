@@ -119,9 +119,9 @@ export function BrandForm({ b, set, ctx }) {
       <b class="group__sub">Okładka</b>
       <${Select} label="Tło okładki" value=${cv.mode} options=${[["image", "Zdjęcie"], ["color", "Jednolity kolor"]]} onChange=${(v) => up((x) => { x.coverMode = v; if (v === "color" && !x.coverColor) x.coverColor = (x.colors || [])[0]?.id || "custom"; })} />
       ${cv.mode === "image"
-        ? html`<${FileField} label="Zdjęcie okładki manuala (opcjonalne)" value=${b.cover} accept="image/jpeg,image/png,image/webp" folder="media" ctx=${ctx} hint="Szablon z Figmy: 1440×900, eksport 2x. Bez zdjęcia okładka ma szare tło." onChange=${(p) => up((x) => { x.cover = p; })} />`
+        ? html`<${FileField} label="Zdjęcie okładki manuala (opcjonalne)" value=${b.cover} accept="image/jpeg,image/png,image/webp" folder="media" ctx=${ctx} hint="Szablon z Figmy: 1440×900, eksport 2x. Bez zdjęcia okładka ma ciemnoszare tło." onChange=${(p) => up((x) => { x.cover = p; })} />`
         : html`<${ColorPick} label="Kolor tła okładki" b=${b} value=${b.coverColor} hex=${b.coverHex} onPick=${(v) => up((x) => { x.coverColor = v; if (v === "custom" && !x.coverHex) x.coverHex = "#1C1C1C"; })} onHex=${(v) => up((x) => { x.coverHex = v; })} />`}
-      <${ColorPick} label="Kolor tekstu okładki" b=${b} value=${b.coverText || ""} hex=${b.coverTextHex} defLabel="Domyślny (czarny)" onPick=${(v) => up((x) => { x.coverText = v || null; if (v === "custom" && !x.coverTextHex) x.coverTextHex = "#FFFFFF"; })} onHex=${(v) => up((x) => { x.coverTextHex = v; })} />
+      <${ColorPick} label="Kolor tekstu okładki" b=${b} value=${b.coverText || ""} hex=${b.coverTextHex} defLabel="Domyślny (biały)" onPick=${(v) => up((x) => { x.coverText = v || null; if (v === "custom" && !x.coverTextHex) x.coverTextHex = "#000000"; })} onHex=${(v) => up((x) => { x.coverTextHex = v; })} />
       <p class="note">${cv.mode === "color" ? `Kontrast tekstu do tła: ${cv.ratio.toFixed(1).replace(".", ",")}:1${cv.ratio < 3 ? " — za mało, nazwa marki będzie słabo czytelna (min. 3:1 dla dużego tekstu)." : "."}` : "Przy zdjęciu dobierz kolor tekstu do jasności zdjęcia."} Ten sam kolor tła i tekstu dostają okładki rozdziałów bez własnego zdjęcia.</p>
     <//>
   </div>`;

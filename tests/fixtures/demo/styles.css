@@ -1,0 +1,2 @@
+body { display: grid; place-items: center; min-height: 100vh; }
+.licznik { font: 500 20px/1 "Geist", sans-serif; padding: 12px 20px; border: 1px solid #000; background: #fff; }

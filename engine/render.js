@@ -141,7 +141,43 @@ function toc(ctx, chapter) {
 //  — blok bez belki → w nagłówku sekcji (gdy sekcja nie ma własnego przycisku i ma jeden akapit),
 //  — gdy oba miejsca zajęte → nad blokiem, w panelu.
 const hasMeta = (b) => !!(b.line || (b.label || "").trim() || (b.text || "").trim());
+// ——— Demo kodu ———
+export const demoPath = (b) => `demos/${slugify(b.label || "") || "demo"}-${String(b.id || "x").slice(0, 6)}/`;
+// Wklejony cały dokument → zostaje treść <body> i zewnętrzne biblioteki z <head>; lokalne style i skrypty
+// zastępujemy naszymi plikami style.css / script.js (to te same treści z pól CSS i JS)
+export function demoParts(html) {
+  const src = String(html || "");
+  if (!/<(html|body|head)[\s>]/i.test(src)) return { head: "", body: src };
+  const head = (src.match(/<head[^>]*>([\s\S]*?)<\/head>/i) || [, ""])[1];
+  const keep = (head.match(/<(link|script)\b[^>]*\b(href|src)=["']https?:[^"']+["'][^>]*>(\s*<\/script>)?/gi) || []).join("\n");
+  const body = (src.match(/<body[^>]*>([\s\S]*?)<\/body>/i) || [, src])[1]
+    .replace(/<script\b[^>]*\bsrc=["'](?!https?:)[^"']*["'][^>]*>\s*<\/script>/gi, "")
+    .replace(/<link\b[^>]*\bhref=["'](?!https?:)[^"']*["'][^>]*>/gi, "");
+  return { head: keep, body };
+}
+// Dokument demo. inline: CSS i JS w środku (podgląd w edytorze); inaczej osobne pliki (eksport, ZIP)
+export function demoDoc(b, { fonts = "", inline = true } = {}) {
+  const { head, body } = demoParts(b.html);
+  return `<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(b.label || "Demo kodu")}</title>
+${fonts ? `<style>${fonts}</style>\n` : ""}<style>html,body{margin:0}body{font-family:"Geist",system-ui,sans-serif}</style>
+${head}
+${inline ? `<style>\n${String(b.css || "").replace(/<\/style/gi, "<\\/style")}\n</style>` : `<link rel="stylesheet" href="style.css">`}
+</head>
+<body>
+${body}
+${inline ? `<script>\n${String(b.js || "").replace(/<\/script/gi, "<\\/script")}\n</script>` : `<script src="script.js"></script>`}
+</body>
+</html>`;
+}
+export const demoFonts = (url) => geistFaces(url);
+
 function blockAction(ctx, b) {
+  if (b.type === "code" && b.download !== false && [b.html, b.css, b.js].some((x) => (x || "").trim())) return button(ctx, "download", ctx.codeZips?.get?.(b.id || "") || null, "Pobierz kod (ZIP)");
   if (b.type === "icons" && (b.items || []).some((i) => i.svg)) return button(ctx, "download", ctx.iconZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)");
   if (b.type === "lottie" && (b.items || []).some((i) => i.file)) return button(ctx, "download", ctx.lottieZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)");
   if (b.type === "model" && b.download && b.file) return button(ctx, "download", b.file, "Pobierz model (GLB)");
@@ -318,6 +354,28 @@ const BLOCKS = {
   },
 
   // Skala typograficzna jako grafika (SVG/PNG) — bez webfontu klienta. Szerokość kolumny, wysokość z pliku.
+  // Demo kodu: działający przykład (HTML / CSS / JS) w ramce + podgląd kodu w zakładkach.
+  // W eksporcie każde demo to osobny folder demos/<id>/ — da się go otworzyć i skopiować w całości.
+  code: (ctx, b) => {
+    const parts = [["html", "HTML", b.html], ["css", "CSS", b.css], ["js", "JS", b.js]].filter(([, , v]) => (v || "").trim());
+    if (!parts.length) return `<div class="code-demo is--empty"><span class="gallery__placeholder text-small">Demo kodu — wklej albo wgraj HTML, CSS i JS</span></div>`;
+    const id = `demo-${esc(b.id || "x")}`, h = Number(b.height) || 480;
+    const src = ctx.preview
+      ? `srcdoc="${esc(demoDoc(b, { fonts: ctx.demoFonts || "" }))}" sandbox="allow-scripts allow-popups allow-pointer-lock"`
+      : `src="${esc(ctx.url(demoPath(b) + "index.html"))}" loading="lazy"`;
+    const tab = (key, label, on) => `<button type="button" class="code-demo__tab text-small${on ? " is--on" : ""}" role="tab" aria-selected="${on}" aria-controls="${id}-${key}" data-code-tab="${key}">${label}</button>`;
+    return `<div class="code-demo" data-code-demo>
+  <div class="code-demo__bar" role="tablist">${tab("run", "Podgląd", true)}${parts.map(([k, l]) => tab(k, l, false)).join("")}
+    <span class="code-demo__tools">
+      <button type="button" class="code-demo__tool text-small" data-code-restart>Uruchom ponownie</button>
+      <button type="button" class="code-demo__tool text-small" data-code-copy hidden>Kopiuj</button>
+      ${ctx.preview ? "" : `<a class="code-demo__tool text-small" href="${esc(ctx.url(demoPath(b) + "index.html"))}" target="_blank" rel="noopener">Otwórz ↗</a>`}
+    </span></div>
+  <div class="code-demo__panel" id="${id}-run" role="tabpanel"><iframe class="code-demo__frame" title="${esc(b.label || "Demo kodu")}" style="height:${h}px" ${src}></iframe></div>
+  ${parts.map(([k, l, v]) => `<pre class="code-demo__panel code-demo__code" id="${id}-${k}" role="tabpanel" aria-label="${l}" tabindex="0" hidden><code>${esc(v)}</code></pre>`).join("")}
+</div>${b.download !== false && !ctx.placed?.has?.(b.id) ? `<div class="code-demo__actions">${button(ctx, "download", ctx.codeZips?.get?.(b.id || "") || null, "Pobierz kod (ZIP)")}</div>` : ""}`;
+  },
+
   typeScale: (ctx, b) => `<div class="graphic">${b.image ? `<img class="graphic__img" src="${esc(ctx.url(b.image))}" alt="${esc(b.label || "Skala typograficzna")}">` : `<span class="graphic__placeholder text-small">Skala typograficzna — SVG lub PNG, szerokość 924 px</span>`}</div>`
 };
 
@@ -445,13 +503,14 @@ export function inlineSvg(text, name, color) {
   tag = tag.replace(/<svg/i, `<svg class="sidebar__logo-svg" role="img" aria-label="${esc(name)}" preserveAspectRatio="xMinYMin meet" fill="currentColor" style="color:${color}"${vb}`);
   return s.slice(s.indexOf(open[0])).replace(open[0], tag).replace(/<\/svg>[\s\S]*$/i, "</svg>");
 }
-// Okładka: tło ze zdjęcia albo jednolity kolor; kolor tekstu wybiera użytkownik (domyślnie czarny)
+// Okładka: tło ze zdjęcia albo jednolity kolor; kolor tekstu wybiera użytkownik (domyślnie biały na ciemnoszarym)
+const COVER_BG = "#3C3C3A", COVER_FG = "#FFFFFF";
 const pickHex = (b, v, hex) => v === "custom" ? hex6(hex) : v ? hex6((b.colors || []).find((x) => x.id === v)?.hex) : null;
 export function coverTheme(b) {
   const mode = b.coverMode === "color" ? "color" : "image";
-  const bg = mode === "color" ? pickHex(b, b.coverColor, b.coverHex) || "#B8B8B5" : null;
-  const fg = pickHex(b, b.coverText, b.coverTextHex) || "#000000";
-  return { mode, bg, fg, ratio: contrastRatio(fg, bg || "#B8B8B5") };
+  const bg = mode === "color" ? pickHex(b, b.coverColor, b.coverHex) || COVER_BG : null;
+  const fg = pickHex(b, b.coverText, b.coverTextHex) || COVER_FG;
+  return { mode, bg, fg, ratio: contrastRatio(fg, bg || COVER_BG) };
 }
 function coverCss(project) {
   const c = coverTheme(project.brand || {});

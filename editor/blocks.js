@@ -11,7 +11,7 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
-const { BLOCK_TYPES, Icon, baseName, blockInfo, sectionInfo, freshIds, html, move, moveTo, newBlock, newSection, slugify, uid } = await import("./core.js" + Q);
+const { BLOCK_TYPES, Icon, baseName, blockInfo, sectionInfo, demoParts, freshIds, html, move, moveTo, newBlock, newSection, slugify, uid } = await import("./core.js" + Q);
 const { FileField, Group, Row, Select, Text, useGroups } = await import("./fields.js" + Q);
 // ——— Bloki ———
 export function ImagesBlock({ b, set, ctx }) {
@@ -155,6 +155,36 @@ export function LottieBlock({ b, set, ctx }) {
     <p class="note">Każda animacja zajmuje 2 kolumny: 4 w rzędzie na desktopie, 3 na tablecie, 2 na telefonie. Grają tylko, gdy są widoczne; przy włączonym „ograniczeniu ruchu” w systemie pokazuje się pierwsza klatka. Desktop: kliknięcie w animację pobiera JSON, przycisk „Pobierz” po najechaniu. Tablet i telefon: przycisk „Pobierz” pod nazwą. „Pobierz wszystkie (ZIP)” w nagłówku sekcji.</p>`;
 }
 
+// Demo kodu: trzy pola (HTML, CSS, JS) albo wgranie plików z gotowego projektu.
+// Cały dokument HTML przycinamy do <body> + zewnętrznych bibliotek — lokalne style i skrypty i tak są w polach CSS / JS.
+export function CodeBlock({ b, set, ctx }) {
+  const ref = useRef();
+  const [note, setNote] = useState("");
+  const load = async (files) => {
+    const by = (re) => files.filter((f) => re.test(f.name));
+    const read = async (list) => (await Promise.all(list.map((f) => f.text()))).join("\n\n");
+    const html = by(/\.html?$/i), css = by(/\.css$/i), js = by(/\.m?js$/i), skipped = files.filter((f) => !/\.(html?|css|m?js)$/i.test(f.name));
+    const rawHtml = html.length ? await read(html) : "";
+    const h = html.length ? demoParts(rawHtml) : null;
+    const title = (rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1]?.trim();
+    const c = css.length ? await read(css) : null, j = js.length ? await read(js) : null;
+    set((x) => { if (h) x.html = (h.head ? h.head + "\n" : "") + h.body.trim(); if (c != null) x.css = c; if (j != null) x.js = j; if (!(x.label || "").trim() || x.label === "Demo kodu") x.label = title || [baseName((html[0] || css[0] || js[0] || {}).name || "")].find((n) => n && !/^(index|main|script|style)$/i.test(n)) || x.label; });
+    setNote([`Wczytano: ${[...html, ...css, ...js].map((f) => f.name).join(", ") || "nic"}.`, skipped.length && `Pominięte (obrazki i fonty dodaj jako adresy https albo wbuduj w CSS): ${skipped.map((f) => f.name).join(", ")}.`].filter(Boolean).join(" "));
+  };
+  return html`
+    <button type="button" class="btn is--add" onClick=${() => ref.current.click()}>Wgraj pliki (HTML, CSS, JS)</button>
+    <input ref=${ref} type="file" accept=".html,.htm,.css,.js,.mjs,text/html,text/css,text/javascript" multiple hidden onChange=${async (e) => { const files = [...e.target.files]; e.target.value = ""; if (files.length) await load(files); }} />
+    ${note && html`<p class="note">${note}</p>`}
+    <${Text} label="HTML (treść strony, bez <head>)" multiline code rows="8" value=${b.html} onInput=${(v) => set((x) => { x.html = v; })} />
+    <${Text} label="CSS" multiline code rows="8" value=${b.css} onInput=${(v) => set((x) => { x.css = v; })} />
+    <${Text} label="JavaScript" multiline code rows="8" value=${b.js} onInput=${(v) => set((x) => { x.js = v; })} />
+    <div class="grid2">
+      <${Select} label="Wysokość podglądu" value=${String(b.height || 480)} options=${[["320", "320 px"], ["480", "480 px"], ["640", "640 px"], ["800", "800 px"]]} onChange=${(v) => set((x) => { x.height = Number(v); })} />
+      <label class="check is--line"><input type="checkbox" checked=${b.download !== false} onChange=${(e) => set((x) => { x.download = e.target.checked; })} />Pobieranie kodu (ZIP)</label>
+    </div>
+    <p class="note">Demo działa na żywo w ramce — w podglądzie i w manualu. W eksporcie trafia też do folderu demos/ jako osobna, działająca strona (backup rozwiązania dla klienta). Krój manuala jest dostępny w demo jako „Geist”. Obrazki i fonty spoza kodu dodawaj jako pełne adresy https.</p>`;
+}
+
 // 3D: GLB (najlepiej — jeden plik z materiałami) albo OBJ, który zamieniamy na GLB w przeglądarce (three.js, ładowane tylko wtedy).
 export async function objToGlb(file) {
   const THREE = await import("three");
@@ -213,7 +243,7 @@ export function TypeScaleBlock({ b, set, ctx }) {
   return html`<${FileField} label="Grafika skali (SVG lub PNG)" value=${b.image} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 924 }}
     hint="Szerokość 924 px (PNG: 1848 px), wysokość dowolna — strona dopasuje ją sama. Bez webfontu klienta, więc bez problemu z licencją." onChange=${(p) => set((x) => { x.image = p; })} />`;
 }
-export const BLOCK_FORMS = { text: TextBlock, images: ImagesBlock, specimens: SpecimensBlock, palette: PaletteBlock, contrast: ContrastBlock, icons: IconsBlock, typeface: TypefaceBlock, typeScale: TypeScaleBlock, video: VideoBlock, lottie: LottieBlock, model: ModelBlock };
+export const BLOCK_FORMS = { text: TextBlock, images: ImagesBlock, specimens: SpecimensBlock, palette: PaletteBlock, contrast: ContrastBlock, icons: IconsBlock, typeface: TypefaceBlock, typeScale: TypeScaleBlock, video: VideoBlock, lottie: LottieBlock, model: ModelBlock, code: CodeBlock };
 
 // ——— Sekcja ———
 export function SectionForm({ s, set, ctx, open, setOpen, noTitle }) {

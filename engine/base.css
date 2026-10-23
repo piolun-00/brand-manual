@@ -55,8 +55,8 @@ img { display: block; max-width: 100%; }
 .cover {
   position: relative; display: flex; flex-direction: column;
   height: 62svh; padding: var(--space-24) var(--grid-margin);
-  /* Tło: kolor z edytora (Marka → Okładka) albo szare pole pod zdjęcie; tekst domyślnie czarny, do zmiany w edytorze */
-  background: var(--cover-bg, var(--bg-media)) center / cover no-repeat; color: var(--cover-fg, var(--text-primary));
+  /* Tło: kolor z edytora (Marka → Okładka) albo ciemnoszare pole pod zdjęcie; tekst domyślnie biały, do zmiany w edytorze */
+  background: var(--cover-bg, var(--bg-cover)) center / cover no-repeat; color: var(--cover-fg, var(--text-cover));
 }
 .cover.is--start, .cover.is--full { height: 100svh; }
 .cover.is--start { height: calc(100svh - 51px); }
@@ -69,10 +69,10 @@ img { display: block; max-width: 100%; }
 }
 /* Desktop: pierwsza kolumna okładki ma szerokość kolumny etykiety, ale gdy nazwa marki w dużym stopniu
    jest szersza, kolumna rośnie razem z nią — tytuł odsuwa się, zamiast na nią nachodzić. Zwykła nazwa się nie łamie;
-   bardzo długa łamie się dopiero przy 62% szerokości (wcześniej wypychała stronę w bok — poziome przewijanie).
+   bardzo długa łamie się dopiero po zajęciu połowy szerokości okładki (wcześniej wypychała stronę w bok — poziome przewijanie).
    Odstęp 0,5 em rośnie razem ze stopniem, więc przy dużym nagłówku nazwa i tytuł nie zlewają się w jedno. */
 @media (min-width: 1280px) {
-  .cover__head { grid-template-columns: fit-content(62%) minmax(0, 1fr); }
+  .cover__head { grid-template-columns: fit-content(50%) minmax(0, 1fr); }
   .cover__brand, .cover__num { min-width: calc(var(--layout-block-indent) - var(--grid-gutter)); padding-right: 0.5em; }
   .cover__num { white-space: nowrap; }
   .cover__brand { text-wrap: balance; overflow-wrap: anywhere; }
@@ -331,3 +331,18 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 .text-block__col { display: flex; flex-direction: column; gap: 1.2em; min-width: 0; }
 .text-block__p { max-width: 75ch; overflow-wrap: anywhere; text-wrap: pretty; }
 @media (min-width: 768px) { .text-block.is--2col { grid-template-columns: 1fr 1fr; gap: var(--grid-gutter); } }
+
+/* ——— Demo kodu ———
+   Pasek zakładek (Podgląd / HTML / CSS / JS) i narzędzia po prawej; podgląd to ramka z działającym kodem.
+   Kod w kroju systemowym o stałej szerokości — bez kolorowania składni, czytelny i lekki. */
+.code-demo { background: var(--bg-surface); border: 1px solid var(--border-subtle); }
+.code-demo.is--empty { display: grid; place-items: center; min-height: 240px; background: var(--bg-placeholder); border: 0; }
+.code-demo__bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); padding: var(--space-8); border-bottom: 1px solid var(--border-subtle); }
+.code-demo__tab, .code-demo__tool { appearance: none; border: 0; background: none; font: inherit; color: var(--text-subtle); padding: var(--space-4) var(--space-8); cursor: pointer; text-decoration: none; }
+.code-demo__tab:hover, .code-demo__tool:hover { color: var(--text-primary); }
+.code-demo__tab.is--on { color: var(--text-primary); box-shadow: inset 0 -1px 0 currentColor; }
+.code-demo__tab:focus-visible, .code-demo__tool:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 1px; }
+.code-demo__tools { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--space-4); }
+.code-demo__frame { display: block; width: 100%; border: 0; background: #fff; }
+.code-demo__code { margin: 0; padding: var(--space-16); max-height: 480px; overflow: auto; font: 12px/1.6 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--text-primary); white-space: pre; tab-size: 2; }
+.code-demo__actions { display: flex; justify-content: flex-end; margin-top: var(--space-12); }

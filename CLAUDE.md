@@ -17,6 +17,10 @@ i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po pol
   (działa z `file://`), pauza wideo poza ekranem, `window.khInitMedia`.
 - Tokeny z `engine/figma-variables.json` (Typography: tryby Geist / ABC Areal). Klasy CSS = nazwy warstw w Figmie (BEM).
 - Pasek boczny: kolor tła wybiera użytkownik, tekst liczy się sam (kontrast ≥ 4.5:1, `sidebarTheme`).
+- Okładka (`coverTheme`): zdjęcie albo jednolity kolor; domyślnie ciemnoszare #3C3C3A i biały tekst (tokeny `bg/cover`, `text/cover`);
+  nazwa marki na desktopie łamie się dopiero po zajęciu 50% szerokości okładki.
+- Demo kodu (blok `code`): podgląd w ramce `srcdoc` z sandboxem w edytorze; w eksporcie `demos/<…>/index.html` + `style.css` + `script.js`
+  (bez sandboxa — fonty manuala z tego samego serwera) i ZIP w `files/`. Kod Nami nie trafia do repo (licencja) — test używa `tests/fixtures/demo`.
 - Eksport (`exportZip` w `editor/app.js`): lista kontrolna → pliki, wersje @1x, plakaty MP4, ZIP-y ikon / Lottie,
   odtwarzacze tylko gdy użyte, licencja (`engine/legal.js`), sygnatura `KHOREI-BM-rok-…`, hasło (AES-GCM w `lock.js`
   albo `.htaccess` + bcrypt).
@@ -40,7 +44,6 @@ i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po pol
 - Wersja do druku / PDF — nie teraz.
 - Gradient na okładce — odrzucony.
 - Własna domena edytora, numer wersji silnika w eksporcie — na końcu.
-- Blok „demo kodu” (rozwiązania kodowe klienta) — kierunek zaakceptowany, nie zaplanowany.
 
 ## Figma
 Plik `nWmpctwP4yNlI3BulXAUk2`, strona 1303:548. Zmienne `bg/sidebar`, `text/sidebar`, `text/sidebar-active`.
