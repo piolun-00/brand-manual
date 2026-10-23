@@ -12,26 +12,10 @@ import { useState, useEffect } from "preact/hooks";
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
 const { accentOf, contrastRatio, fontOf, html, moveTo, sidebarTheme, uid } = await import("./core.js" + Q);
-const { Color, FileField, Row, Select, Text } = await import("./fields.js" + Q);
+const { Color, FileField, Group, Row, Select, Text, useGroups } = await import("./fields.js" + Q);
 // ——— Marka ———
 // ——— Marka i Publikacja: grupy (akordeon z podsumowaniem i ostrzeżeniem) ———
 // Kolejność = kolejność pracy i zależności: kolory marki stoją wyżej niż pola, które z nich wybierają.
-export const GROUPS_KEY = "kh-groups";
-export function useGroups(defaults) {
-  const [open, setOpen] = useState(() => { try { return JSON.parse(localStorage.getItem(GROUPS_KEY)) || defaults; } catch { return defaults; } });
-  const toggle = (id) => setOpen((o) => { const n = { ...o, [id]: !o[id] }; try { localStorage.setItem(GROUPS_KEY, JSON.stringify(n)); } catch {} return n; });
-  return [open, toggle];
-}
-export function Group({ id, title, summary, warn, open, onToggle, onSpot, children }) {
-  return html`<section class=${`group${open ? " is--open" : ""}`}>
-    <button type="button" class="group__head" aria-expanded=${open} onClick=${() => { onToggle(id); if (!open && onSpot) onSpot(); }}>
-      <span class="group__chev" aria-hidden="true">${open ? "−" : "+"}</span>
-      <span class="group__title">${title}</span>
-      ${warn ? html`<span class="group__warn" title=${warn}><span class="group__dot"></span>${warn}</span>` : !open && summary ? html`<span class="group__summary">${summary}</span>` : null}
-    </button>
-    ${open && html`<div class="group__body">${children}</div>`}
-  </section>`;
-}
 export const colorName = (b, id) => (b.colors || []).find((c) => c.id === id)?.name;
 // Wybór koloru: z palety marki albo własny HEX (pasek, logo, akcent — jeden wzór)
 export function ColorPick({ label, b, value, hex, onPick, onHex, extra = [], defLabel }) {

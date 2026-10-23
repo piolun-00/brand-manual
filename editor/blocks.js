@@ -11,8 +11,8 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
-const { BLOCK_TYPES, Icon, baseName, freshIds, html, move, moveTo, newBlock, newSection, slugify, uid } = await import("./core.js" + Q);
-const { FileField, Row, Select, Text } = await import("./fields.js" + Q);
+const { BLOCK_TYPES, Icon, baseName, blockInfo, sectionInfo, freshIds, html, move, moveTo, newBlock, newSection, slugify, uid } = await import("./core.js" + Q);
+const { FileField, Group, Row, Select, Text, useGroups } = await import("./fields.js" + Q);
 // ——— Bloki ———
 export function ImagesBlock({ b, set, ctx }) {
   const count = b.layout === "1" ? 1 : 2;
@@ -225,7 +225,7 @@ export function SectionForm({ s, set, ctx, open, setOpen, noTitle }) {
         return html`<${Row} key=${b.id} id=${b.id} title=${BLOCK_TYPES[b.type]} open=${open === b.id} onToggle=${() => setOpen(open === b.id ? null : b.id)}
           drag=${{ group: `blocks-${s.id}`, index: i, onMove: (from, to) => set((x) => moveTo(x.blocks, from, to)) }}
           onDuplicate=${() => { const nb = freshIds(b); set((x) => { x.blocks.splice(i + 1, 0, nb); }); setOpen(nb.id); }}
-          sub=${b.type === "images" ? `${{ "2-equal": "2 równe", "wide-narrow": "szerokie + wąskie", "narrow-wide": "wąskie + szerokie", "1": "1 zdjęcie" }[b.layout]} · ${b.ratio === "auto" ? "oryginalne" : b.ratio.replace("/", ":")}` : ""}
+          sub=${blockInfo(b).sub} warn=${blockInfo(b).warn}
           onUp=${i > 0 && (() => set((x) => move(x.blocks, i, -1)))} onDown=${i < s.blocks.length - 1 && (() => set((x) => move(x.blocks, i, 1)))}
           onRemove=${() => set((x) => { x.blocks.splice(i, 1); })}>
           <label class="check is--line"><input type="checkbox" checked=${!!b.line} onChange=${(e) => setB((x) => { x.line = e.target.checked; })} />Linia nad blokiem</label>
@@ -246,6 +246,7 @@ export function ChapterForm({ c, set, ctx, num, onFocus, single, select }) {
   const [openS, _setOpenS] = useState(null);
   const [openB1, setOpenB1] = useState(null);
   const [openB, setOpenB] = useState(null);
+  const [groups, toggleGroup] = useGroups({ doc: true });
   // Klik w podglądzie: otwórz sekcję i blok, przewiń formularz do karty
   useEffect(() => {
     if (!select) return;
@@ -270,16 +271,19 @@ export function ChapterForm({ c, set, ctx, num, onFocus, single, select }) {
   
   return html`<div class="panel__inner">
     <h2 class="h">${num} ${c.title || "Rozdział"}</h2>
+    <${Group} id="chapter" title="Strona rozdziału" open=${groups.chapter} onToggle=${toggleGroup}
+      summary=${[`/${c.slug || slugify(c.title)}/`, c.cover ? "okładka" : "bez okładki", c.downloadAll ? "ZIP" : ""].filter(Boolean).join(" · ")}>
     <${Text} label="Tytuł rozdziału" value=${c.title} onInput=${(v) => set((x) => { x.title = v; if (!x.slugLocked) x.slug = slugify(v); })} />
     <${Text} label="Adres strony" value=${c.slug} hint=${`/${c.slug || slugify(c.title)}/ — w trybie multi każdy rozdział to osobna strona`} onInput=${(v) => set((x) => { x.slug = slugify(v); x.slugLocked = true; })} />
     <${FileField} label="Zdjęcie okładki (opcjonalne)" value=${c.cover} accept="image/*" folder="media" ctx=${ctx} expect=${{ w: 1440, h: 900 }} hint="Szablon z Figmy: 1440×900, eksport 2x" onChange=${(p) => set((x) => { x.cover = p; })} />
     <${FileField} label="„Pobierz wszystko” (ZIP pod spisem)" value=${c.downloadAll} accept=".zip" folder="files" ctx=${ctx} onChange=${(p) => set((x) => { x.downloadAll = p; })} />
+    <//>
     <div class="blocks">
       <span class="f__label">Sekcje</span>
       ${(c.sections || []).map((s, i) => html`<${Row} key=${s.id} id=${s.id}
         drag=${{ group: `sections-${c.id}`, index: i, onMove: (from, to) => set((x) => moveTo(x.sections, from, to)) }}
         onDuplicate=${() => { const ns = freshIds(s); ns.title = `${s.title} (kopia)`; set((x) => { x.sections.splice(i + 1, 0, ns); }); setOpenS(ns.id); }}
-        title=${`${num.replace(/^0/, "")}.${i} ${s.title || "Sekcja"}`} open=${openS === s.id}
+        title=${`${num.replace(/^0/, "")}.${i} ${s.title || "Sekcja"}`} open=${openS === s.id} sub=${sectionInfo(s).sub} warn=${sectionInfo(s).warn}
         onToggle=${() => setOpenS(openS === s.id ? null : s.id)}
         onUp=${i > 0 && (() => set((x) => move(x.sections, i, -1)))} onDown=${i < c.sections.length - 1 && (() => set((x) => move(x.sections, i, 1)))}
         onRemove=${() => { if (confirm(`Usunąć sekcję „${s.title || "bez tytułu"}” razem z blokami?`)) set((x) => { x.sections.splice(i, 1); }); }}>

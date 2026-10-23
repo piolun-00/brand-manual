@@ -187,3 +187,32 @@ export const moveTo = (arr, from, to) => { if (from === to || from < 0 || to < 0
 export const freshIds = (o) => { const c = clone(o); const walk = (x) => { if (Array.isArray(x)) x.forEach(walk); else if (x && typeof x === "object") { if ("id" in x && typeof x.id === "string") x.id = uid(); Object.values(x).forEach(walk); } }; walk(c); return c; };
 export const move = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; };
 export const baseName = (fileName) => String(fileName || "").replace(/\.[a-z0-9]+$/i, "");
+
+// Podsumowanie zwiniętego bloku i to, czego w nim brakuje (puste pole = zaślepka w eksporcie)
+const plural = (n, one, few, many) => `${n} ${n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many}`;
+const fileLabel = (p) => p ? baseName(p.split("/").pop()).replace(/-[0-9a-z]{4,6}$/i, "") : "";
+export function blockInfo(b) {
+  const items = b.items || [];
+  const lack = (key) => items.filter((i) => !i[key]).length;
+  const LAYOUT = { "2-equal": "2 równe", "wide-narrow": "szerokie + wąskie", "narrow-wide": "wąskie + szerokie", "1": "1 zdjęcie" };
+  let sub = "", holes = 0;
+  switch (b.type) {
+    case "images": sub = `${LAYOUT[b.layout] || ""} · ${b.ratio === "auto" ? "oryginalne" : (b.ratio || "").replace("/", ":")}`; holes = lack("image"); break;
+    case "specimens": sub = plural(items.length, "znak", "znaki", "znaków"); holes = lack("svg"); break;
+    case "icons": sub = plural(items.filter((i) => i.svg).length, "ikona", "ikony", "ikon"); holes = lack("svg"); break;
+    case "lottie": sub = plural(items.filter((i) => i.file).length, "animacja", "animacje", "animacji"); holes = lack("file"); break;
+    case "model": sub = fileLabel(b.file); holes = b.file ? 0 : 1; break;
+    case "video": sub = (b.source || "file") === "file" ? fileLabel(b.file) : "embed"; holes = (b.source || "file") === "file" ? (b.file ? 0 : 1) : (b.embed ? 0 : 1); break;
+    case "typeface": sub = b.name || ""; holes = b.svg ? 0 : 1; break;
+    case "typeScale": holes = b.image ? 0 : 1; break;
+    case "palette": sub = (b.colors || []).length ? plural(b.colors.length, "kolor", "kolory", "kolorów") : "wszystkie kolory marki"; break;
+    case "contrast": sub = plural((b.pairs || []).length, "para", "pary", "par"); break;
+    case "text": sub = b.columns === 2 ? "2 kolumny" : "1 kolumna"; if (!(b.col1 || "").trim()) holes = 1; break;
+  }
+  if (b.label) sub = b.label + (sub ? " · " + sub : "");
+  return { sub, holes, warn: holes ? plural(holes, "puste pole", "puste pola", "pustych pól") : "" };
+}
+export const sectionInfo = (s) => {
+  const holes = (s.blocks || []).reduce((n, b) => n + blockInfo(b).holes, 0);
+  return { sub: plural((s.blocks || []).length, "blok", "bloki", "bloków"), holes, warn: holes ? plural(holes, "puste pole", "puste pola", "pustych pól") : "" };
+};

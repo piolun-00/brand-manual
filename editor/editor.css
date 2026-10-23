@@ -90,7 +90,9 @@ button { cursor: pointer; }
 .card__head { display: flex; align-items: center; }
 .card__title { flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 9px 10px; display: flex; gap: 8px; align-items: baseline; }
 .card__chev { width: 10px; color: var(--muted); }
-.card__sub { color: var(--muted); margin-left: 6px; }
+.card__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-flex; gap: 8px; align-items: baseline; }
+.card__sub { color: var(--muted); margin-left: auto; padding-left: 8px; min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card__warn { margin-left: auto; padding-left: 8px; color: #9a5b00; display: inline-flex; align-items: center; gap: 6px; flex: none; white-space: nowrap; }
 .card__tools { display: flex; padding-right: 4px; }
 .card__body { padding: 4px 12px 14px; display: grid; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
 .card .card { background: var(--bg); }

@@ -102,7 +102,7 @@ export function FileField({ label, value, accept, hint, folder, ctx, onChange, e
 
 // Karta na liście: rozwijanie, przeciąganie (uchwyt z kropkami), duplikowanie, kolejność, usuwanie.
 // drag = { group, index, onMove(from, to) } — przeciągać można tylko w obrębie tej samej listy.
-export function Row({ id, title, onUp, onDown, onRemove, onDuplicate, open, onToggle, children, sub, drag }) {
+export function Row({ id, title, onUp, onDown, onRemove, onDuplicate, open, onToggle, children, sub, warn, drag }) {
   const [over, setOver] = useState(false);
   const dnd = drag ? {
     onDragOver: (e) => { if (e.dataTransfer.types.includes(`kh/${drag.group}`)) { e.preventDefault(); e.stopPropagation(); setOver(true); } },
@@ -113,7 +113,7 @@ export function Row({ id, title, onUp, onDown, onRemove, onDuplicate, open, onTo
     <div class="card__head" onClick=${(e) => { if (!e.target.closest(".card__tools, .card__grip")) onToggle(); }}>
       ${drag && html`<span class="card__grip" title="Przeciągnij, żeby zmienić kolejność" draggable="true"
         onDragStart=${(e) => { e.stopPropagation(); e.dataTransfer.setData(`kh/${drag.group}`, String(drag.index)); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setDragImage(e.target.closest(".card"), 20, 20); }}><${Grip} /></span>`}
-      <button type="button" class="card__title"><span class="card__chev">${open ? "−" : "+"}</span>${title}${sub && html`<span class="card__sub">${sub}</span>`}</button>
+      <button type="button" class="card__title"><span class="card__chev">${open ? "−" : "+"}</span><span class="card__name">${title}</span>${warn ? html`<span class="card__warn" title=${warn}><span class="group__dot"></span>${warn}</span>` : sub && html`<span class="card__sub">${sub}</span>`}</button>
       <span class="card__tools">
         ${onDuplicate && html`<button type="button" title="Duplikuj" aria-label="Duplikuj" onClick=${onDuplicate}><${Icon} name="duplicate" /></button>`}
         ${onUp && html`<button type="button" title="W górę" aria-label="W górę" onClick=${onUp}><${Icon} name="up" /></button>`}
@@ -125,3 +125,20 @@ export function Row({ id, title, onUp, onDown, onRemove, onDuplicate, open, onTo
   </div>`;
 }
 
+// ——— Grupy (akordeon z podsumowaniem i ostrzeżeniem) — Marka, Publikacja, rozdział ———
+export const GROUPS_KEY = "kh-groups";
+export function useGroups(defaults) {
+  const [open, setOpen] = useState(() => { try { return JSON.parse(localStorage.getItem(GROUPS_KEY)) || defaults; } catch { return defaults; } });
+  const toggle = (id) => setOpen((o) => { const n = { ...o, [id]: !o[id] }; try { localStorage.setItem(GROUPS_KEY, JSON.stringify(n)); } catch {} return n; });
+  return [open, toggle];
+}
+export function Group({ id, title, summary, warn, open, onToggle, onSpot, children }) {
+  return html`<section class=${`group${open ? " is--open" : ""}`}>
+    <button type="button" class="group__head" aria-expanded=${open} onClick=${() => { onToggle(id); if (!open && onSpot) onSpot(); }}>
+      <span class="group__chev" aria-hidden="true">${open ? "−" : "+"}</span>
+      <span class="group__title">${title}</span>
+      ${warn ? html`<span class="group__warn" title=${warn}><span class="group__dot"></span>${warn}</span>` : !open && summary ? html`<span class="group__summary">${summary}</span>` : null}
+    </button>
+    ${open && html`<div class="group__body">${children}</div>`}
+  </section>`;
+}
