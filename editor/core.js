@@ -49,18 +49,18 @@ export const [FIGMA, BASE_CSS, SAMPLE, SAMPLE_SINGLE] = await Promise.all([
 ]);
 
 export const BLOCK_TYPES = {
-  text: "Tekst (1 lub 2 kolumny)",
-  images: "Rząd zdjęć",
-  specimens: "Specimeny znaku",
-  palette: "Paleta",
-  contrast: "Pary kontrastowe",
+  text: "Paragraf",
+  images: "Zdjęcia",
   icons: "Ikony",
-  typeface: "Krój",
-  typeScale: "Skala typograficzna (grafika)",
-  video: "Animacja / wideo",
-  lottie: "Animacje Lottie",
+  specimens: "Logo",
+  palette: "Kolorystyka",
+  contrast: "Kontrast kolorów",
+  typeface: "Typografia",
+  typeScale: "Skala typograficzna",
+  lottie: "Animacja Lottie",
+  video: "Video",
   model: "Model 3D",
-  code: "Demo kodu (HTML / CSS / JS)"
+  code: "Demo kodu"
 };
 export const newBlock = (type) => ({
   images: { layout: "2-equal", ratio: "4/3", items: [{ image: null, caption: "" }, { image: null, caption: "" }] },
@@ -69,7 +69,7 @@ export const newBlock = (type) => ({
   contrast: { pairs: [] },
   icons: { items: [{ name: "", svg: null }] },
   video: { source: "file", file: null, embed: "", ratio: "16/9" },
-  lottie: { line: true, label: "Animacje Lottie", items: [{ name: "", file: null }] },
+  lottie: { line: true, label: "Animacja Lottie", items: [{ name: "", file: null }] },
   model: { file: null, ratio: "16/9", autoRotate: true, speed: 20, background: "surface", shadow: true, download: false, alt: "" },
   code: { line: true, label: "Demo kodu", html: "", css: "", js: "", height: 480, download: true, license: "view", licenseText: "", author: "", contract: "", showCode: true },
   typeface: { name: "", foundry: "", weights: "", svg: null, license: { kind: "note", note: "Krój komercyjny — do użycia wymagana licencja.", linkLabel: "Przejdź do kroju", href: "", file: null } },

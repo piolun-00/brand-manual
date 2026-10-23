@@ -21,16 +21,18 @@ Skrót: **Shift+Spacja** w polu tekstowym wstawia twardą spację (np. „Nazwa 
 ## Bloki
 | Blok | Co pokazuje |
 | --- | --- |
-| Tekst | 1 lub 2 kolumny |
-| Rząd zdjęć | 1–4 zdjęcia; eksport dodaje wersję @1x dla telefonów |
-| Specimeny znaku | logo / symbol na polach |
-| Paleta, Pary kontrastowe | kolory marki z HEX / RGB / CMYK i kontrastem WCAG |
-| Ikony | siatka SVG, pobieranie pojedynczo (hover) i całości (ZIP) |
-| Krój, Skala typograficzna | specimen SVG, grafika skali |
-| Animacja / wideo | MP4 (z klatką startową) lub embed |
-| Animacje Lottie | 2 kolumny na animację, pobieranie JSON i ZIP |
-| Model 3D | GLB lub OBJ (konwersja do GLB w edytorze), obrót 360° |
-| Demo kodu | działający HTML / CSS / JS w ramce + zakładki z kodem; w eksporcie folder `demos/` i ZIP (backup rozwiązań klienta) |
+| Paragraf | tekst w 1 lub 2 kolumnach |
+| Zdjęcia | 1–2 zdjęcia w rzędzie; eksport dodaje wersję @1x dla telefonów |
+| Ikony | siatka SVG, pobieranie pojedynczo i ZIP |
+| Logo | znaki na polach (specimeny SVG) |
+| Kolorystyka | kolory marki z HEX / RGB / CMYK |
+| Kontrast kolorów | pary kolorów z poziomem WCAG |
+| Typografia | specimen kroju (SVG) i licencja kroju |
+| Skala typograficzna | grafika skali (SVG / PNG) |
+| Animacja Lottie | 4 w rzędzie, pobieranie JSON i ZIP |
+| Video | MP4 (z klatką startową) lub embed |
+| Model 3D | GLB lub OBJ, obrót 360° |
+| Demo kodu | działający HTML / CSS / JS + zakładki z kodem i licencją; w eksporcie folder `demos/` i ZIP |
 
 Przycisk akcji bloku (ZIP, GLB) stoi w jego belce opisu; bez belki — w nagłówku sekcji.
 

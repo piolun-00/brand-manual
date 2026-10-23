@@ -150,8 +150,8 @@ test("rozdział: zwinięte karty pokazują podsumowanie i puste pola", async () 
   assert.match(await p.locator(".panel .card__warn").first().innerText(), /\d+ pust/);
   await chapter(p, "Animacje"); await addBlock(p, "lottie");
   await (await p.$('.panel input[type=file][multiple][accept*="json"]')).setInputFiles(path.join(FIX, "obrot.json"));
-  await p.waitForTimeout(600); await p.click('.panel .card__title:has-text("Animacje Lottie")');
-  assert.match(await p.locator('.panel .card:has-text("Animacje Lottie") .card__sub').innerText(), /1 animacja/);
+  await p.waitForTimeout(600); await p.click('.panel .card__title:has-text("Animacja Lottie")');
+  assert.match(await p.locator('.panel .card:has-text("Animacja Lottie") .card__sub').innerText(), /1 animacja/);
   assert.deepEqual(p.errors, []);
   await p.context().close();
 });

@@ -93,7 +93,7 @@ export function IconsBlock({ b, set, ctx }) {
       set((x) => { x.items = [...(x.items || []).filter((k) => k.svg || k.name), ...added]; });
     }} />
     <label class="check"><input type="checkbox" checked=${!!b.currentColor} onChange=${(e) => set((x) => { x.currentColor = e.target.checked; })} />Pliki SVG z kolorem currentColor (ikona przejmie kolor tekstu w kodzie strony)</label>
-    <p class="note">8 w rzędzie na desktopie, 6 na tablecie, 4 na telefonie. Kliknięcie w ikonę pobiera plik SVG (przycisk „Pobierz” po najechaniu). „Pobierz wszystkie (ZIP)” stoi w nagłówku sekcji, po prawej od tekstu — chyba że sekcja ma już własny przycisk albo dwa akapity, wtedy nad ikonami.</p>`;
+    <p class="note">SVG, 8 w rzędzie. Pobieranie: pojedynczo i całość (ZIP).</p>`;
 }
 export function VideoBlock({ b, set, ctx }) {
   return html`<div class="grid2">
@@ -102,7 +102,7 @@ export function VideoBlock({ b, set, ctx }) {
     </div>
     ${(b.source || "file") === "file"
       ? html`<${FileField} label="Plik MP4" value=${b.file} accept="video/mp4,video/webm" folder="media" ctx=${ctx} hint="Odtwarza się sam, bez dźwięku, w pętli. Najlepiej do 10 MB." onChange=${(p) => set((x) => { x.file = p; })} />`
-      : html`<${Text} label="Kod embed" multiline value=${b.embed} placeholder="<iframe src=…></iframe>" hint="Wklej kod z serwisu (Vimeo, YouTube, Lottie, Rive). Zostaje tylko <iframe> z adresem https — skrypty są pomijane dla bezpieczeństwa strony klienta." onInput=${(v) => set((x) => { x.embed = v; })} />`}`;
+      : html`<${Text} label="Kod embed" multiline value=${b.embed} placeholder="<iframe src=…></iframe>" hint="Vimeo, YouTube, Rive — zostaje tylko <iframe> z adresem https." onInput=${(v) => set((x) => { x.embed = v; })} />`}`;
 }
 // Lottie: plik JSON z After Effects (Bodymovin) albo LottieFiles. Sprawdzamy, czy to naprawdę animacja.
 // Sprawdza, czy to Lottie i czy zagra w lekkim odtwarzaczu z eksportu (lottie_light: bez wyrażeń After Effects,
@@ -152,7 +152,7 @@ export function LottieBlock({ b, set, ctx }) {
       set((x) => { x.items = [...(x.items || []).filter((k) => k.file || k.name), ...added]; });
     }} />
     ${warn && html`<p class="f__warn">${warn}</p>`}
-    <p class="note">Każda animacja zajmuje 2 kolumny: 4 w rzędzie na desktopie, 3 na tablecie, 2 na telefonie. Grają tylko, gdy są widoczne; przy włączonym „ograniczeniu ruchu” w systemie pokazuje się pierwsza klatka. Desktop: kliknięcie w animację pobiera JSON, przycisk „Pobierz” po najechaniu. Tablet i telefon: przycisk „Pobierz” pod nazwą. „Pobierz wszystkie (ZIP)” w nagłówku sekcji.</p>`;
+    <p class="note">JSON z After Effects / LottieFiles, 4 w rzędzie. Pobieranie: pojedynczo i całość (ZIP).</p>`;
 }
 
 // Demo kodu: trzy pola (HTML, CSS, JS) albo wgranie plików z gotowego projektu.
@@ -185,7 +185,7 @@ export function CodeBlock({ b, set, ctx }) {
       <${Select} label="Wysokość podglądu" value=${String(b.height || 480)} options=${[["320", "320 px"], ["480", "480 px"], ["640", "640 px"], ["800", "800 px"]]} onChange=${(v) => set((x) => { x.height = Number(v); })} />
       <label class="check is--line"><input type="checkbox" checked=${b.download !== false} onChange=${(e) => set((x) => { x.download = e.target.checked; })} />Pobieranie kodu (ZIP)</label>
     </div>
-    <${Text} label="Napis startu na telefonie i tablecie" value=${b.startLabel} placeholder="Dotknij, aby uruchomić demo" hint="Pasek pod demem na ekranach dotykowych — do jego dotknięcia palec przewija manual, a nie demo." onInput=${(v) => set((x) => { x.startLabel = v; })} />
+    <${Text} label="Napis startu na telefonie i tablecie" value=${b.startLabel} placeholder="Dotknij, aby uruchomić demo" hint="Pasek pod demem na telefonie i tablecie." onInput=${(v) => set((x) => { x.startLabel = v; })} />
     <b class="group__sub">Licencja kodu</b>
     <${Select} label="Licencja" value=${lm} options=${[["none", "Bez licencji — bez zakładki „Licencja”"], ["brand", "Do stosowania w marce zamawiającego"], ["view", "Tylko do wglądu — pokaz rozwiązania"], ["owned", "Prawa przeniesione na zamawiającego (umowa)"], ["custom", "Własny tekst licencji (wklej albo wgraj LICENSE)"]]} onChange=${(v) => set((x) => { x.license = v; })} />
     ${lm === "custom" && html`<${Text} label="Treść licencji" multiline code rows="8" value=${b.licenseText} placeholder="Wklej tekst licencji albo wgraj plik LICENSE razem z kodem" onInput=${(v) => set((x) => { x.licenseText = v; })} />`}
@@ -194,8 +194,8 @@ export function CodeBlock({ b, set, ctx }) {
       ${lm === "owned" ? html`<${Text} label="Umowa (nr / data)" value=${b.contract} placeholder="np. umowa z 12.10.2026" onInput=${(v) => set((x) => { x.contract = v; })} />` : null}
     </div>`}
     <label class="check is--line"><input type="checkbox" checked=${b.showCode !== false} onChange=${(e) => set((x) => { x.showCode = e.target.checked; })} />Pokazuj kod w zakładkach</label>
-    <p class="note">${{ none: "Bez licencji demo ma zakładki Podgląd / HTML / CSS / JS, a pliki nie dostają not.", brand: "Zakładka „Licencja” obok kodu. Zamawiający może używać kodu tylko w kanałach swojej marki (także przez swoich wykonawców); bez innych marek, odsprzedaży i publikowania źródeł.", view: "Zakładka „Licencja” obok kodu. Kod tylko do obejrzenia: bez prawa kopiowania i użycia — także dla zamawiającego. Bez przycisku „Kopiuj” i „Otwórz”, kodu nie da się zaznaczyć myszą; paczkę ZIP (z licencją w środku) możesz zostawić.", owned: "Zakładka „Licencja” obok kodu. Prawa majątkowe ma zamawiający; Ty zachowujesz autorstwo. Osoby oglądające manual nie dostają żadnych praw.", custom: "Zakładka „Licencja” pokazuje Twój tekst; trafia też do LICENSE.txt w paczce." }[lm]}${lm !== "none" ? " Każdy plik dema dostaje notę i sygnaturę." : ""}</p>
-    <p class="note">Demo działa na żywo w ramce — w podglądzie i w manualu. W eksporcie trafia też do folderu demos/ jako osobna, działająca strona (backup rozwiązania dla klienta). Krój manuala jest dostępny w demo jako „Geist”. Obrazki i fonty spoza kodu dodawaj jako pełne adresy https.</p>`;
+    <p class="note">${{ none: "Bez zakładki „Licencja” i bez not w plikach.", brand: "Klient używa kodu tylko w kanałach swojej marki.", view: "Kod tylko do obejrzenia — bez „Kopiuj” i „Otwórz”.", owned: "Prawa ma klient, Ty zachowujesz autorstwo.", custom: "Twój tekst w zakładce „Licencja” i w LICENSE.txt." }[lm]}</p>
+    <p class="note">Działa na żywo w ramce. W eksporcie: folder demos/ i ZIP. Krój manuala dostępny jako „Geist”.</p>`;
 }
 
 // 3D: GLB (najlepiej — jeden plik z materiałami) albo OBJ, który zamieniamy na GLB w przeglądarce (three.js, ładowane tylko wtedy).
@@ -229,14 +229,14 @@ export function ModelBlock({ b, set, ctx }) {
       <${Select} label="Ustawienie modelu" value=${b.upright || "file"} options=${[["file", "Jak w pliku"], ["flip", "Do góry nogami — odwróć"], ["stand-x", "Leży — postaw (pion = oś Z: Rhino, SketchUp, C4D)"], ["stand-x2", "Leży — postaw odwrotnie"], ["stand-z", "Leży na boku — obróć w prawo"], ["stand-z2", "Leży na boku — obróć w lewo"]]} onChange=${(v) => set((x) => { x.upright = v; })} />
       <${Select} label="Obróć wokół pionu" value=${String(b.yaw || 0)} options=${[["0", "0°"], ["90", "90°"], ["180", "180°"], ["270", "270°"]]} onChange=${(v) => set((x) => { x.yaw = Number(v); })} />
     </div>
-    <p class="note">Model leży albo stoi do góry nogami? Programy 3D różnie zapisują, która oś to „góra” — wybierz ustawienie, przy którym model stoi prosto, a obrót kręci go wokół pionu. „Obróć wokół pionu” ustawia, która strona patrzy na widza.</p>
+    <p class="note">Ustaw tak, żeby model stał prosto i obracał się wokół pionu.</p>
     <div class="grid2">
       <${Select} label="Obrót" value=${b.autoRotate === false ? "off" : String(b.speed || 20)} options=${[["off", "Bez obrotu"], ["10", "Wolny"], ["20", "Średni"], ["40", "Szybki"]]} onChange=${(v) => set((x) => { x.autoRotate = v !== "off"; if (v !== "off") x.speed = Number(v); })} />
       <${Text} label="Opis dla czytników ekranu" value=${b.alt} placeholder="np. Butelka z etykietą" onInput=${(v) => set((x) => { x.alt = v; })} />
     </div>
     <label class="check"><input type="checkbox" checked=${b.shadow !== false} onChange=${(e) => set((x) => { x.shadow = e.target.checked; })} />Cień pod modelem</label>
     <label class="check"><input type="checkbox" checked=${!!b.download} onChange=${(e) => set((x) => { x.download = e.target.checked; })} />Przycisk „Pobierz model (GLB)”</label>
-    <p class="note">Model można chwycić i obrócić. Kółko myszy przewija stronę, nie przybliża modelu — żeby nikt nie utknął w bloku.</p>`;
+    `;
 }
 export function TypefaceBlock({ b, set, ctx }) {
   const l = b.license || {};
@@ -254,7 +254,7 @@ export function TypefaceBlock({ b, set, ctx }) {
 }
 export function TypeScaleBlock({ b, set, ctx }) {
   return html`<${FileField} label="Grafika skali (SVG lub PNG)" value=${b.image} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 924 }}
-    hint="Szerokość 924 px (PNG: 1848 px), wysokość dowolna — strona dopasuje ją sama. Bez webfontu klienta, więc bez problemu z licencją." onChange=${(p) => set((x) => { x.image = p; })} />`;
+    hint="Szerokość 924 px (PNG 1848 px), wysokość dowolna." onChange=${(p) => set((x) => { x.image = p; })} />`;
 }
 export const BLOCK_FORMS = { text: TextBlock, images: ImagesBlock, specimens: SpecimensBlock, palette: PaletteBlock, contrast: ContrastBlock, icons: IconsBlock, typeface: TypefaceBlock, typeScale: TypeScaleBlock, video: VideoBlock, lottie: LottieBlock, model: ModelBlock, code: CodeBlock };
 

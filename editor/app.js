@@ -311,7 +311,7 @@ function App() {
     const extra = { variants: new Map(), posters: new Set(), iconZips: new Map() };
     const all = usedAssets(project);
     for (const [k, path] of all.entries()) { if (k % 10 === 0) step(`Zbieram pliki… ${k + 1}/${all.length}`, 0.02 + 0.13 * k / Math.max(1, all.length)); const blob = await store.getAsset(pid, path); blob ? zip.file(path, blob) : missing.push(path); }
-    // Zdjęcia z bloków „Rząd zdjęć”: wersja o połowę mniejsza dla telefonów (srcset)
+    // Zdjęcia z bloków „Zdjęcia”: wersja o połowę mniejsza dla telefonów (srcset)
     const walkBlocks = (fn) => { for (const c of project.chapters || []) for (const s of c.sections || []) for (const bl of s.blocks || []) fn(bl); };
     const photos = new Set(), videos = new Set(), iconBlocks = [], lottieBlocks = [];
     walkBlocks((bl) => {

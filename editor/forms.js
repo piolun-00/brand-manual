@@ -87,7 +87,7 @@ export function BrandForm({ b, set, ctx }) {
 
     <${Group} id="colors" title="Kolory marki" open=${open.colors} onToggle=${toggle} warn=${w.colors}
       summary=${colors.length ? html`<span class="group__chips">${colors.slice(0, 8).map((c) => html`<span class="check__chip" style=${`background:${c.hex}`}></span>`)}</span>${colors.length} ${colors.length === 1 ? "kolor" : colors.length < 5 ? "kolory" : "kolorów"}` : "brak"}>
-      <p class="note">Z tej palety korzystają bloki „Paleta” i „Pary kontrastowe” oraz kolory paska, logo i akcentu.</p>
+      <p class="note">Z tej palety korzystają bloki „Kolorystyka” i „Kontrast kolorów” oraz kolory paska, logo i akcentu.</p>
       <${ColorList} b=${b} up=${up} ctx=${ctx} />
     <//>
 
