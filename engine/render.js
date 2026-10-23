@@ -168,7 +168,7 @@ export function typeScale(base = 16, ratio = 1.25) {
 }
 const fmtPx = (n) => String(n).replace(".", ",");
 // Zakładki odmian (Regular · Bold · …) — przełączają krój w elementach [data-type-live]
-function styleTabs(f, idBase) {
+function styleTabs(f) {
   const st = fontStyles(f);
   return `<div class="type-tabs" role="tablist" aria-label="Odmiany kroju">${st.map((s, i) => `<button type="button" class="type-tabs__tab text-small${i === 0 ? " is--on" : ""}" role="tab" aria-selected="${i === 0}" data-type-style data-weight="${Number(s.weight) || 400}" data-italic="${s.italic ? 1 : 0}">${esc(s.label || "Regular")}</button>`).join("")}</div>`;
 }
