@@ -52,5 +52,14 @@ i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po pol
 - Własna domena edytora, numer wersji silnika w eksporcie — na końcu.
 
 ## Figma
-Plik `nWmpctwP4yNlI3BulXAUk2`, strona 1303:548. Zmienne `bg/sidebar`, `text/sidebar`, `text/sidebar-active`.
+Dedykowany plik „Brand Manual (PRD)”: `WEqpBOOCNfbF2ptFAqLood` (duplikat starego pliku — numery węzłów i zmienne bez zmian).
+Strony: Cover 33:2 · Arch+Lab 3001:1281 (archiwum, BCKP) · Read me 3001:8197 · Branding 3001:8196 (naming i branding produktu) · Design 1303:548 (projekt manuala i komponenty).
+Stary plik `nWmpctwP4yNlI3BulXAUk2` — już nie używać.
+Zmienne `bg/sidebar`, `text/sidebar`, `text/sidebar-active`, `bg/cover`, `text/cover`.
 Wersję nazwaną w historii zapisuje Radek ręcznie (API tego nie obsługuje).
+
+## Dokumentacja (poza repo)
+- Opis projektu (zasady, decyzje, naming): https://claude.ai/artifact/8B7ctr4SAZFueiCg843T3T
+- Architektura kodu: https://claude.ai/artifact/KNLGSera2ExyJFLwywjxzt
+- Po większej zmianie aktualizuj ten plik, README i właściwy dokument w tej samej sesji.
+- „Brandmanual KHOREI” to nazwa robocza — po wyborze nazwy produktu zmienić m.in. format backupu `.khorei`, bazę IndexedDB `khorei-brandmanual`, prefiks sygnatury `KHOREI-BM`, teksty w `legal.js` (z migracją starych projektów).
