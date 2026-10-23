@@ -734,6 +734,7 @@ function PublishForm({ b, set, ctx }) {
       ${pw && html`
         <${Select} label="Sposób ochrony" value=${b.protect || "encrypt"} options=${[["encrypt", "Szyfrowanie stron (każdy serwer)"], ["server", "Hasło serwera (.htaccess, Apache)"]]} onChange=${(v) => up((x) => { x.protect = v; })} />
         ${(b.protect || "encrypt") === "server" && html`<${Text} label="Login" value=${b.login} placeholder="klient" onInput=${(v) => up((x) => { x.login = v; })} />`}`}
+      ${pw && html`<p class="note">Hasła nie zapisujemy w pliku backupu (.khorei) — po wczytaniu backupu na innym komputerze wpisz je ponownie. Zapis do folderu je zachowuje.</p>`}
       <p class="note">${!pw ? "Bez hasła manual jest otwarty dla każdego, kto zna adres."
         : (b.protect || "encrypt") === "encrypt" ? "Eksport szyfruje treść stron — bez hasła nie da się jej przeczytać. Hasło wpisuje się raz na sesję przeglądarki. Pliki do pobrania (media/, files/) pozostają dostępne pod bezpośrednim adresem, jeśli ktoś go zna."
         : "Serwer pyta o login i hasło, zanim wyda cokolwiek — strony, zdjęcia i pliki. Działa na hostingach z Apache (cPanel, home.pl, nazwa.pl, OVH, LH.pl). Po wgraniu trzeba wpisać w .htaccess pełną ścieżkę folderu — instrukcja jest w pliku CZYTAJ-HASLO.txt w eksporcie. Uwaga: jeśli serwer nie obsługuje .htaccess (np. nginx, Netlify), manual będzie otwarty — wtedy wybierz szyfrowanie."}</p>
@@ -760,16 +761,22 @@ function Preview({ project, page, setPage, urls, focus, studio, onSelect, svgTex
   }, []);
   useEffect(() => { try { localStorage.setItem("kh-preview-width", String(width)); } catch {} }, [width]);
   const single = project.brand.mode === "single";
+  // CSS strony zależy tylko od marki, plików i fontów — nie liczymy go od nowa przy każdym znaku w treści rozdziału
+  const brandKey = JSON.stringify(project.brand);
+  const css = useMemo(() => {
+    const url = (p) => urls[p] || studio.urls[p] || (p.startsWith("fonts/geist/") ? ENGINE_URL(p) : VENDOR_ASSETS[p] ? ENGINE_URL(VENDOR_ASSETS[p]) : p);
+    return siteCss(project, FIGMA, BASE_CSS, url, studio.fonts);
+  }, [brandKey, urls, studio]);
   const doc = useMemo(() => {
     const url = (p) => urls[p] || studio.urls[p] || (p.startsWith("fonts/geist/") ? ENGINE_URL(p) : VENDOR_ASSETS[p] ? ENGINE_URL(VENDOR_ASSETS[p]) : p);
     const ctx = {
       preview: true, url, svgText,
       link: (target) => target === "index" ? `href="#" data-page="index"` : single ? `href="#${target}"` : `href="#" data-page="${target}"`,
-      css: { inline: siteCss(project, FIGMA, BASE_CSS, url, studio.fonts) }
+      css: { inline: css }
     };
     const slug = page === "index" ? "index" : (prepare(project).chapters.find((c) => c.id === page)?.slug || "index");
     return renderPage(project, single ? "index" : slug, ctx);
-  }, [project, page, urls, single, studio, svgText]);
+  }, [project, page, urls, single, studio, svgText, css]);
   const pending = useRef(null);
   const scrollTo = (anchor) => {
     if (!frame.current || frame.current.dataset.loading) return false;
@@ -868,6 +875,7 @@ function App() {
   const [view, setView] = useState("brand"); // "brand" | id rozdziału
   const [page, setPage] = useState("index");
   const [status, setStatus] = useState("");
+  const [checks, setChecks] = useState(null); // lista kontrolna przed eksportem
   const [busy, setBusy] = useState(null); // { title, detail, p } — nakładka „Przygotowuję manual” przy dłuższych operacjach
   const [menu, setMenu] = useState(false);
   const [focus, setFocus] = useState(-1);
@@ -1085,7 +1093,37 @@ function App() {
   }, [pid, logoPaths.join("|")]);
 
   // ——— Eksport i backup ———
+  // Lista kontrolna przed eksportem: to, co klient zobaczy jako błąd albo pustkę
+  async function exportChecks() {
+    const out = [], b = project.brand, site = prepare(project);
+    if (!(b.siteUrl || "").trim()) out.push({ t: "Brak adresu manuala", d: "Licencja (LICENSE.txt) nie wskaże adresu, pod którym działa manual.", go: "publish" });
+    const w = brandWarnings(b);
+    for (const [k, v] of Object.entries(w)) if (v && k !== "share") out.push({ t: v[0].toUpperCase() + v.slice(1), d: "Marka → " + ({ doc: "Dokument", colors: "Kolory marki", look: "Logo i oprawa" }[k] || ""), go: "brand" });
+    if (w.share) out.push({ t: "Obrazek linku bez adresu manuala", d: "Bez adresu podgląd linku w Slacku / mailu się nie pokaże.", go: "publish" });
+    const keys = new Set(await store.assetKeys(pid));
+    const lost = usedAssets(project).filter((p) => !keys.has(p));
+    if (lost.length) out.push({ t: `Brakuje plików: ${lost.length}`, d: lost.slice(0, 3).map((p) => p.split("/").pop()).join(", ") + (lost.length > 3 ? "…" : "") + " — wgraj je ponownie." });
+    // Puste miejsca: liczymy zaślepki w podglądzie każdej strony
+    const ctx = { preview: true, url: (p) => p, svgText: {}, link: () => 'href="#"', css: { inline: "" } };
+    // Każdy rozdział osobno (także w single site), żeby wskazać, gdzie są braki
+    const holes = (chapters) => (renderPage({ ...project, brand: { ...b, mode: "single" }, chapters }, "index", ctx).match(/__placeholder/g) || []).length;
+    const base = holes([]);
+    for (const c of project.chapters || []) {
+      const n = holes([c]) - base;
+      if (n > 0) out.push({ t: `„${c.title}”: ${n} ${n === 1 ? "puste miejsce" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "puste miejsca" : "pustych miejsc"}`, d: "Zostaną puste pola — uzupełnij albo usuń bloki.", go: c.id });
+    }
+    for (const c of site.chapters) if (!(c.sections || []).length) out.push({ t: `„${c.title}” nie ma sekcji`, d: "Rozdział wyeksportuje się jako sama okładka.", go: c.id });
+    return out;
+  }
+  async function startExport() {
+    setStatus("Sprawdzam manual…");
+    let items = [];
+    try { items = await exportChecks(); } catch (e) { console.warn(e); }
+    if (items.length) { setChecks(items); setStatus(""); return; }
+    exportZip();
+  }
   async function exportZip() {
+    setChecks(null);
     const title = "Przygotowuję manual";
     let lastP = 0;
     const step = (detail, p) => { lastP = p ?? lastP; setBusy({ title, detail, p: lastP }); setStatus(detail); };
@@ -1228,7 +1266,8 @@ function App() {
   }
   async function backup() {
     const zip = new JSZip();
-    zip.file("project.json", projectJson(pid, project));
+    // Hasło nie trafia do pliku backupu — .khorei krąży mailem / dyskami, a hasło chroni manual klienta
+    zip.file("project.json", projectJson(pid, { ...project, brand: { ...project.brand, password: "" } }));
     for (const path of await store.assetKeys(pid)) { if (!usedAssets(project).includes(path)) continue; zip.file(`assets/${path}`, await store.getAsset(pid, path)); }
     const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
     const d = new Date(), stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1242,7 +1281,12 @@ function App() {
     let id = meta.id || uid();
     if (projects.some((p) => p.id === id)) {
       if (!confirm(`Projekt „${meta.data.brand?.name}” już jest w edytorze. Zastąpić go wersją z dysku?\n\nAnuluj = wczytaj jako kopię.`)) id = uid();
-      else await store.deleteProject(id);
+      else {
+        // Backup nie zawiera hasła — przy zastępieniu zostawiamy to, które już jest w edytorze
+        const prev = await store.getProject(id), pw = prev?.data?.brand?.password;
+        if (pw && !meta.data.brand?.password) meta.data.brand = { ...meta.data.brand, password: pw };
+        await store.deleteProject(id);
+      }
     }
     for (const f of files) if (f.path.startsWith("assets/")) await store.putAsset(id, f.path.slice(7), await f.getBlob());
     await store.putProject({ id, name: meta.data.brand?.name || "Projekt", data: withIds(meta.data) });
@@ -1320,6 +1364,19 @@ function App() {
   return html`<div class=${`app${newVersion ? " has--banner" : ""}`}>
     ${newVersion && html`<div class="banner">Jest nowa wersja edytora. Zapisz pracę i odśwież stronę skrótem <b>Cmd+Shift+R</b> — wszystkie projekty zostaną.
       <button type="button" class="btn is--primary" onClick=${() => location.reload()}>Odśwież</button></div>`}
+    ${checks && html`<div class="busy" role="dialog" aria-modal="true" aria-labelledby="checks-title" onKeyDown=${(e) => { if (e.key === "Escape") setChecks(null); }}>
+      <div class="busy__card precheck">
+        <b class="busy__title" id="checks-title">Przed eksportem — ${checks.length} ${checks.length === 1 ? "rzecz" : "rzeczy"} do sprawdzenia</b>
+        <ul class="precheck__list">${checks.map((c) => html`<li>
+          <span class="precheck__body"><b>${c.t}</b><span>${c.d}</span></span>
+          ${c.go && html`<button type="button" class="btn is--ghost precheck__go" onClick=${() => { setChecks(null); setView(c.go); if (c.go !== "publish") setPage(c.go === "brand" ? "index" : c.go); }}>Pokaż</button>`}
+        </li>`)}</ul>
+        <span class="precheck__actions">
+          <button type="button" class="btn is--ghost" ref=${(el) => el && !el.dataset.f && (el.dataset.f = 1, el.focus())} onClick=${() => setChecks(null)}>Wróć</button>
+          <button type="button" class="btn is--primary" onClick=${exportZip}>Eksportuj mimo to</button>
+        </span>
+      </div>
+    </div>`}
     ${busy && html`<div class="busy" role="status" aria-live="polite">
       <div class="busy__card">
         <span class="busy__mark" aria-hidden="true"><span></span></span>
@@ -1365,7 +1422,7 @@ function App() {
           : html`<span class=${`saved${stale ? " is--warn" : ""}`} title="Safari nie pozwala zapisywać prosto do folderu — rób backup na dysk">Backup: ${ago(meta.lastBackup)}</span>`}
         <label class="btn is--ghost">Wczytaj backup<input type="file" accept=".khorei,.zip" hidden onChange=${(e) => { const f = e.target.files[0]; e.target.value = ""; if (f) restore(f); }} /></label>
         <button type="button" class="btn is--ghost" onClick=${backup}>Backup na dysk</button>
-        <button type="button" class="btn is--primary" onClick=${exportZip}>Eksport ZIP ↓</button>
+        <button type="button" class="btn is--primary" onClick=${startExport}>Eksport ZIP ↓</button>
       </span>
     </header>
     <nav class="nav">
