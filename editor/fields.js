@@ -20,6 +20,7 @@ export function Text({ label, value, onInput, hint, multiline, placeholder, rows
       ? html`<textarea class=${code ? "is--code" : ""} spellcheck=${code ? "false" : undefined} rows=${rows || 4} value=${value || ""} placeholder=${placeholder || ""} onInput=${(e) => onInput(e.target.value)} />`
       : html`<input type="text" value=${value ?? ""} placeholder=${placeholder || ""} onInput=${(e) => onInput(e.target.value)} />`}
     ${hint && html`<span class="f__hint">${hint}</span>`}
+    ${!code && typeof value === "string" && value.includes("\u00A0") && html`<span class="f__nbsp" title="Twarde spacje (Shift+Spacja) — w tych miejscach wiersz się nie złamie">${value.length > 120 ? "Twarde spacje: " + (value.split("\u00A0").length - 1) : value.split("\u00A0").map((p, i) => i ? html`<b>·</b>${p}` : p)}</span>`}
   </label>`;
 }
 export function Num({ label, value, onInput }) {

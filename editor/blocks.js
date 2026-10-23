@@ -160,7 +160,7 @@ export function LottieBlock({ b, set, ctx }) {
 export function CodeBlock({ b, set, ctx }) {
   const ref = useRef();
   const [note, setNote] = useState("");
-  const lm = b.license === "custom" || b.license === "brand" || b.license === "view" || b.license === "owned" ? b.license : "none";
+  const lm = ["custom", "brand", "view", "owned", "none"].includes(b.license) ? b.license : "view";
   const load = async (files) => {
     const by = (re) => files.filter((f) => re.test(f.name));
     const read = async (list) => (await Promise.all(list.map((f) => f.text()))).join("\n\n");
@@ -186,14 +186,14 @@ export function CodeBlock({ b, set, ctx }) {
       <label class="check is--line"><input type="checkbox" checked=${b.download !== false} onChange=${(e) => set((x) => { x.download = e.target.checked; })} />Pobieranie kodu (ZIP)</label>
     </div>
     <b class="group__sub">Licencja kodu</b>
-    <${Select} label="Licencja" value=${lm} options=${[["none", "Bez licencji — bez zakładki „Licencja”"], ["brand", "Do stosowania w marce zamawiającego"], ["view", "Tylko do wglądu — pokaz rozwiązania"], ["owned", "Prawa przeniesione na zamawiającego (umowa)"], ["custom", "Własny tekst licencji (wklej albo wgraj LICENSE)"]]} onChange=${(v) => set((x) => { x.license = v; if (v === "view") x.download = false; })} />
+    <${Select} label="Licencja" value=${lm} options=${[["none", "Bez licencji — bez zakładki „Licencja”"], ["brand", "Do stosowania w marce zamawiającego"], ["view", "Tylko do wglądu — pokaz rozwiązania"], ["owned", "Prawa przeniesione na zamawiającego (umowa)"], ["custom", "Własny tekst licencji (wklej albo wgraj LICENSE)"]]} onChange=${(v) => set((x) => { x.license = v; })} />
     ${lm === "custom" && html`<${Text} label="Treść licencji" multiline code rows="8" value=${b.licenseText} placeholder="Wklej tekst licencji albo wgraj plik LICENSE razem z kodem" onInput=${(v) => set((x) => { x.licenseText = v; })} />`}
     ${lm !== "none" && html`<div class="grid2">
       <${Text} label="Autor kodu" value=${b.author} placeholder="Radosław Prośniak (KHOREI)" onInput=${(v) => set((x) => { x.author = v; })} />
       ${lm === "owned" ? html`<${Text} label="Umowa (nr / data)" value=${b.contract} placeholder="np. umowa z 12.10.2026" onInput=${(v) => set((x) => { x.contract = v; })} />` : null}
     </div>`}
     <label class="check is--line"><input type="checkbox" checked=${b.showCode !== false} onChange=${(e) => set((x) => { x.showCode = e.target.checked; })} />Pokazuj kod w zakładkach</label>
-    <p class="note">${{ none: "Bez licencji demo ma zakładki Podgląd / HTML / CSS / JS, a pliki nie dostają not.", brand: "Zakładka „Licencja” obok kodu. Zamawiający może używać kodu tylko w kanałach swojej marki (także przez swoich wykonawców); bez innych marek, odsprzedaży i publikowania źródeł.", view: "Zakładka „Licencja” obok kodu. Kod tylko do obejrzenia: bez prawa kopiowania i użycia — także dla zamawiającego. Bez przycisku „Kopiuj”, kodu nie da się zaznaczyć myszą.", owned: "Zakładka „Licencja” obok kodu. Prawa majątkowe ma zamawiający; Ty zachowujesz autorstwo. Osoby oglądające manual nie dostają żadnych praw.", custom: "Zakładka „Licencja” pokazuje Twój tekst; trafia też do LICENSE.txt w paczce." }[lm]}${lm !== "none" ? " Każdy plik dema dostaje notę i sygnaturę." : ""}</p>
+    <p class="note">${{ none: "Bez licencji demo ma zakładki Podgląd / HTML / CSS / JS, a pliki nie dostają not.", brand: "Zakładka „Licencja” obok kodu. Zamawiający może używać kodu tylko w kanałach swojej marki (także przez swoich wykonawców); bez innych marek, odsprzedaży i publikowania źródeł.", view: "Zakładka „Licencja” obok kodu. Kod tylko do obejrzenia: bez prawa kopiowania i użycia — także dla zamawiającego. Bez przycisku „Kopiuj” i „Otwórz”, kodu nie da się zaznaczyć myszą; paczkę ZIP (z licencją w środku) możesz zostawić.", owned: "Zakładka „Licencja” obok kodu. Prawa majątkowe ma zamawiający; Ty zachowujesz autorstwo. Osoby oglądające manual nie dostają żadnych praw.", custom: "Zakładka „Licencja” pokazuje Twój tekst; trafia też do LICENSE.txt w paczce." }[lm]}${lm !== "none" ? " Każdy plik dema dostaje notę i sygnaturę." : ""}</p>
     <p class="note">Demo działa na żywo w ramce — w podglądzie i w manualu. W eksporcie trafia też do folderu demos/ jako osobna, działająca strona (backup rozwiązania dla klienta). Krój manuala jest dostępny w demo jako „Geist”. Obrazki i fonty spoza kodu dodawaj jako pełne adresy https.</p>`;
 }
 

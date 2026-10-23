@@ -145,8 +145,9 @@ const hasMeta = (b) => !!(b.line || (b.label || "").trim() || (b.text || "").tri
 // Dane do noty licencyjnej dema (sygnatura z manuala + znacznik bloku; w podglądzie sygnatura jeszcze nie istnieje)
 export function demoLicense(b, brand = {}, legal = null) {
   // Bez licencji (domyślnie) demo nie ma zakładki „Licencja”, not w plikach ani LICENSE.txt
-  if (!b.license || b.license === "none" || (b.license === "custom" && !(b.licenseText || "").trim())) return null;
-  return { label: b.label || "Demo kodu", brand: brand.name || "", author: b.author || "", mode: b.license, contract: b.contract || "", text: b.licenseText || "",
+  const mode = b.license || "view"; // domyślnie: tylko do wglądu
+  if (mode === "none" || (mode === "custom" && !(b.licenseText || "").trim())) return null;
+  return { label: b.label || "Demo kodu", brand: brand.name || "", author: b.author || "", mode, contract: b.contract || "", text: b.licenseText || "",
     year: legal?.year || new Date().getFullYear(), sig: demoSig(legal?.sig || "KHOREI-BM-PODGLAD", b.id), url: (brand.siteUrl || "").trim(), contact: brand.contact || "" };
 }
 export const demoPath = (b) => `demos/${slugify(b.label || "") || "demo"}-${String(b.id || "x").slice(0, 6)}/`;
@@ -170,7 +171,9 @@ export function demoDoc(b, { fonts = "", inline = true, lic = null } = {}) {
 ${H ? H.html + "\n" : ""}<html lang="pl"${lic ? ` data-build="${esc(lic.sig)}"` : ""}>
 <head>
 <meta charset="utf-8">
-${lic ? `<meta name="robots" content="noindex, noai, noimageai">\n<meta name="tdm-reservation" content="1">\n<meta name="copyright" content="© ${lic.year} ${esc(lic.author || "Radosław Prośniak (KHOREI)")} — ${esc(CODE_LICENSES[lic.mode] || "")}">\n` : ""}
+<meta name="robots" content="noindex, noai, noimageai">
+<meta name="tdm-reservation" content="1">
+${lic ? `<meta name="copyright" content="© ${lic.year} ${esc(lic.author || "Radosław Prośniak (KHOREI)")} — ${esc(CODE_LICENSES[lic.mode] || "")}">\n` : ""}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(b.label || "Demo kodu")}</title>
 ${fonts ? `<style>${fonts}</style>\n` : ""}<style>html,body{margin:0}body{font-family:"Geist",system-ui,sans-serif}</style>
@@ -378,11 +381,12 @@ const BLOCKS = {
     return `<div class="code-demo" data-code-demo>
   <div class="code-demo__bar" role="tablist">${tab("run", "Podgląd", true)}${showCode ? parts.map(([k, l]) => tab(k, l, false)).join("") : ""}${lic ? tab("license", "Licencja", false) : ""}
     <span class="code-demo__tools">
+      <button type="button" class="code-demo__tool text-small" data-code-done hidden>Gotowe</button>
       <button type="button" class="code-demo__tool text-small" data-code-restart>Uruchom ponownie</button>
       ${lic?.mode === "view" ? "" : `<button type="button" class="code-demo__tool text-small" data-code-copy hidden>Kopiuj</button>`}
-      ${ctx.preview ? "" : `<a class="code-demo__tool text-small" href="${esc(ctx.url(demoPath(b) + "index.html"))}" target="_blank" rel="noopener">Otwórz ↗</a>`}
+      ${ctx.preview || lic?.mode === "view" ? "" : `<a class="code-demo__tool text-small" href="${esc(ctx.url(demoPath(b) + "index.html"))}" target="_blank" rel="noopener">Otwórz ↗</a>`}
     </span></div>
-  <div class="code-demo__panel" id="${id}-run" role="tabpanel"><iframe class="code-demo__frame" title="${esc(b.label || "Demo kodu")}" style="height:${h}px" ${src}></iframe></div>
+  <div class="code-demo__panel code-demo__stage" id="${id}-run" role="tabpanel"><iframe class="code-demo__frame" title="${esc(b.label || "Demo kodu")}" style="height:${h}px" ${src}></iframe><button type="button" class="code-demo__shield text-small" data-code-shield><span>Dotknij, aby uruchomić demo</span></button></div>
   ${showCode ? parts.map(([k, l, v]) => `<pre class="code-demo__panel code-demo__code${lic?.mode === "view" ? " is--locked" : ""}" id="${id}-${k}" role="tabpanel" aria-label="${l}" tabindex="0" hidden><code>${esc((H ? (k === "html" ? H.html : H.code) + "\n\n" : "") + v)}</code></pre>`).join("") : ""}
   ${lic ? `<pre class="code-demo__panel code-demo__code code-demo__licence" id="${id}-license" role="tabpanel" aria-label="Licencja" tabindex="0" hidden>${esc(demoLicenseText(lic))}</pre>
   <p class="code-demo__license text-small">© ${lic.year} ${esc(lic.author || "Radosław Prośniak (KHOREI)")} · ${esc(CODE_LICENSES[lic.mode])} · ${lic.mode === "view" ? "kodu nie wolno kopiować ani wykorzystywać · " : lic.mode === "brand" ? "tylko w kanałach marki " + esc(lic.brand) + " · " : lic.mode === "owned" ? "prawa: " + esc(lic.brand) + " · " : ""}warunki w zakładce „Licencja”</p>` : ""}

@@ -21,8 +21,8 @@ i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po pol
   nazwa marki na desktopie łamie się dopiero po zajęciu 50% szerokości okładki.
 - Demo kodu (blok `code`): podgląd w ramce `srcdoc` z sandboxem w edytorze; w eksporcie `demos/<…>/index.html` + `style.css` + `script.js`
   (bez sandboxa — fonty manuala z tego samego serwera) i ZIP w `files/`. Licencja dema (`legal.js`: `CODE_LICENSES`, `demoHeaders`,
-  `demoLicenseText`, `demoSig`): opcjonalna — none (domyślnie: bez zakładki „Licencja” i not) / brand / view / owned / custom
-  (własny tekst albo wgrany plik LICENSE); z licencją: zakładka „Licencja”, nota w każdym pliku, LICENSE.txt w folderze i ZIP-ie, sygnatura manuala + znacznik bloku. Kod Nami nie trafia do repo (licencja) — test używa `tests/fixtures/demo`.
+  `demoLicenseText`, `demoSig`): domyślnie view (tylko do wglądu: bez „Kopiuj” i „Otwórz”, ZIP zostaje) / none (bez zakładki „Licencja” i not) / brand / owned / custom
+  (własny tekst albo wgrany plik LICENSE); z licencją: zakładka „Licencja”, nota w każdym pliku, LICENSE.txt w folderze i ZIP-ie, sygnatura manuala + znacznik bloku. Na dotyku demo ma warstwę „Dotknij, aby uruchomić demo” (strona przewija się nad demem; „Gotowe” lub zjechanie wyłącza). Strony dem zawsze noindex/noai. Kod Nami nie trafia do repo (licencja) — test używa `tests/fixtures/demo`.
 - Eksport (`exportZip` w `editor/app.js`): lista kontrolna → pliki, wersje @1x, plakaty MP4, ZIP-y ikon / Lottie,
   odtwarzacze tylko gdy użyte, licencja (`engine/legal.js`), sygnatura `KHOREI-BM-rok-…`, hasło (AES-GCM w `lock.js`
   albo `.htaccess` + bcrypt).

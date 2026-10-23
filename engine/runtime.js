@@ -48,6 +48,7 @@ export const RUNTIME = `
     });
   }), { rootMargin: "-25% 0px -70% 0px" }) : null;
   function initMedia() {
+    window.khWatchDemos?.(); // nowe dema po przejściu między rozdziałami
     document.querySelectorAll(".video video:not([data-ready])").forEach((v) => {
       v.dataset.ready = "1";
       if (reduce) { v.removeAttribute("autoplay"); v.pause(); }
@@ -105,6 +106,15 @@ export const RUNTIME = `
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
 
+  // Demo kodu na dotyku: aktywne dopiero po dotknięciu, wyłącza się „Gotowe” albo po zjechaniu z dema
+  const setActive = (demo, on) => { demo.classList.toggle("is--active", on); const d = demo.querySelector("[data-code-done]"); if (d) d.hidden = !on || !matchMedia("(hover: none) and (pointer: coarse)").matches; };
+  if ("IntersectionObserver" in window) {
+    const away = new IntersectionObserver((es) => es.forEach((en) => { if (!en.isIntersecting) setActive(en.target, false); }));
+    const watchDemos = () => document.querySelectorAll("[data-code-demo]").forEach((d) => away.observe(d));
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watchDemos); else watchDemos();
+    window.khWatchDemos = watchDemos;
+  }
+
   // Demo kodu: zakładki Podgląd / HTML / CSS / JS, kopiowanie widocznego kodu, ponowne uruchomienie ramki
   document.addEventListener("click", async (e) => {
     const demo = e.target.closest("[data-code-demo]");
@@ -117,6 +127,8 @@ export const RUNTIME = `
       demo.querySelector("[data-code-restart]").hidden = tab.dataset.codeTab !== "run";
       return;
     }
+    if (e.target.closest("[data-code-shield]")) { setActive(demo, true); return; }
+    if (e.target.closest("[data-code-done]")) { setActive(demo, false); return; }
     if (e.target.closest("[data-code-restart]")) {
       const f = demo.querySelector("iframe");
       if (f.hasAttribute("srcdoc")) f.srcdoc = f.srcdoc; else f.src = f.src;

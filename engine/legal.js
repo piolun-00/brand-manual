@@ -157,8 +157,10 @@ i nie ogranicza praw wynikających z ich licencji.
 
 
 DEMA KODU. Kod demonstracji w folderze demos/ i w paczkach *-kod.zip
-ma własne noty licencyjne (plik LICENSE.txt w paczce oraz komentarze
-w plikach). Dla tego kodu rozstrzygają te noty.
+nie jest objęty zgodą z punktu 2. Jeżeli demo ma własną notę licencyjną
+(zakładka „Licencja” w manualu, plik LICENSE.txt w paczce, komentarze
+w plikach), rozstrzyga ta nota. Demo bez noty pozostaje własnością jego
+autora — zamieszczenie go w manualu nie oznacza udzielenia licencji.
 
 
 5. NARZĘDZIA AUTOMATYCZNE I MODELE JĘZYKOWE

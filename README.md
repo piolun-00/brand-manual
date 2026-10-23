@@ -53,7 +53,7 @@ Przycisk akcji bloku (ZIP, GLB) stoi w jego belce opisu; bez belki — w nagłó
 | `vendor/` | biblioteki edytora: Preact, htm, JSZip, bcryptjs, DOMPurify, three.js (konwersja OBJ) |
 
 ## Testy
-`cd tests && npm install && npm test` — 34 scenariusze w Playwright (ok. 7 min); uruchamiają się też same przy każdej publikacji — czerwone testy blokują wdrożenie:
+`cd tests && npm install && npm test` — 35 scenariuszy w Playwright (ok. 7 min); uruchamiają się też same przy każdej publikacji — czerwone testy blokują wdrożenie:
 - `e2e.test.mjs` — edytor i eksport: lista kontrolna, hasło i szyfrowanie, backup bez hasła, kotwice, Lottie z dysku, OBJ → GLB, sprzątanie plików, axe (WCAG), podsumowania kart.
 - `extended.test.mjs` — eksport na gotowych projektach (wczytywanych jak backup): nawigacja multi site, `.htaccess` + bcrypt, bezpieczeństwo (znaczniki w nazwach, złośliwe SVG), kontrast paska dla kolorów marki, ikony i ZIP, zdjęcia @1x i klatka MP4, backup w obie strony, cofnij / przywróć, responsywność 360–2560 px, pliki prawne, stopka i kopiowanie HEX, Areal, położenie przycisków bloków, wydajność.
 

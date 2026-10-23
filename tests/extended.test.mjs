@@ -408,6 +408,7 @@ test("Shift+Spacja wstawia twardą spację w polach tekstowych (nie w polach kod
   await p.fill(f, "Nazwa"); await p.focus(f); await p.keyboard.press("End");
   await p.keyboard.press("Shift+Space"); await p.keyboard.type("Marki"); await p.waitForTimeout(500);
   assert.equal(await p.inputValue(f), "Nazwa Marki");
+  assert.equal(await p.locator('.f:has-text("Nazwa marki") .f__nbsp b').count(), 1, "twarda spacja widoczna pod polem");
   const fr = p.frames().find((x) => x !== p.mainFrame());
   assert.match(await fr.$eval(".cover__brand", (e) => e.textContent), /Nazwa Marki/, "twarda spacja trafia do manuala");
   await chapter(p, "Animacje"); await p.selectOption(".panel select.add", "code"); await p.waitForTimeout(400);
@@ -428,6 +429,7 @@ test("demo kodu „Tylko do wglądu”: bez kopiowania, kod niezaznaczalny; opcj
   assert.equal(await demos[0].$("[data-code-copy]"), null, "bez przycisku Kopiuj");
   assert.equal(await demos[0].$eval(".code-demo__code:not(.code-demo__licence)", (e) => getComputedStyle(e).userSelect), "none");
   assert.match(await demos[0].$eval(".code-demo__license", (e) => e.textContent), /Tylko do wglądu/);
+  assert.equal(await demos[0].$('a.code-demo__tool[target="_blank"]'), null, "„Tylko do wglądu” bez Otwórz");
   assert.deepEqual(await demos[1].$$eval("[data-code-tab]", (t) => t.map((x) => x.dataset.codeTab)), ["run", "license"], "ukryty kod: Podgląd i Licencja");
   assert.equal(await demos[1].$(".code-demo__code:not(.code-demo__licence)"), null);
   await v.context().close(); await p.context().close();
@@ -439,6 +441,8 @@ test("demo kodu: bez licencji brak zakładki i not; własna licencja z pliku LIC
   const F = (n) => path.join(ROOT, "tests/fixtures/demo", n);
   await p.setInputFiles('.panel input[type=file][data-code-files]', [F("index.html"), F("styles.css"), F("main.js")]); await p.waitForTimeout(600);
   const prev = p.frames().find((f) => f !== p.mainFrame());
+  assert.equal(await p.inputValue('.panel .f:has-text("Licencja") select'), "view", "nowy blok: domyślnie tylko do wglądu");
+  await p.selectOption('.panel .f:has-text("Licencja") select', "none"); await p.waitForTimeout(500);
   assert.deepEqual(await prev.$$eval(".code-demo [data-code-tab]", (t) => t.map((x) => x.dataset.codeTab)), ["run", "html", "css", "js"], "bez licencji — bez zakładki Licencja");
   let { zip } = await exportManual(p, "demo-bez-licencji");
   let inner = await JSZip.loadAsync(await zip.file(Object.keys(zip.files).find((f) => /-kod\.zip$/.test(f))).async("nodebuffer"));
@@ -452,4 +456,24 @@ test("demo kodu: bez licencji brak zakładki i not; własna licencja z pliku LIC
   inner = await JSZip.loadAsync(await zip.file(Object.keys(zip.files).find((f) => /-kod\.zip$/.test(f))).async("nodebuffer"));
   assert.match(await inner.file("LICENSE.txt").async("string"), /Licencja testowa autora[\s\S]*Sygnatura: KHOREI-BM/);
   await p.context().close();
+});
+
+test("demo kodu na dotyku: strona przewija się nad demem, demo działa dopiero po dotknięciu", async () => {
+  const p = await editor("single");
+  await loadProject(p, { edit: (d) => { const ch = d.chapters.find((c) => c.title === "Animacje"); ch.sections[0].blocks = [
+    { id: "t1", type: "code", line: true, label: "Dotyk", html: "<p>Hej</p>", css: "", js: "", license: "none", height: 480 }]; } });
+  const { url } = await exportManual(p, "demo-dotyk");
+  const v = await viewer(url, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  await v.evaluate(() => document.querySelector(".code-demo").scrollIntoView({ block: "center" })); await v.waitForTimeout(400);
+  assert.ok(await v.isVisible("[data-code-shield]"), "warstwa „Dotknij, aby uruchomić demo”");
+  await v.tap("[data-code-shield]");
+  assert.ok(await v.$eval(".code-demo", (e) => e.classList.contains("is--active")));
+  assert.ok(!(await v.isVisible("[data-code-shield]")) && await v.isVisible("[data-code-done]"), "demo aktywne, jest „Gotowe”");
+  await v.tap("[data-code-done]");
+  assert.ok(await v.isVisible("[data-code-shield]"), "Gotowe przywraca przewijanie");
+  await v.tap("[data-code-shield]"); await v.evaluate(() => window.scrollTo(0, 0)); await v.waitForTimeout(500);
+  assert.ok(!(await v.$eval(".code-demo", (e) => e.classList.contains("is--active"))), "zjechanie z dema wyłącza je");
+  const d = await viewer(url, { viewport: { width: 1440, height: 900 } });
+  assert.ok(!(await d.isVisible("[data-code-shield]")), "na komputerze bez warstwy");
+  await v.context().close(); await d.context().close(); await p.context().close();
 });

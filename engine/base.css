@@ -350,4 +350,13 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 .code-demo__license { margin: 0; padding: var(--space-8) var(--space-12); border-top: 1px solid var(--border-subtle); color: var(--text-subtle); }
 /* Zakładka „Licencja”: tekst noty łamany do szerokości, bez przewijania w bok */
 .code-demo__code.code-demo__licence { white-space: pre-wrap; font-size: 11px; color: var(--text-subtle); }
+/* Ekrany dotykowe: zanim ktoś dotknie dema, palec przewija manual (warstwa nad ramką).
+   Po dotknięciu gesty trafiają tylko do dema; „Gotowe” albo zjechanie z dema przywraca warstwę. */
+.code-demo__stage { position: relative; }
+.code-demo__shield { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .code-demo__shield { display: grid; place-items: center; position: absolute; inset: 0; width: 100%; border: 0; padding: 0; background: transparent; cursor: pointer; font: inherit; }
+  .code-demo__shield span { padding: var(--space-8) var(--space-12); background: var(--bg-surface); border: 1px solid var(--border-strong); color: var(--text-primary); }
+  .code-demo.is--active .code-demo__shield { display: none; }
+}
 .code-demo__actions { display: flex; justify-content: flex-end; margin-top: var(--space-12); }
