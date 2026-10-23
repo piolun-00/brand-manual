@@ -29,6 +29,7 @@ img { display: block; max-width: 100%; }
 .sidebar__close { align-self: flex-end; padding-right: var(--space-12); }
 .sidebar__logo { display: block; width: 210px; height: 72px; }
 .sidebar__logo img { width: 100%; height: 100%; object-fit: contain; object-position: left top; }
+.sidebar__logo-svg { display: block; width: 100%; height: 100%; }
 .sidebar__logo-placeholder { display: block; width: 100%; height: 100%; background: var(--bg-logo); }
 .sidebar__nav { min-height: 0; overflow-y: auto; }           /* przewija się tylko lista */
 .sidebar__item { display: flex; gap: var(--space-8); padding: var(--space-2) 0; color: var(--sidebar-muted, var(--text-muted)); }

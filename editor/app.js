@@ -587,13 +587,18 @@ function SidebarColor({ b, up, ctx }) {
   const accent = b.accent || "#000000";
   return html`<div class="sub">
     <b class="sub__title">Pasek boczny</b>
-    <${Select} label="Kolor paska" value=${th ? b.sidebarColor : ""} options=${[["", "Domyślny (biały)"], ...colors.map((c) => [c.id, `${c.name || "Kolor"} — ${c.hex}`])]}
-      onChange=${(v) => up((x) => { x.sidebarColor = v || null; })} />
-    ${!colors.length && html`<p class="note">Najpierw dodaj kolory marki niżej — pasek bierze kolor z palety.</p>`}
+    <${Select} label="Kolor paska" value=${th || b.sidebarColor === "custom" ? b.sidebarColor : ""} options=${[["", "Domyślny (biały)"], ...colors.map((c) => [c.id, `${c.name || "Kolor"} — ${c.hex}`]), ["custom", "Własny kolor…"]]}
+      onChange=${(v) => up((x) => { x.sidebarColor = v || null; if (v === "custom" && !x.sidebarHex) x.sidebarHex = "#1C1C1C"; })} />
+    ${b.sidebarColor === "custom" && html`<${Color} label="Własny kolor paska" value=${b.sidebarHex} onInput=${(v) => up((x) => { x.sidebarHex = v; })} />`}
+    ${!colors.length && html`<p class="note">Kolory marki dodasz niżej — wtedy pojawią się na tej liście.</p>`}
     ${th && html`<p class="note">Tekst spisu: ${th.dark ? "jasny" : "ciemny"} (kontrast ${th.ratio.toFixed(1).replace(".", ",")}:1).
       ${th.underline ? ` Akcent marki ma na tym tle tylko ${contrastRatio(th.bg, accent).toFixed(1).replace(".", ",")}:1, więc aktywna pozycja będzie ${th.dark ? "biała" : "czarna"} z podkreśleniem.` : " Aktywna pozycja w kolorze akcentu."}${" "}Ten sam kolor dostaje menu „Indeks” i górny pasek na tablecie i telefonie.</p>`}
+    <${Select} label="Kolor logo (SVG)" value=${b.logoColor || "file"} options=${[["file", "Z pliku"], ["auto", "Automatycznie — biel lub czerń do tła"], ...colors.map((c) => [c.id, `${c.name || "Kolor"} — ${c.hex}`]), ["custom", "Własny kolor…"]]}
+        onChange=${(v) => up((x) => { x.logoColor = v; if (v === "custom" && !x.logoHex) x.logoHex = "#FFFFFF"; })} />
+    ${b.logoColor === "custom" && html`<${Color} label="Własny kolor logo" value=${b.logoHex} onInput=${(v) => up((x) => { x.logoHex = v; })} />`}
+    ${(b.logoColor || "file") !== "file" && html`<p class="note">Logo staje się jednobarwne — wszystkie elementy dostają ten kolor. Działa dla logo w SVG; logo wielobarwne zostaw „Z pliku”.${b.logo && !/\.svg$/i.test(b.logo) ? " Uwaga: wgrane logo to nie SVG — kolor nie zadziała." : ""}</p>`}
     <${FileField} label="Logo na ciemnym tle (SVG, opcjonalne)" value=${b.logoDark} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 210, h: 72 }}
-      hint=${th?.dark ? (b.logoDark ? "Używane teraz — pasek jest ciemny." : "Pasek jest ciemny: wgraj jasną wersję logo, inaczej ciemne logo zniknie.") : "Używane automatycznie, gdy pasek jest ciemny."}
+      hint=${(b.logoColor || "file") !== "file" ? "Zwykle niepotrzebne — logo ma ustawiony kolor wyżej. Przydaje się dla logo wielobarwnego, które ma osobną wersję na ciemne tło." : th?.dark ? (b.logoDark ? "Używane teraz — pasek jest ciemny." : "Pasek jest ciemny: wgraj jasną wersję logo albo ustaw kolor logo wyżej, inaczej ciemne logo zniknie.") : "Używane automatycznie, gdy pasek jest ciemny."}
       onChange=${(p) => up((x) => { x.logoDark = p; })} />
   </div>`;
 }
@@ -650,7 +655,7 @@ function BrandForm({ b, set, ctx }) {
 
 // ——— Podgląd ———
 const PRESETS = [390, 768, 1280, 1440, 1920, 2560];
-function Preview({ project, page, setPage, urls, focus, studio, onSelect }) {
+function Preview({ project, page, setPage, urls, focus, studio, onSelect, svgText }) {
   const selectRef = useRef(); selectRef.current = onSelect;
   const stage = useRef(), frame = useRef();
   const [width, setWidth] = useState(() => { try { return Number(localStorage.getItem("kh-preview-width")) || 1440; } catch { return 1440; } });
@@ -664,13 +669,13 @@ function Preview({ project, page, setPage, urls, focus, studio, onSelect }) {
   const doc = useMemo(() => {
     const url = (p) => urls[p] || studio.urls[p] || (p.startsWith("fonts/geist/") ? ENGINE_URL(p) : VENDOR_ASSETS[p] ? ENGINE_URL(VENDOR_ASSETS[p]) : p);
     const ctx = {
-      preview: true, url,
+      preview: true, url, svgText,
       link: (target) => target === "index" ? `href="#" data-page="index"` : single ? `href="#${target}"` : `href="#" data-page="${target}"`,
       css: { inline: siteCss(project, FIGMA, BASE_CSS, url, studio.fonts) }
     };
     const slug = page === "index" ? "index" : (prepare(project).chapters.find((c) => c.id === page)?.slug || "index");
     return renderPage(project, single ? "index" : slug, ctx);
-  }, [project, page, urls, single, studio]);
+  }, [project, page, urls, single, studio, svgText]);
   const pending = useRef(null);
   const scrollTo = (anchor) => {
     if (!frame.current || frame.current.dataset.loading) return false;
@@ -748,6 +753,8 @@ function App() {
   const [pid, setPid] = useState(null);
   const [project, setProject] = useState(null);
   const [urls, setUrls] = useState({});
+  // Treść SVG logo — potrzebna, żeby zmienić kolor logo (logo wstawiane w stronę jako kod)
+  const [svgText, setSvgText] = useState({});
   const [view, setView] = useState("brand"); // "brand" | id rozdziału
   const [page, setPage] = useState("index");
   const [status, setStatus] = useState("");
@@ -928,6 +935,21 @@ function App() {
     setView("brand"); setPage("index");
   }
   const ctx = { urls, addFile, paletteNames, colors, switchMode, setBusy };
+  // Logo SVG jako tekst (do zmiany koloru): wczytywane, gdy zmienia się plik logo
+  const logoPaths = [project?.brand?.logo, project?.brand?.logoDark].filter((p) => p && /\.svg$/i.test(p));
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const next = {};
+      for (const p of logoPaths) {
+        if (svgText[p]) { next[p] = svgText[p]; continue; }
+        const blob = await store.getAsset(pid, p).catch(() => null);
+        if (blob) next[p] = await blob.text();
+      }
+      if (live && JSON.stringify(Object.keys(next)) !== JSON.stringify(Object.keys(svgText))) setSvgText(next);
+    })();
+    return () => { live = false; };
+  }, [pid, logoPaths.join("|")]);
 
   // ——— Eksport i backup ———
   async function exportZip() {
@@ -1041,6 +1063,7 @@ function App() {
     const site = prepare(project);
     for (const [asset, src] of Object.entries(VENDOR_ASSETS)) if (uses(site, asset.includes("lottie") ? "lottie" : "model")) zip.file(asset, await fetch(ENGINE_URL(src)).then((r) => r.blob()));
     step(lock ? "Składam i szyfruję strony…" : "Składam strony…", 0.66);
+    extra.svgText = svgText; // logo w kolorze z ustawień — wstawione w stronę jako SVG
     for (const f of renderSite(project, FIGMA, BASE_CSS, studio.fonts, extra)) {
       zip.file(f.path, lock && f.path.endsWith(".html")
         ? await lockPage(f.content, lock, { title: `${project.brand.name || ""} · ${project.brand.documentTitle || ""}`, accent: "#111111", header: legal.htmlHeader(extra.legal), meta: legal.metaTags(extra.legal) })
@@ -1216,7 +1239,7 @@ function App() {
         : html`<${ChapterForm} key=${chapter.id + (single ? "s" : "m")} single=${single} c=${chapter} num=${site.chapters[chapterIndex].num} ctx=${ctx}
             onFocus=${setFocus} select=${select} set=${(fn) => update((p) => { fn(p.chapters[chapterIndex]); })} />`}
     </main>
-    <${Preview} project=${project} page=${page} urls=${urls} focus=${focus} studio=${studio}
+    <${Preview} project=${project} page=${page} urls=${urls} focus=${focus} studio=${studio} svgText=${svgText}
       onSelect=${(sel) => {
         const c = project.chapters.find((ch) => (ch.sections || []).some((x) => x.id === sel.section));
         if (!c) return;

@@ -95,11 +95,15 @@ function button(ctx, kind, href, label) {
 function sidebar(site, ctx, active) {
   const b = site.brand;
   // Na ciemnym pasku — logo w wersji na ciemne tło (jeśli wgrane)
-  const logo = sidebarTheme({ brand: b })?.dark && b.logoDark ? b.logoDark : b.logo;
+  const th = sidebarTheme({ brand: b });
+  const logo = th?.dark && b.logoDark ? b.logoDark : b.logo;
+  // Kolor logo: SVG wstawiony w stronę (działa też z dysku), wszystkie kolory → jeden
+  const lc = logoColor(b, th), svg = lc && logo && ctx.svgText?.[logo];
+  const logoHtml = svg ? inlineSvg(svg, b.name, lc) : logo ? `<img src="${esc(ctx.url(logo))}" alt="${esc(b.name)}">` : `<span class="sidebar__logo-placeholder"></span>`;
   return `<aside class="sidebar" id="sidebar" aria-label="Rozdziały">
   <div class="sidebar__head">
     <button class="sidebar__close text-body" type="button" data-drawer-close>Zamknij</button>
-    <a class="sidebar__logo" ${ctx.link("index")} aria-label="${esc(b.name)}">${logo ? `<img src="${esc(ctx.url(logo))}" alt="${esc(b.name)}">` : `<span class="sidebar__logo-placeholder"></span>`}</a>
+    <a class="sidebar__logo" ${ctx.link("index")} aria-label="${esc(b.name)}">${logoHtml}</a>
   </div>
   <nav class="sidebar__nav"><ol class="sidebar__list">${site.chapters.map((c) => `
     <li><a class="sidebar__item text-body${c.slug === active ? " is--active" : ""}" ${ctx.link(c.slug)}${c.slug === active ? ` aria-current="page"` : ""}><span class="sidebar__num">${c.num}</span><span class="sidebar__title">${t(c.title)}</span></a></li>`).join("")}
@@ -371,7 +375,7 @@ export const contrastRatio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p
 const mix = (a, b, t) => "#" + rgbOf(a).map((v, i) => Math.round(v * t + rgbOf(b)[i] * (1 - t)).toString(16).padStart(2, "0")).join("").toUpperCase();
 export function sidebarTheme(project) {
   const b = project.brand || {};
-  const c = (b.colors || []).find((x) => x.id === b.sidebarColor);
+  const c = b.sidebarColor === "custom" ? { hex: b.sidebarHex, name: "własny" } : (b.colors || []).find((x) => x.id === b.sidebarColor);
   const bg = c && hex6(c.hex);
   if (!bg) return null;
   const dark = contrastRatio(bg, "#FFFFFF") >= contrastRatio(bg, "#000000");
@@ -381,6 +385,33 @@ export function sidebarTheme(project) {
   const accent = hex6(b.accent) || "#000000";
   const accentOk = contrastRatio(accent, bg) >= 4.5;
   return { bg, fg, muted, active: accentOk ? accent : fg, underline: !accentOk, dark, name: c.name || "", ratio: contrastRatio(muted, bg) };
+}
+// Kolor logo: "file" (bez zmian) | "auto" (biel/czerń do tła paska) | id koloru marki | "custom" (logoHex)
+export function logoColor(b, th = sidebarTheme({ brand: b })) {
+  const m = b.logoColor || "file";
+  if (m === "file") return null;
+  if (m === "auto") return th ? th.fg : "#000000";
+  if (m === "custom") return hex6(b.logoHex);
+  return hex6((b.colors || []).find((x) => x.id === m)?.hex);
+}
+// SVG w stronie: bez skryptów i zdarzeń, kolory wypełnień i obrysów → currentColor
+export function inlineSvg(text, name, color) {
+  let s = String(text)
+    .replace(/<\?xml[\s\S]*?\?>/gi, "").replace(/<!DOCTYPE[\s\S]*?>/gi, "").replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<script[\s\S]*?<\/script\s*>/gi, "").replace(/<foreignObject[\s\S]*?<\/foreignObject\s*>/gi, "")
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "").replace(/(href\s*=\s*["'])\s*javascript:[^"']*/gi, "$1#");
+  s = s.replace(/((?:fill|stroke|stop-color)\s*[=:]\s*["']?)(#[0-9a-f]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)|black|white)/gi, "$1currentColor");
+  const open = s.match(/<svg\b[^>]*>/i);
+  if (!open) return "";
+  // Bez viewBox wymiary brane z width/height — inaczej po ich usunięciu logo straciłoby proporcje
+  let vb = "";
+  if (!/viewBox\s*=/i.test(open[0])) {
+    const w = parseFloat((open[0].match(/\swidth\s*=\s*["']?([\d.]+)/i) || [])[1]), h = parseFloat((open[0].match(/\sheight\s*=\s*["']?([\d.]+)/i) || [])[1]);
+    if (w && h) vb = ` viewBox="0 0 ${w} ${h}"`;
+  }
+  let tag = open[0].replace(/\s(width|height|class|style|role|aria-label|preserveAspectRatio|fill)\s*=\s*("[^"]*"|'[^']*')/gi, "");
+  tag = tag.replace(/<svg/i, `<svg class="sidebar__logo-svg" role="img" aria-label="${esc(name)}" preserveAspectRatio="xMinYMin meet" fill="currentColor" style="color:${color}"${vb}`);
+  return s.slice(s.indexOf(open[0])).replace(open[0], tag).replace(/<\/svg>[\s\S]*$/i, "</svg>");
 }
 function sidebarCss(project) {
   const th = sidebarTheme(project);
