@@ -8,7 +8,7 @@ Każdy manual to osobna instancja: uzupełniasz w edytorze → **Eksport ZIP** �
 
 ## Jak pracować
 1. Otwórz edytor (GitHub Pages). Lista projektów: przycisk z nazwą marki u góry.
-2. **Marka** — trzy grupy: *Dokument* (nazwa, wersja, tryb multi / single), *Kolory marki* (zwijane: nazwa + HEX), *Logo i oprawa* (logo i jego kolor, pasek boczny, akcent, krój, okładka). Ostrzeżenia wypływają na nagłówki grup.
+2. **Marka** — grupy: *Dokument* (nazwa, wersja, tryb multi / single), *Kolory marki* (zwijane: nazwa + HEX), *Kroje marki* (pliki OTF / TTF / WOFF2, nazwa wyświetlana, potwierdzenie licencji webfont), *Logo i oprawa* (logo i jego kolor, pasek boczny, akcent, krój, okładka). Ostrzeżenia wypływają na nagłówki grup.
 3. **Rozdziały** → sekcje → bloki. Podgląd obok, z suwakiem szerokości; kliknięcie w ustawienie podświetla jego miejsce w podglądzie.
 4. **Publikacja** — *Wydanie* (adres manuala, dostęp / hasło, favicon i obrazek linku) oraz *Studio* (kontakt w stopce).
 5. **Eksport ZIP** — najpierw lista kontrolna (brak adresu, puste miejsca, brakujące pliki, ostrzeżenia marki), potem gotowa strona do wgrania. Działa z dowolnego folderu na serwerze.
@@ -27,8 +27,8 @@ Skrót: **Shift+Spacja** w polu tekstowym wstawia twardą spację (np. „Nazwa 
 | Logo | znaki na polach (specimeny SVG) |
 | Kolorystyka | kolory marki z HEX / RGB / CMYK |
 | Kontrast kolorów | pary kolorów z poziomem WCAG |
-| Typografia | specimen kroju (SVG) i licencja kroju |
-| Skala typograficzna | grafika skali (SVG / PNG) |
+| Typografia | krój z Marki: specimen na żywo z zakładkami odmian; bez kroju — grafika SVG |
+| Skala typograficzna | krój z Marki: skala z rozmiaru bazowego i mnożnika (H1–H6, tekst, podpis); bez kroju — grafika |
 | Animacja Lottie | 4 w rzędzie, pobieranie JSON i ZIP |
 | Video | MP4 (z klatką startową) lub embed |
 | Model 3D | GLB lub OBJ, obrót 360° |
@@ -55,7 +55,7 @@ Przycisk akcji bloku (ZIP, GLB) stoi w jego belce opisu; bez belki — w nagłó
 | `vendor/` | biblioteki edytora: Preact, htm, JSZip, bcryptjs, DOMPurify, three.js (konwersja OBJ) |
 
 ## Testy
-`cd tests && npm install && npm test` — 35 scenariuszy w Playwright (ok. 7 min); uruchamiają się też same przy każdej publikacji — czerwone testy blokują wdrożenie:
+`cd tests && npm install && npm test` — 36 scenariuszy w Playwright (ok. 7 min); uruchamiają się też same przy każdej publikacji — czerwone testy blokują wdrożenie:
 - `e2e.test.mjs` — edytor i eksport: lista kontrolna, hasło i szyfrowanie, backup bez hasła, kotwice, Lottie z dysku, OBJ → GLB, sprzątanie plików, axe (WCAG), podsumowania kart.
 - `extended.test.mjs` — eksport na gotowych projektach (wczytywanych jak backup): nawigacja multi site, `.htaccess` + bcrypt, bezpieczeństwo (znaczniki w nazwach, złośliwe SVG), kontrast paska dla kolorów marki, ikony i ZIP, zdjęcia @1x i klatka MP4, backup w obie strony, cofnij / przywróć, responsywność 360–2560 px, pliki prawne, stopka i kopiowanie HEX, Areal, położenie przycisków bloków, wydajność.
 

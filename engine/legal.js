@@ -78,7 +78,7 @@ export function metaTags({ sig, year }) {
 }
 
 // Licencja dla klienta — plik LICENSE.txt w każdym eksporcie
-export function licenseText({ brand, title, sig, year, url, libs }) {
+export function licenseText({ brand, title, sig, year, url, libs, fonts = [] }) {
   const where = url ? `pod adresem ${url}` : "pod adresem internetowym uzgodnionym z autorem";
   return `BRANDMANUAL — ${clean(brand)}${title ? ` · ${clean(title)}` : ""}
 Copyright © ${year} ${AUTHOR}. Wszelkie prawa zastrzeżone.
@@ -148,12 +148,24 @@ zamawiającym i jego kliencie końcowym.
 
 Autor kodu nie ponosi odpowiedzialności za skutki użycia tych materiałów
 bez wymaganych licencji.
+${fonts.length ? `
+KROJE PISMA OSADZONE W MANUALU. Poniższe kroje zostały osadzone na stronie
+(pliki w folderze fonts/marka/) wyłącznie na podstawie oświadczenia
+zamawiającego, że posiada ważną licencję webfont obejmującą ich osadzenie
+pod adresem manuala:
+${fonts.map((f) => `  — ${clean(f.name)}${f.styles?.length ? ` (${f.styles.map(clean).join(", ")})` : ""}${f.date ? ` — oświadczenie z ${f.date.split("-").reverse().join(".")}` : ""}`).join("\n")}
 
-Manual zawiera także oprogramowanie open source udostępniane na jego
+Autor kodu nie weryfikuje licencji krojów i nie ponosi odpowiedzialności
+za ich osadzenie, udostępnianie ani za roszczenia właścicieli praw z tego
+tytułu. Pliki krojów nie są objęte niniejszą licencją; ich używanie poza
+manualem podlega wyłącznie licencji udzielonej przez właściciela kroju.
+` : ""}
+
+${libs.length ? `Manual zawiera także oprogramowanie open source udostępniane na jego
 własnych licencjach: ${libs.map((l) => l.name).join(", ")}.
 Wykaz znajduje się w pliku THIRD-PARTY-NOTICES.txt, a pełne teksty licencji
 w katalogu licenses/. Niniejsze zastrzeżenie tych składników nie obejmuje
-i nie ogranicza praw wynikających z ich licencji.
+i nie ogranicza praw wynikających z ich licencji.` : "Manual nie zawiera oprogramowania open source."}
 
 
 DEMA KODU. Kod demonstracji w folderze demos/ i w paczkach *-kod.zip

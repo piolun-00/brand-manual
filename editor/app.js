@@ -249,9 +249,10 @@ function App() {
     if (pals) out.push(`${pals} ${pals === 1 ? "blok Paleta" : "bloki Paleta"}`);
     return out;
   };
-  const ctx = { urls, addFile, paletteNames, colors, switchMode, setBusy, spot, colorUsage };
+  const fonts = (project?.brand?.fonts || []).filter((f) => (f.styles || []).some((s) => s.file));
+  const ctx = { urls, addFile, paletteNames, colors, fonts, switchMode, setBusy, spot, colorUsage };
   const bw = project ? brandWarnings(project.brand) : {};
-  const brandWarn = !!(bw.doc || bw.colors || bw.look), publishWarn = !!(bw.share || bw.access);
+  const brandWarn = !!(bw.doc || bw.colors || bw.fonts || bw.look), publishWarn = !!(bw.share || bw.access);
   // Logo SVG jako tekst (do zmiany koloru): wczytywane, gdy zmienia się plik logo
   const logoPaths = [project?.brand?.logo, project?.brand?.logoDark].filter((p) => p && /\.svg$/i.test(p));
   useEffect(() => {
@@ -274,7 +275,7 @@ function App() {
     const out = [], b = project.brand, site = prepare(project);
     if (!(b.siteUrl || "").trim()) out.push({ t: "Brak adresu manuala", d: "Licencja (LICENSE.txt) nie wskaże adresu, pod którym działa manual.", go: "publish" });
     const w = brandWarnings(b);
-    for (const [k, v] of Object.entries(w)) if (v && k !== "share") out.push({ t: v[0].toUpperCase() + v.slice(1), d: "Marka → " + ({ doc: "Dokument", colors: "Kolory marki", look: "Logo i oprawa" }[k] || ""), go: "brand" });
+    for (const [k, v] of Object.entries(w)) if (v && k !== "share") out.push({ t: v[0].toUpperCase() + v.slice(1), d: k === "fonts" ? "Marka → Kroje marki. Bez potwierdzenia krój nie trafi do eksportu — bloki pokażą grafikę SVG." : "Marka → " + ({ doc: "Dokument", colors: "Kolory marki", look: "Logo i oprawa" }[k] || ""), go: "brand" });
     if (w.share) out.push({ t: "Obrazek linku bez adresu manuala", d: "Bez adresu podgląd linku w Slacku / mailu się nie pokaże.", go: "publish" });
     const keys = new Set(await store.assetKeys(pid));
     const lost = usedAssets(project).filter((p) => !keys.has(p));
@@ -309,7 +310,9 @@ function App() {
     const zip = new JSZip();
     const font = fontOf(project), missing = [];
     const extra = { variants: new Map(), posters: new Set(), iconZips: new Map() };
-    const all = usedAssets(project);
+    // Kroje marki bez potwierdzonej licencji webfont nie wychodzą poza edytor
+    const blockedFonts = new Set((project.brand.fonts || []).filter((f) => !f.licensed).flatMap((f) => (f.styles || []).map((s) => s.file)));
+    const all = usedAssets(project).filter((p) => !blockedFonts.has(p));
     for (const [k, path] of all.entries()) { if (k % 10 === 0) step(`Zbieram pliki… ${k + 1}/${all.length}`, 0.02 + 0.13 * k / Math.max(1, all.length)); const blob = await store.getAsset(pid, path); blob ? zip.file(path, blob) : missing.push(path); }
     // Zdjęcia z bloków „Zdjęcia”: wersja o połowę mniejsza dla telefonów (srcset)
     const walkBlocks = (fn) => { for (const c of project.chapters || []) for (const s of c.sections || []) for (const bl of s.blocks || []) fn(bl); };
@@ -448,7 +451,8 @@ function App() {
     if (font === "geist") libs.push(L.geist);
     if (uses(site, "lottie")) libs.push(L.lottie);
     if (uses(site, "model")) libs.push(L.modelViewer, L.three);
-    zip.file("LICENSE.txt", legal.licenseText({ ...extra.legal, url: (project.brand.siteUrl || "").trim(), libs }));
+    const fonts = (project.brand.fonts || []).filter((f) => f.licensed && (f.styles || []).some((s) => s.file)).map((f) => ({ name: f.name || f.family, styles: f.styles.filter((s) => s.file).map((s) => s.label), date: f.licensedAt }));
+    zip.file("LICENSE.txt", legal.licenseText({ ...extra.legal, url: (project.brand.siteUrl || "").trim(), libs, fonts }));
     zip.file("THIRD-PARTY-NOTICES.txt", libs.length ? legal.noticesText(libs) : "Manual nie zawiera składników open source.\n");
     zip.file("robots.txt", legal.robotsText(!!project.brand.indexable));
     for (const l of libs) zip.file(`licenses/${l.file}`, await fetch(ENGINE_URL(`licenses/${l.file}`)).then((r) => r.blob()));

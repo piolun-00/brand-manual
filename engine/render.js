@@ -141,6 +141,39 @@ function toc(ctx, chapter) {
 //  — blok bez belki → w nagłówku sekcji (gdy sekcja nie ma własnego przycisku i ma jeden akapit),
 //  — gdy oba miejsca zajęte → nad blokiem, w panelu.
 const hasMeta = (b) => !!(b.line || (b.label || "").trim() || (b.text || "").trim());
+// ——— Kroje marki (Marka → Kroje marki) ———
+// Krój: { id, name (nazwa wyświetlana), family (z pliku), foundry, licensed, licensedAt, styles: [{ id, file, weight, italic, label }] }
+// W eksporcie trafiają tylko kroje z potwierdzoną licencją webfont; w podglądzie wszystkie (żeby było widać efekt).
+export const fontFamilyId = (f) => `kh-font-${f.id}`;
+export function brandFont(brand, id, ctx = {}) {
+  const f = (brand?.fonts || []).find((x) => x.id === id);
+  if (!f || !(f.styles || []).some((s) => s.file)) return null;
+  return ctx.preview || f.licensed ? f : null;
+}
+export const fontStyles = (f) => (f.styles || []).filter((s) => s.file).slice().sort((a, b) => (a.italic - b.italic) || (a.weight - b.weight));
+const FONT_FORMAT = { otf: "opentype", ttf: "truetype", woff2: "woff2", woff: "woff" };
+export function brandFontFaces(brand, url, { licensedOnly = false } = {}) {
+  return (brand?.fonts || []).filter((f) => !licensedOnly || f.licensed).flatMap((f) => fontStyles(f).map((s) =>
+    `@font-face{font-family:"${fontFamilyId(f)}";src:url("${url(s.file)}") format("${FONT_FORMAT[s.file.split(".").pop().toLowerCase()] || "opentype"}");font-weight:${Number(s.weight) || 400};font-style:${s.italic ? "italic" : "normal"};font-display:swap}`)).join("\n");
+}
+// Skala modularna: rozmiar = baza × mnożnik^stopień; interlinia maleje z rozmiarem (tekst 1,5 → nagłówki ok. 1,1)
+export const SCALE_RATIOS = [["1.125", "1,125 — sekunda wielka"], ["1.2", "1,2 — tercja mała"], ["1.25", "1,25 — tercja wielka"], ["1.333", "1,333 — kwarta czysta"], ["1.414", "1,414 — tryton"], ["1.5", "1,5 — kwinta czysta"], ["1.618", "1,618 — złoty podział"]];
+export const SCALE_LEVELS = [["H1", 6], ["H2", 5], ["H3", 4], ["H4", 3], ["H5", 2], ["H6", 1], ["Tekst", 0], ["Podpis", -1]];
+export function typeScale(base = 16, ratio = 1.25) {
+  return SCALE_LEVELS.map(([name, step]) => {
+    const size = Math.round(base * ratio ** step * 10) / 10;
+    const lh = Math.round(size * (step <= 0 ? 1.5 : Math.max(1.1, 1.45 - 0.06 * step)));
+    return { name, step, size, lh };
+  });
+}
+const fmtPx = (n) => String(n).replace(".", ",");
+// Zakładki odmian (Regular · Bold · …) — przełączają krój w elementach [data-type-live]
+function styleTabs(f, idBase) {
+  const st = fontStyles(f);
+  return `<div class="type-tabs" role="tablist" aria-label="Odmiany kroju">${st.map((s, i) => `<button type="button" class="type-tabs__tab text-small${i === 0 ? " is--on" : ""}" role="tab" aria-selected="${i === 0}" data-type-style data-weight="${Number(s.weight) || 400}" data-italic="${s.italic ? 1 : 0}">${esc(s.label || "Regular")}</button>`).join("")}</div>`;
+}
+const liveStyle = (f) => { const s = fontStyles(f)[0] || {}; return `font-family:'${fontFamilyId(f)}',var(--font-ui-family);font-weight:${Number(s.weight) || 400};font-style:${s.italic ? "italic" : "normal"}`; };
+
 // ——— Demo kodu ———
 // Dane do noty licencyjnej dema (sygnatura z manuala + znacznik bloku; w podglądzie sygnatura jeszcze nie istnieje)
 export function demoLicense(b, brand = {}, legal = null) {
@@ -354,12 +387,24 @@ const BLOCKS = {
     return `<div class="video"${ratio}>${b.file ? `<video src="${esc(ctx.url(b.file))}"${poster} autoplay muted loop playsinline preload="metadata"></video>` : `<span class="gallery__placeholder text-small">Animacja MP4</span>`}</div>`;
   },
 
-  typeface: (ctx, b) => {
+  typeface: (ctx, b, site) => {
     const l = b.license || {};
     const free = l.kind === "file";
-    return `<div class="typeface is--${free ? "free" : "commercial"}">
-    <div class="typeface__specimen">${b.svg ? `<img class="typeface__svg" src="${esc(ctx.url(b.svg))}" alt="Specimen kroju ${esc(b.name)}">` : `<span class="typeface__placeholder text-small">Specimen kroju — SVG</span>`}</div>
-    <div class="typeface__meta"><span class="typeface__name text-small-relaxed">${t(b.name)}<br>${t(b.foundry)}</span><span class="typeface__weights text-small-relaxed">${t(b.weights)}</span>
+    const f = b.font ? brandFont(site?.brand, b.font, ctx) : null;
+    const name = (b.name || "").trim() || f?.name || "";
+    const sample = (b.sample || "").trim() || "Zażółć gęślą jaźń";
+    const specimen = f
+      ? `<div class="typeface__live" data-type-tabs>${styleTabs(f)}
+      <div class="typeface__board" data-type-live style="${liveStyle(f)}">
+        <span class="typeface__aa" aria-hidden="true">Aa</span>
+        <span class="typeface__chars">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>ĄĆĘŁŃÓŚŹŻ ąćęłńóśźż<br>0123456789 &amp;@#%?!.,:;()„”–—</span>
+        <span class="typeface__sample">${t(sample)}</span>
+      </div></div>`
+      : `<div class="typeface__specimen">${b.svg ? `<img class="typeface__svg" src="${esc(ctx.url(b.svg))}" alt="Specimen kroju ${esc(name)}">` : `<span class="typeface__placeholder text-small">Specimen kroju — SVG albo krój z Marki</span>`}</div>`;
+    const weights = f ? fontStyles(f).map((x) => x.label).join(", ") : b.weights;
+    return `<div class="typeface is--${free ? "free" : "commercial"}${f ? " has--font" : ""}">
+    ${specimen}
+    <div class="typeface__meta"><span class="typeface__name text-small-relaxed">${t(name)}<br>${t(b.foundry || f?.foundry || "")}</span><span class="typeface__weights text-small-relaxed">${t(weights)}</span>
       <div class="typeface__license"><span class="typeface__note text-small-relaxed">${t(l.note)}</span>${free ? button(ctx, "download", l.file, "Pobierz")
         : `<a class="typeface__link text-small-relaxed" href="${esc(l.href || "#")}" target="_blank" rel="noopener"><span class="typeface__link-label">${t(l.linkLabel || "Przejdź do kroju")}</span>${icon("external")}</a>`}</div>
     </div></div>`;
@@ -394,7 +439,19 @@ const BLOCKS = {
 </div>${b.download !== false && !ctx.placed?.has?.(b.id) ? `<div class="code-demo__actions">${button(ctx, "download", ctx.codeZips?.get?.(b.id || "") || null, "Pobierz kod (ZIP)")}</div>` : ""}`;
   },
 
-  typeScale: (ctx, b) => `<div class="graphic">${b.image ? `<img class="graphic__img" src="${esc(ctx.url(b.image))}" alt="${esc(b.label || "Skala typograficzna")}">` : `<span class="graphic__placeholder text-small">Skala typograficzna — SVG lub PNG, szerokość 924 px</span>`}</div>`
+  typeScale: (ctx, b, site) => {
+    const f = b.font ? brandFont(site?.brand, b.font, ctx) : null;
+    if (f) {
+      const ratio = Number(b.ratio === "custom" ? b.ratioCustom : b.ratio) || 1.25, base = Number(b.base) || 16;
+      const sample = (b.sample || "").trim() || "Zażółć gęślą jaźń";
+      return `<div class="type-scale has--font" data-type-tabs>${styleTabs(f)}
+  <div class="type-scale__list" data-type-live style="${liveStyle(f)};--brand-font-family:'${fontFamilyId(f)}'">${typeScale(base, ratio).map((l) => `
+    <div class="type-scale__row"><span class="type-scale__label text-small">${l.name}</span><div class="type-scale__body"><span class="type-scale__sample" style="--sample-size:${l.size}px;line-height:${l.lh}px">${t(sample)}</span><div class="type-scale__params text-small"><span>Rozmiar<br>${fmtPx(l.size)} px</span><span>Interlinia<br>${l.lh} px</span></div></div></div>`).join("")}
+  </div>
+  <p class="type-scale__note text-small">${esc(f.name)} · rozmiar bazowy ${fmtPx(base)} px · mnożnik ${fmtPx(ratio)}</p></div>`;
+    }
+    return `<div class="graphic">${b.image ? `<img class="graphic__img" src="${esc(ctx.url(b.image))}" alt="${esc(b.label || "Skala typograficzna")}">` : `<span class="graphic__placeholder text-small">Skala typograficzna — SVG / PNG albo krój z Marki</span>`}</div>`;
+  }
 };
 
 function section(ctx, s, site) {
@@ -541,14 +598,14 @@ function sidebarCss(project) {
     + (th.underline ? `.sidebar__item.is--active .sidebar__title{text-decoration:underline;text-underline-offset:.25em;text-decoration-thickness:1px}` : "");
 }
 
-export function siteCss(project, figmaVars, baseCss, url, studioFonts = []) {
+export function siteCss(project, figmaVars, baseCss, url, studioFonts = [], { licensedOnly = false } = {}) {
   const b = project.brand || {};
   const font = fontOf(project);
   const overrides = { "font/ui/family": FONT_FAMILY[font] };
   const acc = accentOf(b);
   if (acc) overrides["brand/accent"] = acc;
   const faces = font === "geist" ? geistFaces(url) : font === "areal" ? fontFaces([{ family: "ABC Areal Variable", files: studioFonts }], url) : "";
-  return [faces, tokensCss(figmaVars, overrides), baseCss, sidebarCss(project), coverCss(project)].join("\n");
+  return [faces, brandFontFaces(b, url, { licensedOnly }), tokensCss(figmaVars, overrides), baseCss, sidebarCss(project), coverCss(project)].join("\n");
 }
 
 // Czy któryś rozdział ma blok danego typu (skrypty Lottie / 3D ładujemy tylko wtedy — na każdej stronie,
@@ -614,7 +671,7 @@ export function renderSite(project, figmaVars, baseCss, studioFonts = [], extra 
   const single = site.brand.mode === "single";
   const pages = ["index", ...(single ? [] : site.chapters.map((c) => c.slug))];
   const files = [];
-  const css = siteCss(project, figmaVars, baseCss, (p) => `../${p}`, fontOf(project) === "areal" ? studioFonts : []); // style.css leży w assets/
+  const css = siteCss(project, figmaVars, baseCss, (p) => `../${p}`, fontOf(project) === "areal" ? studioFonts : [], { licensedOnly: true }); // style.css leży w assets/
   files.push({ path: "assets/style.css", content: extra.legal ? codeHeader(extra.legal) + "\n" + css : css });
   for (const page of pages) {
     const root = page === "index" ? "" : "../";

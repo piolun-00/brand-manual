@@ -115,6 +115,14 @@ export const RUNTIME = `
     window.khWatchDemos = watchDemos;
   }
 
+  // Typografia / Skala: zakładki odmian kroju (Regular · Bold · …)
+  document.addEventListener("click", (e) => {
+    const tab = e.target.closest("[data-type-style]"); if (!tab) return;
+    const box = tab.closest("[data-type-tabs]");
+    box.querySelectorAll("[data-type-style]").forEach((t) => { const on = t === tab; t.classList.toggle("is--on", on); t.setAttribute("aria-selected", String(on)); });
+    box.querySelectorAll("[data-type-live]").forEach((el) => { el.style.fontWeight = tab.dataset.weight; el.style.fontStyle = tab.dataset.italic === "1" ? "italic" : "normal"; });
+  });
+
   // Demo kodu: zakładki Podgląd / HTML / CSS / JS, kopiowanie widocznego kodu, ponowne uruchomienie ramki
   document.addEventListener("click", async (e) => {
     const demo = e.target.closest("[data-code-demo]");

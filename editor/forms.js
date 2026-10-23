@@ -8,10 +8,10 @@
    wprowadza wyłącznie autor lub osoba działająca na jego polecenie. */
 
 // Marka, Studio i Publikacja: grupy z podsumowaniem i ostrzeżeniami.
-import { useState, useEffect } from "preact/hooks";
+import { useState, useEffect, useRef } from "preact/hooks";
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
-const { accentOf, contrastRatio, coverTheme, fontOf, html, moveTo, sidebarTheme, uid } = await import("./core.js" + Q);
+const { accentOf, contrastRatio, coverTheme, fontOf, html, moveTo, sidebarTheme, uid, readFontFile, styleLabel, WEIGHT_NAMES } = await import("./core.js" + Q);
 const { Color, FileField, Group, Row, Select, Text, useGroups } = await import("./fields.js" + Q);
 // ——— Marka ———
 // ——— Marka i Publikacja: grupy (akordeon z podsumowaniem i ostrzeżeniem) ———
@@ -47,6 +47,60 @@ export function ColorList({ b, up, ctx }) {
   </div>`;
 }
 
+// Kroje marki: krój = nazwa wyświetlana + odmiany z plików (OTF / TTF / WOFF2) + potwierdzenie licencji webfont.
+// Wgranie kilku plików naraz grupuje je w kroje po nazwie rodziny zapisanej w pliku.
+export function FontList({ b, up, ctx }) {
+  const [open, setOpen] = useState(null);
+  const [note, setNote] = useState("");
+  const ref = useRef(), target = useRef(null);
+  const list = b.fonts || [];
+  const upload = async (files, fontId) => {
+    const added = [], skipped = [];
+    for (const f of files) {
+      if (!/\.(otf|ttf|woff2?)$/i.test(f.name)) { skipped.push(f.name); continue; }
+      const meta = await readFontFile(f);
+      const path = await ctx.addFile(f, "fonts/marka"); if (!path) continue;
+      added.push({ meta, style: { id: uid(), file: path, weight: meta.weight, italic: meta.italic, label: styleLabel(meta.weight, meta.italic, meta.sub) } });
+    }
+    let openId = null;
+    up((x) => {
+      x.fonts ||= [];
+      for (const a of added) {
+        let font = fontId ? x.fonts.find((k) => k.id === fontId) : x.fonts.find((k) => k.family === a.meta.family);
+        if (!font) { font = { id: uid(), name: a.meta.family, family: a.meta.family, foundry: "", licensed: false, licensedAt: "", styles: [] }; x.fonts.push(font); }
+        font.styles.push(a.style); openId = font.id;
+      }
+    });
+    if (openId) setOpen(openId);
+    setNote([added.length && `Wczytano ${added.length} ${added.length === 1 ? "odmianę" : added.length < 5 ? "odmiany" : "odmian"}.`, skipped.length && `Pominięte (tylko OTF, TTF, WOFF2): ${skipped.join(", ")}.`].filter(Boolean).join(" "));
+  };
+  const pick = (fontId) => { target.current = fontId; ref.current.click(); };
+  return html`<div class="blocks">
+    ${list.map((f, i) => {
+      const st = (f.styles || []).filter((s) => s.file);
+      return html`<${Row} key=${f.id} id=${f.id} open=${open === f.id} onToggle=${() => setOpen(open === f.id ? null : f.id)}
+        title=${f.name || f.family || `Krój ${i + 1}`} sub=${`${st.length} ${st.length === 1 ? "odmiana" : st.length < 5 ? "odmiany" : "odmian"}`} warn=${f.licensed ? "" : "bez potwierdzonej licencji"}
+        drag=${{ group: "fonts", index: i, onMove: (from, to) => up((x) => moveTo(x.fonts, from, to)) }}
+        onRemove=${() => { if (confirm(`Usunąć krój „${f.name || f.family}” z Marki? Bloki, które go pokazują, wrócą do grafiki SVG.`)) up((x) => { x.fonts.splice(i, 1); }); }}>
+        <div class="grid2"><${Text} label="Nazwa wyświetlana" value=${f.name} placeholder=${f.family} onInput=${(v) => up((x) => { x.fonts[i].name = v; })} />
+        <${Text} label="Odlewnia" value=${f.foundry} onInput=${(v) => up((x) => { x.fonts[i].foundry = v; })} /></div>
+        <div class="font-styles">${st.map((s) => { const k = f.styles.indexOf(s); return html`<div class="font-styles__row">
+          <input type="text" aria-label="Nazwa odmiany" value=${s.label} onInput=${(e) => up((x) => { x.fonts[i].styles[k].label = e.target.value; })} />
+          <select aria-label="Grubość" value=${String(s.weight)} onChange=${(e) => up((x) => { x.fonts[i].styles[k].weight = Number(e.target.value); })}>${Object.entries(WEIGHT_NAMES).map(([w, n]) => html`<option value=${w}>${w} ${n}</option>`)}</select>
+          <label class="check"><input type="checkbox" checked=${!!s.italic} onChange=${(e) => up((x) => { x.fonts[i].styles[k].italic = e.target.checked; })} />Kursywa</label>
+          <button type="button" class="link is--icon" title="Usuń odmianę" aria-label="Usuń odmianę" onClick=${() => up((x) => { x.fonts[i].styles.splice(k, 1); })}>×</button>
+        </div>`; })}</div>
+        <button type="button" class="btn is--add" onClick=${() => pick(f.id)}>+ Wgraj odmiany (OTF, TTF, WOFF2)</button>
+        <label class="check is--line"><input type="checkbox" checked=${!!f.licensed} onChange=${(e) => up((x) => { x.fonts[i].licensed = e.target.checked; x.fonts[i].licensedAt = e.target.checked ? new Date().toISOString().slice(0, 10) : ""; })} />Klient ma licencję webfont na domenę manuala${f.licensed && f.licensedAt ? ` (potwierdzone ${f.licensedAt.split("-").reverse().join(".")})` : ""}</label>
+        <p class="note">${f.licensed ? "Krój trafi do eksportu; potwierdzenie z datą jest w LICENSE.txt." : "Bez potwierdzenia krój widać tylko w podglądzie — eksport pokaże grafikę SVG z bloku."}</p>
+      <//>`;
+    })}
+    <button type="button" class="btn is--add" onClick=${() => pick(null)}>+ Dodaj krój (OTF, TTF, WOFF2)</button>
+    <input ref=${ref} type="file" data-font-files multiple hidden onChange=${async (e) => { const files = [...e.target.files]; e.target.value = ""; if (files.length) await upload(files, target.current); }} />
+    ${note && html`<p class="note">${note}</p>`}
+  </div>`;
+}
+
 // Ostrzeżenia grup — wypływają na nagłówek, żeby nie trzeba było otwierać wszystkiego
 export function brandWarnings(b) {
   const th = sidebarTheme({ brand: b }), lc = b.logoColor || "file";
@@ -57,6 +111,8 @@ export function brandWarnings(b) {
   else if (th?.dark && lc === "file" && !b.logoDark && b.logo) w.look = "ciemny pasek — logo może zniknąć";
   else if (lc !== "file" && b.logo && !/\.svg$/i.test(b.logo)) w.look = "kolor logo działa tylko dla SVG";
   if (!w.look && b.coverMode === "color" && coverTheme(b).ratio < 3) w.look = "tekst okładki słabo czytelny";
+  const unlic = (b.fonts || []).filter((f) => !f.licensed && (f.styles || []).some((s) => s.file));
+  if (unlic.length) w.fonts = unlic.length === 1 ? `„${unlic[0].name || unlic[0].family}” bez potwierdzonej licencji` : `${unlic.length} kroje bez potwierdzonej licencji`;
   if (b.ogImage && !(b.siteUrl || "").trim()) w.share = "obrazek bez adresu manuala";
   if (b.protect === "server" && (b.password || "").trim() && !(b.siteUrl || "").trim()) w.access = "";
   return w;
@@ -89,6 +145,12 @@ export function BrandForm({ b, set, ctx }) {
       summary=${colors.length ? html`<span class="group__chips">${colors.slice(0, 8).map((c) => html`<span class="check__chip" style=${`background:${c.hex}`}></span>`)}</span>${colors.length} ${colors.length === 1 ? "kolor" : colors.length < 5 ? "kolory" : "kolorów"}` : "brak"}>
       <p class="note">Z tej palety korzystają bloki „Kolorystyka” i „Kontrast kolorów” oraz kolory paska, logo i akcentu.</p>
       <${ColorList} b=${b} up=${up} ctx=${ctx} />
+    <//>
+
+    <${Group} id="fonts" title="Kroje marki" open=${open.fonts} onToggle=${toggle} warn=${w.fonts}
+      summary=${(b.fonts || []).length ? (b.fonts || []).map((f) => f.name || f.family).join(" · ") : "brak — bloki typografii jako grafika SVG"}>
+      <p class="note">Z tych krojów korzystają bloki „Typografia” i „Skala typograficzna”. Bez kroju bloki pokazują grafikę SVG.</p>
+      <${FontList} b=${b} up=${up} ctx=${ctx} />
     <//>
 
     <${Group} id="look" title="Logo i oprawa" open=${open.look} onToggle=${toggle} warn=${w.look} onSpot=${() => ctx.spot(".sidebar")}

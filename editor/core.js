@@ -15,7 +15,7 @@ import htm from "htm";
 // więc po aktualizacji przeglądarka nie zmiesza starych plików z nowymi.
 export const VERSION = new URL(import.meta.url).searchParams.get("v") || "dev";
 export const Q = `?v=${VERSION}`;
-export const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets, GEIST_FILES, fontOf, variantOf, uses, sidebarTheme, contrastRatio, accentOf, coverTheme, demoDoc, demoPath, demoParts, demoFonts, demoLicense } = await import("../engine/render.js" + Q);
+export const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets, GEIST_FILES, fontOf, variantOf, uses, sidebarTheme, contrastRatio, accentOf, coverTheme, demoDoc, demoPath, demoParts, demoFonts, demoLicense, brandFont, fontStyles, SCALE_RATIOS, typeScale } = await import("../engine/render.js" + Q);
 // Pliki kroju Geist leżą w silniku: w podglądzie ładowane z edytora, w eksporcie kopiowane do fonts/geist/
 export const ENGINE_URL = (p) => new URL("../engine/" + p, import.meta.url).href;
 // Odtwarzacze dołączane do strony tylko, gdy manual ma blok Lottie / 3D (assets/… w eksporcie ← engine/vendor/…)
@@ -127,7 +127,7 @@ export function fileName(file, blob) {
 }
 // ——— Folder na dysku (File System Access API — Chrome, Edge). Safari: tylko backup do pliku. ———
 export const CAN_FOLDER = typeof window.showDirectoryPicker === "function";
-export const MIME = { json: "application/json", glb: "model/gltf-binary", svg: "image/svg+xml", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", woff2: "font/woff2", woff: "font/woff", zip: "application/zip", mp4: "video/mp4", webm: "video/webm" };
+export const MIME = { json: "application/json", glb: "model/gltf-binary", svg: "image/svg+xml", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", woff2: "font/woff2", woff: "font/woff", otf: "font/otf", ttf: "font/ttf", zip: "application/zip", mp4: "video/mp4", webm: "video/webm" };
 export const mimeOf = (path) => MIME[path.split(".").pop().toLowerCase()] || "application/octet-stream";
 export async function writeFile(dir, path, blob) {
   const parts = path.split("/");
@@ -205,8 +205,8 @@ export function blockInfo(b) {
     case "lottie": sub = plural(items.filter((i) => i.file).length, "animacja", "animacje", "animacji"); holes = lack("file"); break;
     case "model": sub = fileLabel(b.file); holes = b.file ? 0 : 1; break;
     case "video": sub = (b.source || "file") === "file" ? fileLabel(b.file) : "embed"; holes = (b.source || "file") === "file" ? (b.file ? 0 : 1) : (b.embed ? 0 : 1); break;
-    case "typeface": sub = b.name || ""; holes = b.svg ? 0 : 1; break;
-    case "typeScale": holes = b.image ? 0 : 1; break;
+    case "typeface": sub = b.name || (b.font ? "krój z Marki" : ""); holes = b.svg || b.font ? 0 : 1; break;
+    case "typeScale": sub = b.font ? `mnożnik ${String(b.ratio === "custom" ? b.ratioCustom : b.ratio || "1.25").replace(".", ",")}` : ""; holes = b.image || b.font ? 0 : 1; break;
     case "palette": sub = (b.colors || []).length ? plural(b.colors.length, "kolor", "kolory", "kolorów") : "wszystkie kolory marki"; break;
     case "contrast": sub = plural((b.pairs || []).length, "para", "pary", "par"); break;
     case "text": sub = b.columns === 2 ? "2 kolumny" : "1 kolumna"; if (!(b.col1 || "").trim()) holes = 1; break;
@@ -219,3 +219,36 @@ export const sectionInfo = (s) => {
   const holes = (s.blocks || []).reduce((n, b) => n + blockInfo(b).holes, 0);
   return { sub: plural((s.blocks || []).length, "blok", "bloki", "bloków"), holes, warn: holes ? plural(holes, "puste pole", "puste pola", "pustych pól") : "" };
 };
+
+// ——— Pliki krojów: nazwa rodziny, odmiana, grubość i kursywa odczytane z tabel OpenType (OTF / TTF) ———
+// WOFF2 jest skompresowany — wtedy zgadujemy z nazwy pliku (Bold, Medium, Italic…), do poprawienia w Marce.
+const WEIGHTS = [[100, /thin|hairline/i], [200, /extra\s*light|ultra\s*light/i], [300, /light/i], [500, /medium/i], [600, /semi\s*bold|demi/i], [800, /extra\s*bold|ultra\s*bold/i], [900, /black|heavy/i], [700, /bold/i]];
+export const WEIGHT_NAMES = { 100: "Thin", 200: "ExtraLight", 300: "Light", 400: "Regular", 500: "Medium", 600: "SemiBold", 700: "Bold", 800: "ExtraBold", 900: "Black" };
+const guessWeight = (s) => (WEIGHTS.find(([, re]) => re.test(s)) || [400])[0];
+export async function readFontFile(file) {
+  const base = file.name.replace(/\.[^.]+$/, "");
+  const out = { family: base.replace(/[-_ ]?(thin|hairline|extra\s*light|ultra\s*light|light|regular|book|medium|semi\s*bold|demi\s*bold|bold|extra\s*bold|black|heavy|italic|oblique)+$/gi, "").replace(/[-_]+/g, " ").trim() || base, weight: guessWeight(base), italic: /italic|oblique/i.test(base), sub: "" };
+  try {
+    const dv = new DataView(await file.arrayBuffer());
+    const tag = dv.getUint32(0);
+    if (tag !== 0x00010000 && tag !== 0x4F54544F && tag !== 0x74727565) return out; // nie sfnt (np. WOFF2)
+    const n = dv.getUint16(4), tables = {};
+    for (let i = 0; i < n; i++) { const o = 12 + i * 16; tables[String.fromCharCode(dv.getUint8(o), dv.getUint8(o + 1), dv.getUint8(o + 2), dv.getUint8(o + 3))] = dv.getUint32(o + 8); }
+    if (tables["OS/2"] != null) { out.weight = dv.getUint16(tables["OS/2"] + 4) || out.weight; out.italic = !!(dv.getUint16(tables["OS/2"] + 62) & 1) || out.italic; }
+    if (tables.name != null) {
+      const t = tables.name, count = dv.getUint16(t + 2), strOff = t + dv.getUint16(t + 4), names = {};
+      for (let i = 0; i < count; i++) {
+        const r = t + 6 + i * 12, pid = dv.getUint16(r), id = dv.getUint16(r + 6), len = dv.getUint16(r + 8), off = strOff + dv.getUint16(r + 10);
+        if (![1, 2, 16, 17].includes(id) || (names[id] && pid !== 3)) continue;
+        let s = "";
+        if (pid === 3 || pid === 0) for (let k = 0; k < len; k += 2) s += String.fromCharCode(dv.getUint16(off + k));
+        else for (let k = 0; k < len; k++) s += String.fromCharCode(dv.getUint8(off + k));
+        names[id] = s;
+      }
+      out.family = names[16] || names[1] || out.family;
+      out.sub = names[17] || names[2] || "";
+    }
+  } catch {}
+  return out;
+}
+export const styleLabel = (weight, italic, sub) => (sub && !/^regular$/i.test(sub) ? sub : `${WEIGHT_NAMES[weight] || weight}${italic ? " Italic" : ""}`).replace(/^Regular Italic$/, "Italic");

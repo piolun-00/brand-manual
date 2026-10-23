@@ -214,3 +214,6 @@ button { cursor: pointer; }
 .f textarea.is--code { font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre; overflow-wrap: normal; overflow-x: auto; tab-size: 2; }
 .f__nbsp { font-size: 11px; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
 .f__nbsp b { color: #c46a00; font-weight: 700; padding: 0 1px; }
+.font-styles { display: grid; gap: 6px; }
+.font-styles__row { display: grid; grid-template-columns: minmax(0, 1fr) 132px auto auto; gap: 8px; align-items: center; }
+.font-styles__row input[type=text], .font-styles__row select { width: 100%; border: 1px solid var(--line); background: var(--panel); border-radius: 2px; padding: 6px 8px; font: inherit; }

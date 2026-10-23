@@ -23,6 +23,10 @@ i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po pol
   (bez sandboxa — fonty manuala z tego samego serwera) i ZIP w `files/`. Licencja dema (`legal.js`: `CODE_LICENSES`, `demoHeaders`,
   `demoLicenseText`, `demoSig`): domyślnie view (tylko do wglądu: bez „Kopiuj” i „Otwórz”, ZIP zostaje) / none (bez zakładki „Licencja” i not) / brand / owned / custom
   (własny tekst albo wgrany plik LICENSE); z licencją: zakładka „Licencja”, nota w każdym pliku, LICENSE.txt w folderze i ZIP-ie, sygnatura manuala + znacznik bloku. Na dotyku demo ma warstwę „Dotknij, aby uruchomić demo” (strona przewija się nad demem; „Gotowe” lub zjechanie wyłącza). Strony dem zawsze noindex/noai. Kod Nami nie trafia do repo (licencja) — test używa `tests/fixtures/demo`.
+- Kroje marki (`brand.fonts`: nazwa wyświetlana, odmiany z plików — `readFontFile` czyta tabele name / OS/2 z OTF / TTF, WOFF2 po nazwie pliku;
+  `licensed` + `licensedAt`). Bloki Typografia / Skala wybierają krój (`b.font`), zakładki odmian `[data-type-style]`; skala modularna
+  `typeScale(base, ratio)`. Krój bez potwierdzonej licencji: tylko podgląd — eksport go pomija (pliki i @font-face), blok wraca do SVG;
+  LICENSE.txt wymienia osadzone kroje z datą oświadczenia. Pliki krojów nigdy do repo (test: KaTeX, MIT, w `tests/fixtures/font`).
 - Eksport (`exportZip` w `editor/app.js`): lista kontrolna → pliki, wersje @1x, plakaty MP4, ZIP-y ikon / Lottie,
   odtwarzacze tylko gdy użyte, licencja (`engine/legal.js`), sygnatura `KHOREI-BM-rok-…`, hasło (AES-GCM w `lock.js`
   albo `.htaccess` + bcrypt).

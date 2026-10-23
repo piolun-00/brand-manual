@@ -11,7 +11,7 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
-const { BLOCK_TYPES, Icon, baseName, blockInfo, sectionInfo, demoParts, freshIds, html, move, moveTo, newBlock, newSection, slugify, uid } = await import("./core.js" + Q);
+const { BLOCK_TYPES, Icon, SCALE_RATIOS, typeScale, baseName, blockInfo, sectionInfo, demoParts, freshIds, html, move, moveTo, newBlock, newSection, slugify, uid } = await import("./core.js" + Q);
 const { FileField, Group, Row, Select, Text, useGroups } = await import("./fields.js" + Q);
 // ——— Bloki ———
 export function ImagesBlock({ b, set, ctx }) {
@@ -238,13 +238,20 @@ export function ModelBlock({ b, set, ctx }) {
     <label class="check"><input type="checkbox" checked=${!!b.download} onChange=${(e) => set((x) => { x.download = e.target.checked; })} />Przycisk „Pobierz model (GLB)”</label>
     `;
 }
+// Typografia: krój z Marki (specimen składany na żywo, zakładki odmian) albo grafika SVG, gdy kroju nie ma
+const fontOptions = (ctx) => [["", "Grafika SVG (bez kroju)"], ...(ctx.fonts || []).map((f) => [f.id, `${f.name || f.family}${f.licensed ? "" : " — bez potwierdzonej licencji"}`])];
 export function TypefaceBlock({ b, set, ctx }) {
   const l = b.license || {};
+  const font = (ctx.fonts || []).find((f) => f.id === b.font);
   return html`
-    <div class="grid2"><${Text} label="Nazwa kroju" value=${b.name} onInput=${(v) => set((x) => { x.name = v; })} />
-    <${Text} label="Odlewnia" value=${b.foundry} onInput=${(v) => set((x) => { x.foundry = v; })} /></div>
-    <${Text} label="Odmiany" value=${b.weights} placeholder="Regular, Medium, Bold" onInput=${(v) => set((x) => { x.weights = v; })} />
-    <${FileField} label="Specimen SVG" value=${b.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} expect=${{ w: 924, h: 364 }} hint="Ramka 924×364 z Figmy" onChange=${(p) => set((x) => { x.svg = p; })} />
+    <${Select} label="Krój" value=${font ? b.font : ""} options=${fontOptions(ctx)} hint=${(ctx.fonts || []).length ? "" : "Kroje dodajesz w Marka → Kroje marki."} onChange=${(v) => set((x) => { x.font = v || null; })} />
+    ${font && !font.licensed && html`<p class="f__warn">Bez potwierdzonej licencji krój widać tylko w podglądzie — w eksporcie blok pokaże grafikę SVG.</p>`}
+    <div class="grid2"><${Text} label="Nazwa kroju" value=${b.name} placeholder=${font ? font.name || font.family : ""} onInput=${(v) => set((x) => { x.name = v; })} />
+    <${Text} label="Odlewnia" value=${b.foundry} placeholder=${font?.foundry || ""} onInput=${(v) => set((x) => { x.foundry = v; })} /></div>
+    ${font
+      ? html`<${Text} label="Tekst przykładowy" value=${b.sample} placeholder="Zażółć gęślą jaźń" onInput=${(v) => set((x) => { x.sample = v; })} />`
+      : html`<${Text} label="Odmiany" value=${b.weights} placeholder="Regular, Medium, Bold" onInput=${(v) => set((x) => { x.weights = v; })} />`}
+    <${FileField} label=${font ? "Specimen SVG (zapasowy, gdy krój nie trafi do eksportu)" : "Specimen SVG"} value=${b.svg} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} expect=${{ w: 924, h: 364 }} hint="Ramka 924×364 z Figmy" onChange=${(p) => set((x) => { x.svg = p; })} />
     <${Select} label="Licencja" value=${l.kind || "note"} options=${[["note", "Komercyjna — adnotacja + link do odlewni"], ["file", "Darmowa — plik do pobrania"]]} onChange=${(v) => set((x) => { x.license = { ...l, kind: v }; })} />
     <${Text} label="Adnotacja" value=${l.note} onInput=${(v) => set((x) => { x.license = { ...l, note: v }; })} />
     ${l.kind === "file"
@@ -252,9 +259,24 @@ export function TypefaceBlock({ b, set, ctx }) {
       : html`<div class="grid2"><${Text} label="Tekst linku" value=${l.linkLabel} onInput=${(v) => set((x) => { x.license = { ...l, linkLabel: v }; })} />
         <${Text} label="Adres odlewni" value=${l.href} placeholder="https://" onInput=${(v) => set((x) => { x.license = { ...l, href: v }; })} /></div>`}`;
 }
+// Skala: z kroju marki liczy się sama (baza × mnożnik), bez kroju — grafika SVG / PNG
 export function TypeScaleBlock({ b, set, ctx }) {
-  return html`<${FileField} label="Grafika skali (SVG lub PNG)" value=${b.image} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 924 }}
-    hint="Szerokość 924 px (PNG 1848 px), wysokość dowolna." onChange=${(p) => set((x) => { x.image = p; })} />`;
+  const font = (ctx.fonts || []).find((f) => f.id === b.font);
+  const ratio = b.ratio || "1.25";
+  const r = Number(ratio === "custom" ? b.ratioCustom : ratio) || 1.25;
+  return html`
+    <${Select} label="Krój" value=${font ? b.font : ""} options=${fontOptions(ctx).map(([v, l]) => [v, v ? l : "Grafika SVG / PNG (bez kroju)"])} onChange=${(v) => set((x) => { x.font = v || null; })} />
+    ${font ? html`
+      ${!font.licensed && html`<p class="f__warn">Bez potwierdzonej licencji krój widać tylko w podglądzie — w eksporcie blok pokaże grafikę.</p>`}
+      <div class="grid2">
+        <${Select} label="Rozmiar bazowy (tekst)" value=${String(b.base || 16)} options=${[14, 15, 16, 17, 18, 20].map((n) => [String(n), `${n} px`])} onChange=${(v) => set((x) => { x.base = Number(v); })} />
+        <${Select} label="Mnożnik" value=${ratio} options=${[...SCALE_RATIOS, ["custom", "Własny…"]]} onChange=${(v) => set((x) => { x.ratio = v; if (v === "custom" && !x.ratioCustom) x.ratioCustom = "1.3"; })} />
+      </div>
+      ${ratio === "custom" && html`<${Text} label="Własny mnożnik" value=${b.ratioCustom} placeholder="np. 1.3" onInput=${(v) => set((x) => { x.ratioCustom = v.replace(",", "."); })} />`}
+      <${Text} label="Tekst przykładowy" value=${b.sample} placeholder="Zażółć gęślą jaźń" onInput=${(v) => set((x) => { x.sample = v; })} />
+      <p class="note">${typeScale(Number(b.base) || 16, r).map((l) => `${l.name} ${String(l.size).replace(".", ",")}`).join(" · ")} px</p>` : null}
+    <${FileField} label=${font ? "Grafika skali (zapasowa, gdy krój nie trafi do eksportu)" : "Grafika skali (SVG lub PNG)"} value=${b.image} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 924 }}
+      hint="Szerokość 924 px (PNG 1848 px), wysokość dowolna." onChange=${(p) => set((x) => { x.image = p; })} />`;
 }
 export const BLOCK_FORMS = { text: TextBlock, images: ImagesBlock, specimens: SpecimensBlock, palette: PaletteBlock, contrast: ContrastBlock, icons: IconsBlock, typeface: TypefaceBlock, typeScale: TypeScaleBlock, video: VideoBlock, lottie: LottieBlock, model: ModelBlock, code: CodeBlock };
 
