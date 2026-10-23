@@ -94,10 +94,12 @@ function button(ctx, kind, href, label) {
 
 function sidebar(site, ctx, active) {
   const b = site.brand;
+  // Na ciemnym pasku — logo w wersji na ciemne tło (jeśli wgrane)
+  const logo = sidebarTheme({ brand: b })?.dark && b.logoDark ? b.logoDark : b.logo;
   return `<aside class="sidebar" id="sidebar" aria-label="Rozdziały">
   <div class="sidebar__head">
     <button class="sidebar__close text-body" type="button" data-drawer-close>Zamknij</button>
-    <a class="sidebar__logo" ${ctx.link("index")} aria-label="${esc(b.name)}">${b.logo ? `<img src="${esc(ctx.url(b.logo))}" alt="${esc(b.name)}">` : `<span class="sidebar__logo-placeholder"></span>`}</a>
+    <a class="sidebar__logo" ${ctx.link("index")} aria-label="${esc(b.name)}">${logo ? `<img src="${esc(ctx.url(logo))}" alt="${esc(b.name)}">` : `<span class="sidebar__logo-placeholder"></span>`}</a>
   </div>
   <nav class="sidebar__nav"><ol class="sidebar__list">${site.chapters.map((c) => `
     <li><a class="sidebar__item text-body${c.slug === active ? " is--active" : ""}" ${ctx.link(c.slug)}${c.slug === active ? ` aria-current="page"` : ""}><span class="sidebar__num">${c.num}</span><span class="sidebar__title">${t(c.title)}</span></a></li>`).join("")}
@@ -348,13 +350,42 @@ function geistFaces(url) {
     `@font-face{font-family:"Geist";src:url("${url(`fonts/geist/geist-${sub}-wght-${st}.woff2`)}") format("woff2");font-style:${st};font-weight:100 900;font-display:swap;unicode-range:${range}}`)).join("\n");
 }
 
+// ——— Kolor paska bocznego ———
+// Tło z palety marki; tekst dobierany automatycznie tak, żeby spełniał WCAG AA (4,5:1).
+// Aktywna pozycja zostaje w kolorze akcentu tylko, gdy akcent jest czytelny na tym tle — inaczej
+// biel/czerń z podkreśleniem (akcent marki często znika na jej własnym kolorze).
+const hex6 = (h) => { const m = String(h || "").trim().replace("#", ""); return /^[0-9a-f]{6}$/i.test(m) ? "#" + m.toUpperCase() : /^[0-9a-f]{3}$/i.test(m) ? "#" + m.split("").map((c) => c + c).join("").toUpperCase() : null; };
+const rgbOf = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const lum = (h) => { const [r, g, b] = rgbOf(h).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+export const contrastRatio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+const mix = (a, b, t) => "#" + rgbOf(a).map((v, i) => Math.round(v * t + rgbOf(b)[i] * (1 - t)).toString(16).padStart(2, "0")).join("").toUpperCase();
+export function sidebarTheme(project) {
+  const b = project.brand || {};
+  const c = (b.colors || []).find((x) => x.id === b.sidebarColor);
+  const bg = c && hex6(c.hex);
+  if (!bg) return null;
+  const dark = contrastRatio(bg, "#FFFFFF") >= contrastRatio(bg, "#000000");
+  const fg = dark ? "#FFFFFF" : "#000000";
+  let t = 0.6, muted = mix(fg, bg, t);
+  while (contrastRatio(muted, bg) < 4.5 && t < 1) { t += 0.05; muted = mix(fg, bg, Math.min(1, t)); }
+  const accent = hex6(b.accent) || "#000000";
+  const accentOk = contrastRatio(accent, bg) >= 4.5;
+  return { bg, fg, muted, active: accentOk ? accent : fg, underline: !accentOk, dark, name: c.name || "", ratio: contrastRatio(muted, bg) };
+}
+function sidebarCss(project) {
+  const th = sidebarTheme(project);
+  if (!th) return "";
+  return `:root{--sidebar-bg:${th.bg};--sidebar-fg:${th.fg};--sidebar-muted:${th.muted};--sidebar-active:${th.active}}`
+    + (th.underline ? `.sidebar__item.is--active .sidebar__title{text-decoration:underline;text-underline-offset:.25em;text-decoration-thickness:1px}` : "");
+}
+
 export function siteCss(project, figmaVars, baseCss, url, studioFonts = []) {
   const b = project.brand || {};
   const font = fontOf(project);
   const overrides = { "font/ui/family": FONT_FAMILY[font] };
   if (b.accent) overrides["brand/accent"] = b.accent;
   const faces = font === "geist" ? geistFaces(url) : font === "areal" ? fontFaces([{ family: "ABC Areal Variable", files: studioFonts }], url) : "";
-  return [faces, tokensCss(figmaVars, overrides), baseCss].join("\n");
+  return [faces, tokensCss(figmaVars, overrides), baseCss, sidebarCss(project)].join("\n");
 }
 
 // Czy któryś rozdział ma blok danego typu (skrypty Lottie / 3D ładujemy tylko wtedy — na każdej stronie,

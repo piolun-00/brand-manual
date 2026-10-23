@@ -17,7 +17,7 @@ import htm from "htm";
 // więc po aktualizacji przeglądarka nie zmiesza starych plików z nowymi.
 const VERSION = new URL(import.meta.url).searchParams.get("v") || "dev";
 const Q = `?v=${VERSION}`;
-const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets, GEIST_FILES, fontOf, variantOf, uses } = await import("../engine/render.js" + Q);
+const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets, GEIST_FILES, fontOf, variantOf, uses, sidebarTheme, contrastRatio } = await import("../engine/render.js" + Q);
 // Pliki kroju Geist leżą w silniku: w podglądzie ładowane z edytora, w eksporcie kopiowane do fonts/geist/
 const ENGINE_URL = (p) => new URL("../engine/" + p, import.meta.url).href;
 // Odtwarzacze dołączane do strony tylko, gdy manual ma blok Lottie / 3D (assets/… w eksporcie ← engine/vendor/…)
@@ -575,6 +575,23 @@ function ChapterForm({ c, set, ctx, num, onFocus, single, select }) {
 }
 
 // ——— Marka ———
+// Kolor paska bocznego: z palety marki; tekst i aktywna pozycja dobierane automatycznie (kontrast WCAG)
+function SidebarColor({ b, up, ctx }) {
+  const colors = (b.colors || []).filter((c) => c.hex);
+  const th = sidebarTheme({ brand: b });
+  const accent = b.accent || "#000000";
+  return html`<div class="sub">
+    <b class="sub__title">Pasek boczny</b>
+    <${Select} label="Kolor paska" value=${th ? b.sidebarColor : ""} options=${[["", "Domyślny (biały)"], ...colors.map((c) => [c.id, `${c.name || "Kolor"} — ${c.hex}`])]}
+      onChange=${(v) => up((x) => { x.sidebarColor = v || null; })} />
+    ${!colors.length && html`<p class="note">Najpierw dodaj kolory marki niżej — pasek bierze kolor z palety.</p>`}
+    ${th && html`<p class="note">Tekst spisu: ${th.dark ? "jasny" : "ciemny"} (kontrast ${th.ratio.toFixed(1).replace(".", ",")}:1).
+      ${th.underline ? ` Akcent marki ma na tym tle tylko ${contrastRatio(th.bg, accent).toFixed(1).replace(".", ",")}:1, więc aktywna pozycja będzie ${th.dark ? "biała" : "czarna"} z podkreśleniem.` : " Aktywna pozycja w kolorze akcentu."}${" "}Ten sam kolor dostaje menu „Indeks” i górny pasek na tablecie i telefonie.</p>`}
+    <${FileField} label="Logo na ciemnym tle (SVG, opcjonalne)" value=${b.logoDark} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 210, h: 72 }}
+      hint=${th?.dark ? (b.logoDark ? "Używane teraz — pasek jest ciemny." : "Pasek jest ciemny: wgraj jasną wersję logo, inaczej ciemne logo zniknie.") : "Używane automatycznie, gdy pasek jest ciemny."}
+      onChange=${(p) => up((x) => { x.logoDark = p; })} />
+  </div>`;
+}
 function BrandForm({ b, set, ctx }) {
   const up = (fn) => set((x) => fn(x));
   return html`<div class="panel__inner">
@@ -585,6 +602,7 @@ function BrandForm({ b, set, ctx }) {
     <${Text} label="Data" value=${b.date} placeholder="październik 2026" onInput=${(v) => up((x) => { x.date = v; })} /></div>
     <${Select} label="Tryb strony" value=${b.mode} options=${[["multi", "Multi site — osobna strona na rozdział"], ["single", "Single site — wszystko na jednej stronie"]]} onChange=${(v) => ctx.switchMode(v)} />
     <${FileField} label="Logo w sidebarze (SVG)" value=${b.logo} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 210, h: 72 }} hint="Ramka 210×72 z Figmy, przezroczysta" onChange=${(p) => up((x) => { x.logo = p; })} />
+    <${SidebarColor} b=${b} up=${up} ctx=${ctx} />
     <${FileField} label="Zdjęcie okładki manuala (opcjonalne)" value=${b.cover} accept="image/jpeg,image/png,image/webp" folder="media" ctx=${ctx} hint="Szablon z Figmy: 1440×900, eksport 2x. Bez zdjęcia okładka ma kolor tła." onChange=${(p) => up((x) => { x.cover = p; })} />
     <${Text} label="E-mail w stopce" value=${b.contact} onInput=${(v) => up((x) => { x.contact = v; })} />
     <div class="sub">
