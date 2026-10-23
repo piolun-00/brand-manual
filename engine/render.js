@@ -445,6 +445,18 @@ export function inlineSvg(text, name, color) {
   tag = tag.replace(/<svg/i, `<svg class="sidebar__logo-svg" role="img" aria-label="${esc(name)}" preserveAspectRatio="xMinYMin meet" fill="currentColor" style="color:${color}"${vb}`);
   return s.slice(s.indexOf(open[0])).replace(open[0], tag).replace(/<\/svg>[\s\S]*$/i, "</svg>");
 }
+// Okładka: tło ze zdjęcia albo jednolity kolor; kolor tekstu wybiera użytkownik (domyślnie czarny)
+const pickHex = (b, v, hex) => v === "custom" ? hex6(hex) : v ? hex6((b.colors || []).find((x) => x.id === v)?.hex) : null;
+export function coverTheme(b) {
+  const mode = b.coverMode === "color" ? "color" : "image";
+  const bg = mode === "color" ? pickHex(b, b.coverColor, b.coverHex) || "#B8B8B5" : null;
+  const fg = pickHex(b, b.coverText, b.coverTextHex) || "#000000";
+  return { mode, bg, fg, ratio: contrastRatio(fg, bg || "#B8B8B5") };
+}
+function coverCss(project) {
+  const c = coverTheme(project.brand || {});
+  return `:root{--cover-fg:${c.fg}${c.bg ? `;--cover-bg:${c.bg}` : ""}}`;
+}
 function sidebarCss(project) {
   const th = sidebarTheme(project);
   if (!th) return "";
@@ -459,7 +471,7 @@ export function siteCss(project, figmaVars, baseCss, url, studioFonts = []) {
   const acc = accentOf(b);
   if (acc) overrides["brand/accent"] = acc;
   const faces = font === "geist" ? geistFaces(url) : font === "areal" ? fontFaces([{ family: "ABC Areal Variable", files: studioFonts }], url) : "";
-  return [faces, tokensCss(figmaVars, overrides), baseCss, sidebarCss(project)].join("\n");
+  return [faces, tokensCss(figmaVars, overrides), baseCss, sidebarCss(project), coverCss(project)].join("\n");
 }
 
 // Czy któryś rozdział ma blok danego typu (skrypty Lottie / 3D ładujemy tylko wtedy — na każdej stronie,
@@ -479,7 +491,7 @@ export function renderPage(project, page, ctx) {
   const title = `${chapter ? `${chapter.title} — ` : ""}${b.name || ""} · ${b.documentTitle || ""}`;
   let content, showFooter = true;
   if (!chapter) {
-    content = cover(ctx, { kind: "start", first: b.name, second: b.documentTitle, version: `Wersja ${b.version || ""} · ${b.date || ""}`, image: b.cover })
+    content = cover(ctx, { kind: "start", first: b.name, second: b.documentTitle, version: `Wersja ${b.version || ""} · ${b.date || ""}`, image: b.coverMode === "color" ? null : b.cover })
       + (single ? `<div class="main">${site.chapters.map((c) => singleChapter(ctx, c, site)).join("")}</div>` : "");
     showFooter = single;
   } else content = chapterContent(ctx, chapter, site, false);
@@ -490,7 +502,7 @@ ${lg ? htmlHeader(lg) + "\n" : ""}<html lang="pl"${ctx.preview ? " data-preview"
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, noai, noimageai">
+<meta name="robots" content="${b.indexable ? "index, follow" : "noindex"}, noai, noimageai">
 ${lg ? metaTags(lg) : ""}
 <title>${esc(title)}</title>
 ${b.favicon ? `<link rel="icon" href="${esc(ctx.url(b.favicon))}">` : ""}

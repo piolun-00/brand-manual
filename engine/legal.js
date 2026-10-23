@@ -178,8 +178,13 @@ W sprawie licencji wykraczającej poza zakres z punktu 2 — kontakt z autorem.
 `;
 }
 
-// robots.txt — jak w Nami: widoczność tak, zbieranie do trenowania nie
-export const ROBOTS = `# ---------------------------------------------------------------
+// robots.txt — jak w Nami: widoczność tak, zbieranie do trenowania nie.
+// Czy manual trafia do wyników wyszukiwania, decyduje meta robots w stronach (przełącznik w Publikacji);
+// tu wpuszczamy roboty zawsze, bo bez tego nie działa podgląd linków w Slacku czy mailu.
+export const robotsText = (indexable) => ROBOTS.replace("# __INDEKS__", indexable
+  ? "# Manual jest widoczny w wynikach wyszukiwania (meta robots: index)."
+  : "# Manual NIE jest widoczny w wynikach wyszukiwania (meta robots: noindex) —\n# roboty wchodzą tylko po podgląd linku.");
+const ROBOTS = `# ---------------------------------------------------------------
 # Zasada: wszystko, co daje widoczność — wpuszczamy.
 # Wszystko, co zbiera materiał do trenowania modeli — odmawiamy.
 #
@@ -193,6 +198,7 @@ export const ROBOTS = `# -------------------------------------------------------
 # ---------------------------------------------------------------
 
 # Wyszukiwarki i roboty podglądu linków (Slack, Teams, LinkedIn, mail).
+# __INDEKS__
 User-agent: *
 Allow: /
 

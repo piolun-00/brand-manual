@@ -11,7 +11,7 @@
 import { useState, useEffect } from "preact/hooks";
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
-const { accentOf, contrastRatio, fontOf, html, moveTo, sidebarTheme, uid } = await import("./core.js" + Q);
+const { accentOf, contrastRatio, coverTheme, fontOf, html, moveTo, sidebarTheme, uid } = await import("./core.js" + Q);
 const { Color, FileField, Group, Row, Select, Text, useGroups } = await import("./fields.js" + Q);
 // ——— Marka ———
 // ——— Marka i Publikacja: grupy (akordeon z podsumowaniem i ostrzeżeniem) ———
@@ -56,6 +56,7 @@ export function brandWarnings(b) {
   if (fontOf({ brand: b }) === "areal") w.look = "Areal tylko z licencją klienta";
   else if (th?.dark && lc === "file" && !b.logoDark && b.logo) w.look = "ciemny pasek — logo może zniknąć";
   else if (lc !== "file" && b.logo && !/\.svg$/i.test(b.logo)) w.look = "kolor logo działa tylko dla SVG";
+  if (!w.look && b.coverMode === "color" && coverTheme(b).ratio < 3) w.look = "tekst okładki słabo czytelny";
   if (b.ogImage && !(b.siteUrl || "").trim()) w.share = "obrazek bez adresu manuala";
   if (b.protect === "server" && (b.password || "").trim() && !(b.siteUrl || "").trim()) w.access = "";
   return w;
@@ -68,6 +69,7 @@ export function BrandForm({ b, set, ctx }) {
   const w = brandWarnings(b);
   const font = fontOf({ brand: b });
   const accent = accentOf(b);
+  const cv = coverTheme(b);
   const lc = b.logoColor || "file";
   const lcName = lc === "file" ? "logo z pliku" : lc === "auto" ? "logo auto" : lc === "custom" ? `logo ${b.logoHex || ""}` : `logo ${colorName(b, lc) || ""}`;
   const colors = b.colors || [];
@@ -90,7 +92,7 @@ export function BrandForm({ b, set, ctx }) {
     <//>
 
     <${Group} id="look" title="Logo i oprawa" open=${open.look} onToggle=${toggle} warn=${w.look} onSpot=${() => ctx.spot(".sidebar")}
-      summary=${[b.logo ? lcName : "bez logo", th ? `pasek ${th.name}` : "pasek biały", font === "geist" ? "Geist" : font === "areal" ? "Areal" : "systemowy"].join(" · ")}>
+      summary=${[b.logo ? lcName : "bez logo", th ? `pasek ${th.name}` : "pasek biały", font === "geist" ? "Geist" : font === "areal" ? "Areal" : "systemowy", cv.mode === "color" ? "okładka w kolorze" : ""].filter(Boolean).join(" · ")}>
       <b class="group__sub">Logo</b>
       <${FileField} label="Plik logo (SVG)" value=${b.logo} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 210, h: 72 }} hint="Ramka 210×72 z Figmy, przezroczysta" onChange=${(p) => up((x) => { x.logo = p; })} />
       <${ColorPick} label="Kolor logo (SVG)" b=${b} value=${lc} hex=${b.logoHex} extra=${[["file", "Z pliku"], ["auto", "Automatycznie — biel lub czerń do tła"]]}
@@ -115,7 +117,12 @@ export function BrandForm({ b, set, ctx }) {
       <p class="note">${font === "areal" ? "Licencja Dinamo obejmuje jedną domenę i jednego licencjobiorcę — klient musi kupić własną licencję webową na swoją domenę. Pliki wgrywasz w menu projektu → Krój ABC Areal." : font === "geist" ? "Geist jest na licencji SIL Open Font License — wolno go dołączyć do strony klienta. Pliki (ok. 95 KB) trafiają do eksportu." : "Bez plików fontu — każdy zobaczy krój swojego systemu."}</p>
 
       <b class="group__sub">Okładka</b>
-      <${FileField} label="Zdjęcie okładki manuala (opcjonalne)" value=${b.cover} accept="image/jpeg,image/png,image/webp" folder="media" ctx=${ctx} hint="Szablon z Figmy: 1440×900, eksport 2x. Bez zdjęcia okładka ma kolor tła." onChange=${(p) => up((x) => { x.cover = p; })} />
+      <${Select} label="Tło okładki" value=${cv.mode} options=${[["image", "Zdjęcie"], ["color", "Jednolity kolor"]]} onChange=${(v) => up((x) => { x.coverMode = v; if (v === "color" && !x.coverColor) x.coverColor = (x.colors || [])[0]?.id || "custom"; })} />
+      ${cv.mode === "image"
+        ? html`<${FileField} label="Zdjęcie okładki manuala (opcjonalne)" value=${b.cover} accept="image/jpeg,image/png,image/webp" folder="media" ctx=${ctx} hint="Szablon z Figmy: 1440×900, eksport 2x. Bez zdjęcia okładka ma szare tło." onChange=${(p) => up((x) => { x.cover = p; })} />`
+        : html`<${ColorPick} label="Kolor tła okładki" b=${b} value=${b.coverColor} hex=${b.coverHex} onPick=${(v) => up((x) => { x.coverColor = v; if (v === "custom" && !x.coverHex) x.coverHex = "#1C1C1C"; })} onHex=${(v) => up((x) => { x.coverHex = v; })} />`}
+      <${ColorPick} label="Kolor tekstu okładki" b=${b} value=${b.coverText || ""} hex=${b.coverTextHex} defLabel="Domyślny (czarny)" onPick=${(v) => up((x) => { x.coverText = v || null; if (v === "custom" && !x.coverTextHex) x.coverTextHex = "#FFFFFF"; })} onHex=${(v) => up((x) => { x.coverTextHex = v; })} />
+      <p class="note">${cv.mode === "color" ? `Kontrast tekstu do tła: ${cv.ratio.toFixed(1).replace(".", ",")}:1${cv.ratio < 3 ? " — za mało, nazwa marki będzie słabo czytelna (min. 3:1 dla dużego tekstu)." : "."}` : "Przy zdjęciu dobierz kolor tekstu do jasności zdjęcia."} Ten sam kolor tła i tekstu dostają okładki rozdziałów bez własnego zdjęcia.</p>
     <//>
   </div>`;
 }
@@ -159,7 +166,9 @@ export function PublishForm({ b, set, ctx }) {
     <//>
 
     <${Group} id="share" title="Udostępnianie" open=${open.share} onToggle=${toggle} warn=${w.share}
-      summary=${[b.favicon ? "favicon" : "bez favicony", b.ogImage ? "obrazek linku" : "bez obrazka linku"].join(" · ")}>
+      summary=${[b.indexable ? "w wyszukiwarkach" : "poza wyszukiwarkami", b.favicon ? "favicon" : "bez favicony", b.ogImage ? "obrazek linku" : "bez obrazka linku"].join(" · ")}>
+      <label class="check"><input type="checkbox" checked=${!!b.indexable} onChange=${(e) => up((x) => { x.indexable = e.target.checked; })} />Widoczny w wyszukiwarkach (Google, Bing)</label>
+      <p class="note">${b.indexable ? "Manual może pojawić się w wynikach wyszukiwania — dla manuali publicznych, np. dla mediów i partnerów." : "Domyślnie manual nie trafia do wyników wyszukiwania; link wysłany mailem czy w Slacku dalej pokaże podgląd. Roboty zbierające dane do trenowania AI są blokowane zawsze."}</p>
       <${FileField} label="Favicon (SVG lub PNG 512×512)" value=${b.favicon} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} onChange=${(p) => up((x) => { x.favicon = p; })} />
       <${FileField} label="Obrazek do udostępniania (1200×630)" value=${b.ogImage} accept="image/png,image/jpeg" folder="media" ctx=${ctx} expect=${{ w: 1200, h: 630 }} hint="Pokazuje się, gdy ktoś wklei link do manuala w Slacku, mailu czy na LinkedIn. Wymaga adresu manuala." onChange=${(p) => up((x) => { x.ogImage = p; })} />
     <//>

@@ -55,10 +55,9 @@ img { display: block; max-width: 100%; }
 .cover {
   position: relative; display: flex; flex-direction: column;
   height: 62svh; padding: var(--space-24) var(--grid-margin);
-  background: var(--bg-media) center / cover no-repeat; color: var(--text-on-media);
+  /* Tło: kolor z edytora (Marka → Okładka) albo szare pole pod zdjęcie; tekst domyślnie czarny, do zmiany w edytorze */
+  background: var(--cover-bg, var(--bg-media)) center / cover no-repeat; color: var(--cover-fg, var(--text-primary));
 }
-/* Bez zdjęcia okładka to szare pole — biały tekst miałby kontrast 2:1, więc przechodzimy na czarny */
-.cover:not(.has--image) { color: var(--text-primary); }
 .cover.is--start, .cover.is--full { height: 100svh; }
 .cover.is--start { height: calc(100svh - 51px); }
 .cover__head { display: grid; grid-template-columns: 1fr 1fr; gap: var(--grid-gutter); }

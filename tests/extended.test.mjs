@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { ROOT, OUT, JSZip, base, browser, editor, openGroup, setPassword, exportManual, loadProject, viewer } from "./helpers.mjs";
+import { ROOT, OUT, JSZip, base, browser, editor, openGroup, setPassword, exportManual, chapter, loadProject, viewer } from "./helpers.mjs";
 const require = createRequire(import.meta.url);
 const bcrypt = require(path.join(ROOT, "vendor/bcrypt.min.js"));
 
@@ -285,4 +285,53 @@ test("multi site: rozdziały o nazwach folderów eksportu dostają bezpieczny ad
   const v = await viewer(url + "assets-2/");
   assert.ok(await v.$(".sidebar"), "podstrona działa"); assert.deepEqual(v.missing, []);
   await v.context().close(); await p.context().close();
+});
+
+test("okładka: jednolity kolor z palety i własny kolor tekstu, ostrzeżenie przy słabym kontraście", async () => {
+  const p = await editor("single");
+  await loadProject(p, { edit: (d) => { d.brand.coverMode = "color"; d.brand.coverColor = "c1"; d.brand.coverText = "c4"; d.brand.cover = "media/foto.jpg"; }, assets: { "media/foto.jpg": "zdjecie.jpg" } });
+  const { url } = await exportManual(p, "okladka-kolor");
+  const v = await viewer(url);
+  const c = await v.$eval(".cover.is--start", (e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e.querySelector("h1")).color, !!e.querySelector("img")]);
+  assert.equal(c[0], "rgb(28, 28, 28)", "tło = Grafit"); assert.equal(c[1], "rgb(255, 255, 255)", "tekst = Biel"); assert.equal(c[2], false, "w trybie koloru bez zdjęcia");
+  await v.context().close();
+  // domyślnie: zdjęcie i czarny tekst
+  const q = await editor("single");
+  const { url: u2 } = await exportManual(q, "okladka-domyslna");
+  const w = await viewer(u2);
+  assert.equal(await w.$eval(".cover.is--start h1", (h) => getComputedStyle(h).color), "rgb(0, 0, 0)");
+  await w.context().close(); await q.context().close();
+  // słaby kontrast → ostrzeżenie w Marce i na liście przed eksportem
+  await loadProject(p, { edit: (d) => { d.brand.coverMode = "color"; d.brand.coverColor = "c2"; d.brand.coverText = "c3"; } });
+  await p.click('button:has-text("Eksport ZIP")'); await p.waitForSelector(".precheck");
+  assert.ok((await p.locator(".precheck__list li").allInnerTexts()).some((t) => /okładki słabo czytelny/.test(t)));
+  await p.context().close();
+});
+
+test("wyszukiwarki: domyślnie noindex, po włączeniu index — robots.txt mówi to samo", async () => {
+  for (const on of [false, true]) {
+    const p = await editor("single");
+    await p.click('.nav button:has-text("Wydanie")');
+    const box = '.check:has-text("Widoczny w wyszukiwarkach") input';
+    await openGroup(p, "Udostępnianie", box);
+    if (on) await p.check(box);
+    const { zip } = await exportManual(p, "seo-" + on);
+    const html = await zip.file("index.html").async("string"), robots = await zip.file("robots.txt").async("string");
+    assert.match(html, on ? /name="robots" content="index, follow, noai/ : /name="robots" content="noindex, noai/);
+    assert.match(robots, on ? /jest widoczny w wynikach/ : /NIE jest widoczny w wynikach/);
+    assert.match(robots, /GPTBot[\s\S]*Disallow: \//, "trenowanie AI zablokowane zawsze");
+    await p.context().close();
+  }
+});
+
+test("Lottie: ostrzeżenie o wyrażeniach i obrazkach spoza JSON, zwykły plik bez ostrzeżeń", async () => {
+  const p = await editor("single");
+  await chapter(p, "Animacje"); await p.selectOption(".panel select.add", "lottie"); await p.waitForTimeout(400);
+  const multi = '.panel input[type=file][multiple][accept*="json"]';
+  await p.setInputFiles(multi, path.join(ROOT, "tests/fixtures/obrot.json")); await p.waitForTimeout(500);
+  assert.equal(await p.locator(".panel .f__warn").count(), 0, "zwykła animacja bez ostrzeżeń");
+  await p.setInputFiles(multi, [path.join(ROOT, "tests/fixtures/lottie-wyrazenia.json"), path.join(ROOT, "tests/fixtures/lottie-obrazek.json")]); await p.waitForTimeout(800);
+  const warn = await p.locator(".panel .f__warn").innerText();
+  assert.match(warn, /lottie-wyrazenia\.json.*wyrażeń/s); assert.match(warn, /lottie-obrazek\.json.*osobnych plikach/s);
+  await p.context().close();
 });

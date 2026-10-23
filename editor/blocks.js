@@ -105,17 +105,32 @@ export function VideoBlock({ b, set, ctx }) {
       : html`<${Text} label="Kod embed" multiline value=${b.embed} placeholder="<iframe src=…></iframe>" hint="Wklej kod z serwisu (Vimeo, YouTube, Lottie, Rive). Zostaje tylko <iframe> z adresem https — skrypty są pomijane dla bezpieczeństwa strony klienta." onInput=${(v) => set((x) => { x.embed = v; })} />`}`;
 }
 // Lottie: plik JSON z After Effects (Bodymovin) albo LottieFiles. Sprawdzamy, czy to naprawdę animacja.
+// Sprawdza, czy to Lottie i czy zagra w lekkim odtwarzaczu z eksportu (lottie_light: bez wyrażeń After Effects,
+// obrazki muszą być wbudowane w JSON — plik obok nie trafi do manuala)
 export async function checkLottie(file) {
-  try { const j = JSON.parse(await file.text()); if (j && j.v && Array.isArray(j.layers)) return { ok: true, w: j.w, h: j.h, sec: j.op && j.fr ? (j.op - (j.ip || 0)) / j.fr : null }; } catch {}
+  try {
+    const j = JSON.parse(await file.text());
+    if (j && j.v && Array.isArray(j.layers)) {
+      let expr = false;
+      const walk = (o) => { if (expr || !o || typeof o !== "object") return; if (typeof o.x === "string" && ("k" in o || "a" in o)) { expr = true; return; } for (const v of Array.isArray(o) ? o : Object.values(o)) walk(v); };
+      walk(j.layers); walk(j.assets);
+      const extImg = (j.assets || []).some((a) => a && a.p && !String(a.p).startsWith("data:") && a.e !== 1);
+      return { ok: true, w: j.w, h: j.h, sec: j.op && j.fr ? (j.op - (j.ip || 0)) / j.fr : null, expr, extImg };
+    }
+  } catch {}
   return { ok: false };
 }
+const lottieIssues = (name, c) => [
+  c.expr && `„${name}” używa wyrażeń (expressions) z After Effects — w manualu mogą nie działać. Zamień je na klatki kluczowe (Bodymovin: „Convert expressions to keyframes”) albo sprawdź animację w podglądzie.`,
+  c.extImg && `„${name}” odwołuje się do obrazków w osobnych plikach — nie pojawią się w manualu. Wyeksportuj z obrazkami wbudowanymi w JSON (Bodymovin: „Include in json”).`
+].filter(Boolean);
 export function LottieBlock({ b, set, ctx }) {
   const ref = useRef();
   const [warn, setWarn] = useState("");
   const lctx = { ...ctx, addFile: async (f, folder) => {
     if (/\.lottie$/i.test(f.name)) { setWarn("Plik .lottie to spakowany format — wyeksportuj animację jako JSON (LottieFiles: Download → Lottie JSON)."); return null; }
     const c = await checkLottie(f); if (!c.ok) { setWarn(`„${f.name}” nie wygląda na animację Lottie (JSON z After Effects / LottieFiles).`); return null; }
-    setWarn(""); return ctx.addFile(f, folder);
+    setWarn(lottieIssues(f.name, c).join(" ")); return ctx.addFile(f, folder);
   } };
   return html`<${ListBlock} items=${b.items || []} addLabel="Dodaj animację"
     add=${() => set((x) => { (x.items ||= []).push({ name: "", file: null }); })}
@@ -131,7 +146,9 @@ export function LottieBlock({ b, set, ctx }) {
     <input ref=${ref} type="file" accept=".json,application/json" multiple hidden onChange=${async (e) => {
       const files = [...e.target.files]; e.target.value = "";
       const added = [];
-      for (const f of files) { const p = await lctx.addFile(f, "media"); if (p) added.push({ name: baseName(f.name), file: p }); }
+      const notes = [];
+      for (const f of files) { const p = await lctx.addFile(f, "media"); if (p) added.push({ name: baseName(f.name), file: p }); const c = await checkLottie(f); if (c.ok) notes.push(...lottieIssues(f.name, c)); }
+      setWarn(notes.join(" "));
       set((x) => { x.items = [...(x.items || []).filter((k) => k.file || k.name), ...added]; });
     }} />
     ${warn && html`<p class="f__warn">${warn}</p>`}
@@ -160,7 +177,7 @@ export function ModelBlock({ b, set, ctx }) {
     return ctx.addFile(f, folder);
   } };
   return html`<${FileField} label="Model (GLB lub OBJ)" value=${b.file} accept=".glb,.obj,model/gltf-binary" folder="media" ctx=${mctx}
-      hint=${"GLB niesie materiały i tekstury (Blender, Spline, Cinema 4D: Export → glTF Binary). OBJ to sama bryła — dostanie neutralny materiał. Najlepiej do 10 MB."} onChange=${(p) => set((x) => { x.file = p; })} />
+      hint=${"GLB niesie materiały i tekstury (Blender, Spline, Cinema 4D: Export → glTF Binary). OBJ to sama bryła — tekstury z osobnych plików się nie przeniosą, dostanie neutralny materiał. Najlepiej do 10 MB."} onChange=${(p) => set((x) => { x.file = p; })} />
     <div class="grid2">
       <${Select} label="Proporcje" value=${b.ratio || "16/9"} options=${[["16/9", "16:9"], ["4/3", "4:3"], ["1/1", "1:1"], ["3/4", "3:4"]]} onChange=${(v) => set((x) => { x.ratio = v; })} />
       <${Select} label="Tło" value=${b.background || "surface"} options=${[["surface", "Białe pole"], ["transparent", "Przezroczyste"]]} onChange=${(v) => set((x) => { x.background = v; })} />

@@ -412,7 +412,7 @@ function App() {
     if (uses(site, "model")) libs.push(L.modelViewer, L.three);
     zip.file("LICENSE.txt", legal.licenseText({ ...extra.legal, url: (project.brand.siteUrl || "").trim(), libs }));
     zip.file("THIRD-PARTY-NOTICES.txt", libs.length ? legal.noticesText(libs) : "Manual nie zawiera składników open source.\n");
-    zip.file("robots.txt", legal.ROBOTS);
+    zip.file("robots.txt", legal.robotsText(!!project.brand.indexable));
     for (const l of libs) zip.file(`licenses/${l.file}`, await fetch(ENGINE_URL(`licenses/${l.file}`)).then((r) => r.blob()));
     if (font === "areal") for (const f of studio.fonts) zip.file(f.path, await store.getAsset("_studio", f.path));
     if (font === "geist") {
