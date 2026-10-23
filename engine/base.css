@@ -342,6 +342,7 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 .code-demo__tab:hover, .code-demo__tool:hover { color: var(--text-primary); }
 .code-demo__tab.is--on { color: var(--text-primary); box-shadow: inset 0 -1px 0 currentColor; }
 .code-demo__tab:focus-visible, .code-demo__tool:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 1px; }
+.code-demo__tabs { display: flex; gap: var(--space-4); min-width: 0; }
 .code-demo__tools { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--space-4); }
 .code-demo__frame { display: block; width: 100%; border: 0; background: #fff; }
 .code-demo__code { margin: 0; padding: var(--space-16); max-height: 480px; overflow: auto; font: 12px/1.6 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--text-primary); white-space: pre; tab-size: 2; }
@@ -350,13 +351,20 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 .code-demo__license { margin: 0; padding: var(--space-8) var(--space-12); border-top: 1px solid var(--border-subtle); color: var(--text-subtle); }
 /* Zakładka „Licencja”: tekst noty łamany do szerokości, bez przewijania w bok */
 .code-demo__code.code-demo__licence { white-space: pre-wrap; font-size: 11px; color: var(--text-subtle); }
-/* Ekrany dotykowe: zanim ktoś dotknie dema, palec przewija manual (warstwa nad ramką).
-   Po dotknięciu gesty trafiają tylko do dema; „Gotowe” albo zjechanie z dema przywraca warstwę. */
+/* Ekrany dotykowe: zanim ktoś dotknie dema, palec przewija manual (przezroczysta warstwa nad ramką).
+   Napis startu stoi pod ramką, nie na niej — nie zasłania treści dema. Po dotknięciu gesty trafiają
+   tylko do dema; „Gotowe” albo zjechanie z dema przywraca warstwę. */
 .code-demo__stage { position: relative; }
-.code-demo__shield { display: none; }
+.code-demo__shield, .code-demo__start { display: none; }
 @media (hover: none) and (pointer: coarse) {
-  .code-demo__shield { display: grid; place-items: center; position: absolute; inset: 0; width: 100%; border: 0; padding: 0; background: transparent; cursor: pointer; font: inherit; }
-  .code-demo__shield span { padding: var(--space-8) var(--space-12); background: var(--bg-surface); border: 1px solid var(--border-strong); color: var(--text-primary); }
-  .code-demo.is--active .code-demo__shield { display: none; }
+  .code-demo__shield { display: block; position: absolute; inset: 0; width: 100%; border: 0; padding: 0; background: transparent; cursor: pointer; }
+  .code-demo__start { display: block; width: 100%; padding: var(--space-12); border: 0; border-top: 1px solid var(--border-subtle); background: var(--bg-surface); color: var(--text-primary); font: inherit; text-align: center; cursor: pointer; }
+  .code-demo.is--active .code-demo__shield, .code-demo.is--active .code-demo__start { display: none; }
+}
+/* Wąsko: zakładki w jednym rzędzie (przewijane w bok, gdy się nie mieszczą), narzędzia w osobnym rzędzie pod nimi */
+@media (max-width: 767px) {
+  .code-demo__bar { flex-wrap: nowrap; flex-direction: column; align-items: stretch; gap: 0; padding: 0; }
+  .code-demo__tabs { display: flex; gap: var(--space-4); padding: var(--space-8); overflow-x: auto; scrollbar-width: none; }
+  .code-demo__tools { margin-left: 0; padding: var(--space-4) var(--space-8); border-top: 1px solid var(--border-subtle); justify-content: flex-start; }
 }
 .code-demo__actions { display: flex; justify-content: flex-end; margin-top: var(--space-12); }
