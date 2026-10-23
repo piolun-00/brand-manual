@@ -10,6 +10,7 @@ licencjach, a zastrzeżenia z pliku [LICENSE](LICENSE) ich nie obejmują.
 | Preact | 10.26.4 | MIT | © 2015-present Jason Miller | [licenses/preact-MIT.txt](licenses/preact-MIT.txt) |
 | htm | 3.1.1 | Apache 2.0 | © Google LLC | [licenses/htm-Apache-2.0.txt](licenses/htm-Apache-2.0.txt) |
 | JSZip | 3.10.1 | MIT lub GPL-3.0 (do wyboru — używamy MIT) | © 2009-2016 Stuart Knightley i in. | [licenses/jszip-MIT-or-GPL-3.0.txt](licenses/jszip-MIT-or-GPL-3.0.txt) |
+| DOMPurify (czyszczenie SVG logo) | 3.2.4 | MPL 2.0 lub Apache 2.0 (do wyboru — używamy Apache 2.0) | © Cure53 i współtwórcy | [licenses/dompurify-MPL-2.0-or-Apache-2.0.txt](licenses/dompurify-MPL-2.0-or-Apache-2.0.txt) |
 | bcrypt.js | 2.4.3 | MIT | © 2012 Nevins Bartolomeo, © 2012 Shane Girish, © 2014 Daniel Wirtz | [licenses/bcryptjs-MIT.txt](licenses/bcryptjs-MIT.txt) |
 | three.js (konwersja OBJ → GLB) | 0.160.0 | MIT | © 2010-2023 three.js authors | [engine/licenses/three-MIT.txt](engine/licenses/three-MIT.txt) |
 

@@ -23,7 +23,42 @@ export const RUNTIME = `
     e.isIntersecting ? a.play() : a.pause();
   })) : null;
   const local = location.protocol === "file:";
+  // Odtwarzacze (Lottie 164 KB, 3D 913 KB) ładowane dopiero, gdy ich blok jest ~800 px od ekranu —
+  // pierwsze wejście na manual nie płaci za bloki na dole strony
+  const libs = {};
+  const loadLib = (src, module) => libs[src] || (libs[src] = new Promise((ok, bad) => {
+    const s = document.createElement("script"); if (module) s.type = "module";
+    s.src = src; s.onload = ok; s.onerror = bad; document.head.appendChild(s);
+  }));
+  const wake = (el) => loadLib(el.dataset.lib, el.hasAttribute("data-lib-module")).then(initMedia).catch(() => {});
+  const near = "IntersectionObserver" in window ? new IntersectionObserver((list) => list.forEach((e) => {
+    if (e.isIntersecting) { near.unobserve(e.target); wake(e.target); }
+  }), { rootMargin: "800px 0px" }) : null;
+  // Wideo MP4: gra tylko na ekranie (mniej pracy procesora i baterii); przy „ograniczeniu ruchu” stoi
+  const vids = "IntersectionObserver" in window ? new IntersectionObserver((list) => list.forEach((e) => {
+    const v = e.target; if (reduce) return;
+    e.isIntersecting ? v.play().catch(() => {}) : v.pause();
+  }), { threshold: 0.15 }) : null;
+  // Single site: aktywna pozycja spisu = sekcja w górnej części ekranu
+  const spy = "IntersectionObserver" in window ? new IntersectionObserver((list) => list.forEach((e) => {
+    if (!e.isIntersecting) return;
+    document.querySelectorAll('.sidebar__item[href^="#"]').forEach((a) => {
+      const on = decodeURIComponent(a.getAttribute("href").slice(1)) === e.target.id;
+      a.classList.toggle("is--active", on); on ? a.setAttribute("aria-current", "location") : a.removeAttribute("aria-current");
+    });
+  }), { rootMargin: "-25% 0px -70% 0px" }) : null;
   function initMedia() {
+    document.querySelectorAll(".video video:not([data-ready])").forEach((v) => {
+      v.dataset.ready = "1";
+      if (reduce) { v.removeAttribute("autoplay"); v.pause(); }
+      if (vids) vids.observe(v);
+    });
+    if (spy && document.querySelector('.sidebar__item[href^="#"]')) document.querySelectorAll(".section[id]:not([data-spy])").forEach((s) => { s.dataset.spy = "1"; spy.observe(s); });
+    document.querySelectorAll("[data-lib]:not([data-lib-watch])").forEach((el) => {
+      el.dataset.libWatch = "1";
+      if (el.classList.contains("model") && local && !preview) return; // 3D z dysku i tak nie zadziała
+      near ? near.observe(el) : wake(el);
+    });
     // Model 3D: wskaźnik ładowania znika po wczytaniu. Z dysku (file://) przeglądarka blokuje modele — informacja zamiast pustego pola.
     document.querySelectorAll(".model:not([data-ready])").forEach((box) => {
       box.dataset.ready = "1";
@@ -130,8 +165,8 @@ export const RUNTIME = `
     const next = doc.querySelector(".layout__column");
     if (!next) { location.href = url.href; return; }
     // Względne adresy z innej strony (../media/…) trzeba przeliczyć względem nowego adresu.
-    const fix = (root) => root.querySelectorAll("[href],[src],[style]").forEach((el) => {
-      for (const at of ["href", "src"]) { const v = el.getAttribute(at); if (v && !/^(#|[a-z]+:|\\/)/i.test(v)) el.setAttribute(at, keep(new URL(v, url.href))); }
+    const fix = (root) => root.querySelectorAll("[href],[src],[style],[data-lib],[data-lottie]").forEach((el) => {
+      for (const at of ["href", "src", "data-lib", "data-lottie"]) { const v = el.getAttribute(at); if (v && !/^(#|[a-z]+:|\\/)/i.test(v)) el.setAttribute(at, keep(new URL(v, url.href))); }
       const st = el.getAttribute("style"); if (st && st.includes("url(")) el.setAttribute("style", st.replace(/url\\((['"]?)(?![a-z]+:|\\/)([^'")]+)\\1\\)/gi, (m, q, p) => "url(" + q + new URL(p, url.href).pathname + q + ")"));
     });
     fix(next);

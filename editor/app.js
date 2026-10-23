@@ -1105,6 +1105,8 @@ function App() {
       if (bl.type === "icons" && (bl.items || []).some((i) => i.svg)) iconBlocks.push(bl);
       if (bl.type === "lottie" && (bl.items || []).some((i) => i.file)) lottieBlocks.push(bl);
     });
+    // Okładki (manuala i rozdziałów) też dostają wersję 1x dla telefonów
+    for (const p of [project.brand.cover, ...(project.chapters || []).map((c) => c.cover)]) if (p && /\.(jpe?g|png|webp)$/i.test(p)) photos.add(p);
     let n = 0;
     for (const path of photos) {
       step(`Zmniejszam zdjęcia dla telefonów… ${++n}/${photos.size}`, 0.15 + 0.3 * (n - 1) / Math.max(1, photos.size));
@@ -1285,6 +1287,23 @@ function App() {
       setStatus("Backup wczytany");
     } catch (e) { alert("Nie udało się wczytać pliku: " + e.message); }
   }
+  // Pliki podmienione lub usunięte z bloków zostają w pamięci przeglądarki — sprzątanie na żądanie.
+  // Czyści też historię cofania: cofnięcie mogłoby przywrócić odwołanie do usuniętego pliku.
+  const orphans = project ? Object.keys(sizes).filter((p) => !usedAssets(project).includes(p)) : [];
+  const plikow = (n) => n === 1 ? "nieużywany plik" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? "nieużywane pliki" : "nieużywanych plików";
+  async function cleanOrphans() {
+    const mb = fmtMB(orphans.reduce((n, p) => n + (sizes[p] || 0), 0));
+    if (!confirm(`Usunąć ${orphans.length} ${plikow(orphans.length)} (${mb})?\n\nTo pliki, które podmieniłeś albo usunąłeś z bloków. Historia cofania (Cmd+Z) zostanie wyczyszczona.`)) return;
+    for (const p of orphans) {
+      await store.deleteAsset(pid, p);
+      if (folder?.ok) {
+        try { let d = folder.handle; const parts = ["assets", ...p.split("/")]; for (const x of parts.slice(0, -1)) d = await d.getDirectoryHandle(x); await d.removeEntry(parts[parts.length - 1]); } catch {}
+      }
+    }
+    setSizes((s) => { const n = { ...s }; for (const p of orphans) delete n[p]; return n; });
+    undoStack.current = []; redoStack.current = []; refreshQuota();
+    setStatus(`Usunięto: ${orphans.length} ${plikow(orphans.length)} (${mb})`);
+  }
   async function remove() {
     if (!confirm(`Usunąć projekt „${project.brand.name}” z tej przeglądarki? Zrób najpierw backup, jeśli go potrzebujesz.`)) return;
     await store.deleteProject(pid); const list = await store.listProjects(); setProjects(list);
@@ -1316,6 +1335,7 @@ function App() {
         ${menu && html`<div class="menu" onMouseLeave=${() => setMenu(false)}>
           <span class="menu__label">Projekty w tej przeglądarce</span>
           <span class="menu__usage">Ten projekt: <b>${fmtMB(usedAssets(project).reduce((n, p) => n + (sizes[p] || 0), 0))}</b>${quota ? html` · edytor razem: ${fmtMB(quota.usage)} z ${fmtMB(quota.quota)}` : ""}</span>
+          ${orphans.length > 0 && html`<button type="button" onClick=${cleanOrphans}>Wyczyść nieużywane pliki<small>${orphans.length} · ${fmtMB(orphans.reduce((n, p) => n + (sizes[p] || 0), 0))}</small></button>`}
           ${projects.map((p) => html`<button type="button" class=${p.id === pid ? "is--on" : ""} onClick=${() => open(p.id)}>${p.name || "Bez nazwy"}<small>${new Date(p.updated).toLocaleDateString("pl-PL")}</small></button>`)}
           <hr />
           <button type="button" onClick=${() => newProject("multi")}>+ Nowy multi site (21 rozdziałów: tekst + zdjęcie)</button>

@@ -113,9 +113,13 @@ function sidebar(site, ctx, active) {
 
 const topbar = (chapter) => `<header class="topbar"><button class="topbar__index text-body" type="button" data-drawer-open aria-controls="sidebar">Indeks</button>${chapter ? `<span class="topbar__chapter text-body">${chapter.num} ${t(chapter.title)}</span>` : ""}</header>`;
 
+// Okładka: nazwa marki (start) albo tytuł rozdziału jest nagłówkiem h1 strony.
+// Zdjęcie jako <img> z wersją 1x dla telefonów (srcset), a nie tło CSS w pełnym rozmiarze.
 function cover(ctx, { kind, first, second, version, image, full }) {
-  return `<section class="cover is--${kind}${full ? " is--full" : ""}"${image ? ` style="background-image:url('${esc(ctx.url(image))}')"` : ""}>
-  <div class="cover__head"><span class="cover__${kind === "start" ? "brand" : "num"} text-display">${t(first)}</span><span class="cover__title text-display">${t(second)}</span></div>
+  const start = kind === "start";
+  const img = image ? `<img class="cover__img" src="${esc(ctx.url(image))}"${srcset(ctx, image, "cover")} alt="" fetchpriority="high">` : "";
+  return `<section class="cover is--${kind}${full ? " is--full" : ""}${image ? " has--image" : ""}">
+  ${img}<div class="cover__head">${start ? `<h1 class="cover__brand text-display">${t(first)}</h1><span class="cover__title text-display">${t(second)}</span>` : `<span class="cover__num text-display">${t(first)}</span><h1 class="cover__title text-display">${t(second)}</h1>`}</div>
   ${version ? `<span class="cover__version text-small">${t(version)}</span>` : ""}
 </section>`;
 }
@@ -166,7 +170,7 @@ function sectionHeader(ctx, s, blockAction) {
 
 // Zdjęcia w eksporcie mają wersję 1x (połowa szerokości) — telefon nie pobiera pliku 1848 px.
 // ctx.variants: zbiór ścieżek, dla których eksport przygotował plik „@1x”.
-const SIZES = { "1": "(min-width: 1280px) 924px, (min-width: 768px) 537px, 100vw", "2-equal": "(min-width: 1280px) 456px, (min-width: 768px) 263px, 100vw",
+const SIZES = { cover: "100vw", "1": "(min-width: 1280px) 924px, (min-width: 768px) 537px, 100vw", "2-equal": "(min-width: 1280px) 456px, (min-width: 768px) 263px, 100vw",
   "wide-narrow": "(min-width: 1280px) 573px, (min-width: 768px) 354px, 100vw", "narrow-wide": "(min-width: 1280px) 573px, (min-width: 768px) 354px, 100vw" };
 export const variantOf = (path) => path.replace(/(\.[a-z0-9]+)$/i, "@1x$1");
 function srcset(ctx, path, layout) {
@@ -267,7 +271,8 @@ const BLOCKS = {
   lottie: (ctx, b) => {
     const items = b.items || [];
     const zip = items.some((i) => i.file) && !ctx.placed?.has?.(b.id) ? `<div class="icons__actions">${button(ctx, "download", ctx.lottieZips?.get?.(b.id || "") || null, "Pobierz wszystkie (ZIP)")}</div>` : "";
-    return `<div class="lottie">${zip}<div class="lottie__grid">${items.map((i) => `
+    // data-lib: odtwarzacz Lottie ładowany dopiero, gdy blok zbliża się do ekranu (runtime)
+    return `<div class="lottie" data-lib="${esc(ctx.url("assets/lottie.min.js"))}">${zip}<div class="lottie__grid">${items.map((i) => `
     <div class="lottie-tile">
       ${i.file ? `<a class="lottie-tile__stage" href="${esc(ctx.url(i.file))}" download="${esc((slugify(i.name) || "animacja") + ".json")}" aria-label="Pobierz animację ${esc(i.name)} (JSON)">
         <span class="lottie-tile__anim" data-lottie="${esc(ctx.url(i.file))}" role="img" aria-label="${esc(i.name || "Animacja")}"></span>
@@ -285,7 +290,7 @@ const BLOCKS = {
     const viewer = b.file ? `<model-viewer src="${esc(ctx.url(b.file))}" alt="${esc(b.alt || b.label || "Model 3D")}" orientation="${modelOrientation(b)}" min-camera-orbit="auto 0deg auto" max-camera-orbit="auto 180deg auto" camera-controls disable-zoom touch-action="pan-y" interaction-prompt="none"${b.autoRotate === false ? "" : ` auto-rotate auto-rotate-delay="0" rotation-per-second="${b.speed || 20}deg"`} shadow-intensity="${b.shadow === false ? 0 : 0.7}" exposure="1"><div slot="progress-bar"></div></model-viewer>
       <span class="model__loader" aria-hidden="true"><span></span></span>
       <span class="model__note text-small">Model 3D wyświetli się po wgraniu manuala na serwer — przeglądarka nie otwiera modeli z dysku.</span>` : `<span class="gallery__placeholder text-small">Model 3D — GLB lub OBJ</span>`;
-    return `<div class="model${b.background === "transparent" ? " is--transparent" : ""}" style="aspect-ratio:${ratio}">${viewer}</div>${b.download && b.file && !ctx.placed?.has?.(b.id) ? `<div class="model__actions">${button(ctx, "download", b.file, "Pobierz model (GLB)")}</div>` : ""}`;
+    return `<div class="model${b.background === "transparent" ? " is--transparent" : ""}" style="aspect-ratio:${ratio}"${b.file ? ` data-lib="${esc(ctx.url("assets/model-viewer.min.js"))}" data-lib-module` : ""}>${viewer}</div>${b.download && b.file && !ctx.placed?.has?.(b.id) ? `<div class="model__actions">${button(ctx, "download", b.file, "Pobierz model (GLB)")}</div>` : ""}`;
   },
 
   // Animacja: plik MP4 (odtwarza się sam, bez dźwięku, w pętli) albo kod embed (np. Vimeo, Lottie, Rive)
@@ -391,16 +396,17 @@ export const contrastRatio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p
 const mix = (a, b, t) => "#" + rgbOf(a).map((v, i) => Math.round(v * t + rgbOf(b)[i] * (1 - t)).toString(16).padStart(2, "0")).join("").toUpperCase();
 export function sidebarTheme(project) {
   const b = project.brand || {};
-  const c = b.sidebarColor === "custom" ? { hex: b.sidebarHex, name: "własny" } : (b.colors || []).find((x) => x.id === b.sidebarColor);
-  const bg = c && hex6(c.hex);
-  if (!bg) return null;
+  // Bez wybranego koloru pasek jest biały (bg/surface) — kolor tekstu i tak liczony z tła, żeby spis miał min. 4,5:1
+  const picked = b.sidebarColor === "custom" ? { hex: b.sidebarHex, name: "własny" } : (b.colors || []).find((x) => x.id === b.sidebarColor);
+  const c = picked && hex6(picked.hex) ? picked : { hex: "#FFFFFF", name: "biały", isDefault: true };
+  const bg = hex6(c.hex);
   const dark = contrastRatio(bg, "#FFFFFF") >= contrastRatio(bg, "#000000");
   const fg = dark ? "#FFFFFF" : "#000000";
   let t = 0.6, muted = mix(fg, bg, t);
   while (contrastRatio(muted, bg) < 4.5 && t < 1) { t += 0.05; muted = mix(fg, bg, Math.min(1, t)); }
   const accent = accentOf(b) || "#000000";
   const accentOk = contrastRatio(accent, bg) >= 4.5;
-  return { bg, fg, muted, active: accentOk ? accent : fg, underline: !accentOk, dark, name: c.name || "", ratio: contrastRatio(muted, bg) };
+  return { bg, fg, muted, active: accentOk ? accent : fg, underline: !accentOk, dark, name: c.name || "", ratio: contrastRatio(muted, bg), isDefault: !!c.isDefault };
 }
 // Akcent: kolor z palety (aktualizuje się razem z paletą) albo własny HEX
 export function accentOf(b) {
@@ -417,6 +423,9 @@ export function logoColor(b, th = sidebarTheme({ brand: b })) {
 }
 // SVG w stronie: bez skryptów i zdarzeń, kolory wypełnień i obrysów → currentColor
 export function inlineSvg(text, name, color) {
+  // Najpierw DOMPurify (edytor ma go w vendor/): sprawdzony parser zamiast samych wyrażeń regularnych.
+  // Wyrażenia niżej zostają jako druga warstwa i jako zapas, gdy biblioteki brak (np. testy w Node).
+  if (globalThis.DOMPurify) text = globalThis.DOMPurify.sanitize(String(text), { USE_PROFILES: { svg: true, svgFilters: true }, FORBID_TAGS: ["foreignObject", "script"] });
   let s = String(text)
     .replace(/<\?xml[\s\S]*?\?>/gi, "").replace(/<!DOCTYPE[\s\S]*?>/gi, "").replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<script[\s\S]*?<\/script\s*>/gi, "").replace(/<foreignObject[\s\S]*?<\/foreignObject\s*>/gi, "")
@@ -474,7 +483,7 @@ export function renderPage(project, page, ctx) {
   } else content = chapterContent(ctx, chapter, site, false);
 
   const lg = ctx.legal; // tylko w eksporcie: noty prawne i sygnatura wdrożenia
-  return `<!doctype html>
+  const out = `<!doctype html>
 ${lg ? htmlHeader(lg) + "\n" : ""}<html lang="pl"${ctx.preview ? " data-preview" : ""}${lg ? ` data-build="${esc(lg.sig)}"` : ""}>
 <head>
 <meta charset="utf-8">
@@ -482,8 +491,6 @@ ${lg ? htmlHeader(lg) + "\n" : ""}<html lang="pl"${ctx.preview ? " data-preview"
 <meta name="robots" content="noindex, noai, noimageai">
 ${lg ? metaTags(lg) : ""}
 <title>${esc(title)}</title>
-${uses(site, "lottie") ? `<script src="${esc(ctx.url("assets/lottie.min.js"))}" defer></script>` : ""}
-${uses(site, "model") ? `<script type="module" src="${esc(ctx.url("assets/model-viewer.min.js"))}"></script>` : ""}
 ${b.favicon ? `<link rel="icon" href="${esc(ctx.url(b.favicon))}">` : ""}
 <meta property="og:title" content="${esc(title)}">
 ${b.ogImage && b.siteUrl ? `<meta property="og:image" content="${esc(new URL(b.ogImage, b.siteUrl.replace(/\/?$/, "/")).href)}">` : ""}
@@ -494,15 +501,17 @@ ${ctx.preview ? `<style>[data-kh]{cursor:pointer}[data-kh="block"]:hover{outline
 <div class="page">
 ${sidebar(site, ctx, chapter?.slug)}
 <div class="overlay" data-drawer-close></div>
-<div class="layout__column">
+<main class="layout__column" id="tresc">
 ${topbar(chapter)}
 ${content}
-</div>
+</main>
 </div>
 ${showFooter ? footer(site) : ""}
 <script>${lg ? codeHeader(lg) + "\n" : ""}${RUNTIME}</script>
 </body>
 </html>`;
+  // Gotowy manual: puste pola zostają jako szare prostokąty, bez roboczych napisów („Zdjęcie”, „Specimen kroju — SVG”)
+  return ctx.preview ? out : out.replace(/(<span class="(?:gallery|lottie-tile|typeface|graphic)__placeholder[^"]*")([^>]*>)[^<]*(<\/span>)/g, '$1 aria-hidden="true"$2$3');
 }
 
 // ——— Cała strona do eksportu ———
