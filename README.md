@@ -50,8 +50,9 @@ Przycisk akcji bloku (ZIP, GLB) stoi w jego belce opisu; bez belki — w nagłó
 | `vendor/` | biblioteki edytora: Preact, htm, JSZip, bcryptjs, DOMPurify, three.js (konwersja OBJ) |
 
 ## Testy
-`cd tests && npm install && npm test` — Playwright przechodzi przez edytor i eksport: lista kontrolna, komplet plików,
-hasło i szyfrowanie, backup bez hasła, kotwice, Lottie z dysku i leniwe ładowanie, konwersja OBJ → GLB, sprzątanie plików, axe (WCAG).
+`cd tests && npm install && npm test` — 25 scenariuszy w Playwright (ok. 6 min):
+- `e2e.test.mjs` — edytor i eksport: lista kontrolna, hasło i szyfrowanie, backup bez hasła, kotwice, Lottie z dysku, OBJ → GLB, sprzątanie plików, axe (WCAG), podsumowania kart.
+- `extended.test.mjs` — eksport na gotowych projektach (wczytywanych jak backup): nawigacja multi site, `.htaccess` + bcrypt, bezpieczeństwo (znaczniki w nazwach, złośliwe SVG), kontrast paska dla kolorów marki, ikony i ZIP, zdjęcia @1x i klatka MP4, backup w obie strony, cofnij / przywróć, responsywność 360–2560 px, pliki prawne, stopka i kopiowanie HEX, Areal, położenie przycisków bloków, wydajność.
 
 ## Wdrożenie
 Każdy push na `main` publikuje edytor na GitHub Pages. Numer wersji (`version.json`, `?v=` w `index.html`) nadaje workflow przy wdrożeniu — `scripts/release.sh` służy tylko do testów lokalnych.

@@ -9,7 +9,17 @@
 
 // Edytor brandmanuala KHOREI — stan, zapis, eksport i układ okna.
 import { render } from "preact";
-import { useState, useEffect, useRef, useMemo, useCallback } from "preact/hooks";
+import { useState, useEffect, useRef, useMemo, useCallback, useErrorBoundary } from "preact/hooks";
+
+// Bezpiecznik: błąd w jednym formularzu albo w podglądzie nie wyłącza całego edytora (dane są w IndexedDB)
+function Safe({ children, label }) {
+  const [err, reset] = useErrorBoundary((e) => console.error(e));
+  if (!err) return children;
+  return html`<div class="panel__inner safe">
+    <p class="note"><b>${label} napotkał błąd</b> — ${String(err.message || err)}. Projekt jest zapisany. Cofnij ostatnią zmianę (Cmd+Z) albo przełącz widok.</p>
+    <button type="button" class="btn is--ghost" onClick=${reset}>Spróbuj ponownie</button>
+  </div>`;
+}
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
 const { BASE_CSS, CAN_FOLDER, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, uid, usedAssets, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
@@ -598,7 +608,7 @@ function App() {
       <button type="button" class=${view === "publish" ? "is--on" : ""} onClick=${() => setView("publish")}>Wydanie${publishWarn ? html` <span class="nav__dot" title="Coś wymaga uwagi"></span>` : null}</button>
       <button type="button" class=${view === "studio" ? "is--on" : ""} onClick=${() => setView("studio")}>Studio</button>
     </nav>
-    <main class="panel">
+    <main class="panel"><${Safe} key=${view} label="Formularz">
       ${view === "publish"
         ? html`<${PublishForm} b=${project.brand} ctx=${ctx} set=${(fn) => update((p) => fn(p.brand))} />`
         : view === "studio"
@@ -607,15 +617,15 @@ function App() {
         ? html`<${BrandForm} b=${project.brand} ctx=${ctx} set=${(fn) => update((p) => fn(p.brand))} />`
         : html`<${ChapterForm} key=${chapter.id + (single ? "s" : "m")} single=${single} c=${chapter} num=${site.chapters[chapterIndex].num} ctx=${ctx}
             onFocus=${setFocus} select=${select} set=${(fn) => update((p) => { fn(p.chapters[chapterIndex]); })} />`}
-    </main>
-    <${Preview} project=${project} page=${page} urls=${urls} focus=${focus} studio=${studio} svgText=${svgText} spotOn=${spotOn}
+    <//></main>
+    <${Safe} label="Podgląd"><${Preview} project=${project} page=${page} urls=${urls} focus=${focus} studio=${studio} svgText=${svgText} spotOn=${spotOn}
       onSelect=${(sel) => {
         const c = project.chapters.find((ch) => (ch.sections || []).some((x) => x.id === sel.section));
         if (!c) return;
         setView(c.id); if (!single) setPage(c.id);
         setSelect({ ...sel, n: Date.now() });
       }}
-      setPage=${(slug) => { const c = site.chapters.find((x) => x.slug === slug); setPage(c ? c.id : "index"); setView(c ? c.id : "brand"); }} />
+      setPage=${(slug) => { const c = site.chapters.find((x) => x.slug === slug); setPage(c ? c.id : "index"); setView(c ? c.id : "brand"); }} /><//>
   </div>`;
 }
 

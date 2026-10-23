@@ -25,7 +25,7 @@ i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po pol
 - Nigdy nie dodawaj licencjonowanych krojów (ABC Areal) do repozytorium — tylko Geist (OFL).
 - SVG wstawiane inline zawsze przez DOMPurify (`inlineSvg`).
 - Backup `.khorei` nie zawiera hasła; zapis do folderu je zawiera.
-- Przed pushem: `node --test --test-concurrency=1 tests/` (testy same stawiają serwer). Nowa funkcja = nowy przypadek w `tests/e2e.test.mjs`.
+- Przed pushem: `cd tests && node --test --test-concurrency=1 e2e.test.mjs extended.test.mjs` (testy same stawiają serwer). Nowa funkcja = nowy przypadek w `tests/e2e.test.mjs`.
 - Kolory tekstu w eksporcie muszą przechodzić axe (≥ 4.5:1) — tokeny w `engine/figma-variables.json` zmieniaj też w Figmie.
 - Wersję nadaje workflow `pages.yml` przy wdrożeniu; `scripts/release.sh` tylko lokalnie.
 - GitHub: tylko REST przez `gh`; push tagów daje 403 — backupy jako gałęzie `backup/…`.

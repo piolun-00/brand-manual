@@ -69,11 +69,14 @@ img { display: block; max-width: 100%; }
   .cover__head { grid-template-columns: calc(var(--layout-block-indent) - var(--grid-gutter)) 1fr; }
 }
 /* Desktop: pierwsza kolumna okładki ma szerokość kolumny etykiety, ale gdy nazwa marki w dużym stopniu
-   jest szersza, kolumna rośnie razem z nią — tytuł odsuwa się, zamiast na nią nachodzić. Nazwa się nie łamie.
+   jest szersza, kolumna rośnie razem z nią — tytuł odsuwa się, zamiast na nią nachodzić. Zwykła nazwa się nie łamie;
+   bardzo długa łamie się dopiero przy 62% szerokości (wcześniej wypychała stronę w bok — poziome przewijanie).
    Odstęp 0,5 em rośnie razem ze stopniem, więc przy dużym nagłówku nazwa i tytuł nie zlewają się w jedno. */
 @media (min-width: 1280px) {
-  .cover__head { grid-template-columns: minmax(calc(var(--layout-block-indent) - var(--grid-gutter)), max-content) minmax(0, 1fr); }
-  .cover__brand, .cover__num { white-space: nowrap; padding-right: 0.5em; }
+  .cover__head { grid-template-columns: fit-content(62%) minmax(0, 1fr); }
+  .cover__brand, .cover__num { min-width: calc(var(--layout-block-indent) - var(--grid-gutter)); padding-right: 0.5em; }
+  .cover__num { white-space: nowrap; }
+  .cover__brand { text-wrap: balance; overflow-wrap: anywhere; }
 }
 @media (min-width: 1280px) {
   .cover { padding-top: var(--space-48); }

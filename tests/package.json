@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test --test-concurrency=1 e2e.test.mjs"
+    "test": "node --test --test-concurrency=1 e2e.test.mjs extended.test.mjs"
   },
   "devDependencies": {
     "axe-core": "4.10.2",

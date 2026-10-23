@@ -104,7 +104,7 @@ export function BrandForm({ b, set, ctx }) {
       <b class="group__sub">Pasek boczny</b>
       <${ColorPick} label="Kolor paska" b=${b} value=${th || b.sidebarColor === "custom" ? b.sidebarColor : ""} hex=${b.sidebarHex} defLabel="Domyślny (biały)"
         onPick=${(v) => up((x) => { x.sidebarColor = v || null; if (v === "custom" && !x.sidebarHex) x.sidebarHex = "#1C1C1C"; })} onHex=${(v) => up((x) => { x.sidebarHex = v; })} />
-      ${th && html`<p class="note">Tekst spisu: ${th.dark ? "jasny" : "ciemny"} (kontrast ${th.ratio.toFixed(1).replace(".", ",")}:1).${th.underline ? ` Akcent ma na tym tle tylko ${contrastRatio(th.bg, accent).toFixed(1).replace(".", ",")}:1, więc aktywna pozycja będzie ${th.dark ? "biała" : "czarna"} z podkreśleniem.` : " Aktywna pozycja w kolorze akcentu."} Ten sam kolor ma menu „Indeks” i górny pasek na tablecie i telefonie.</p>`}
+      ${th && html`<p class="note">Tekst spisu: ${th.dark ? "jasny" : "ciemny"} (kontrast ${th.ratio.toFixed(1).replace(".", ",")}:1).${th.underline ? ` Akcent ma na tym tle tylko ${contrastRatio(th.bg, accent || "#000000").toFixed(1).replace(".", ",")}:1, więc aktywna pozycja będzie ${th.dark ? "biała" : "czarna"} z podkreśleniem.` : " Aktywna pozycja w kolorze akcentu."} Ten sam kolor ma menu „Indeks” i górny pasek na tablecie i telefonie.</p>`}
       <b class="group__sub">Akcent</b>
       <${ColorPick} label="Kolor akcentu" b=${b} value=${b.accentColor || (b.accent ? "custom" : "")} hex=${b.accent || "#000000"} defLabel="Domyślny (czarny)"
         onPick=${(v) => up((x) => { x.accentColor = v || null; if (v === "custom" && !x.accent) x.accent = "#000000"; if (!v) x.accent = null; })} onHex=${(v) => up((x) => { x.accent = v; })} />
