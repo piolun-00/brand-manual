@@ -58,7 +58,7 @@ function luminance(hex) {
     .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
-// Kolory marki definiowane raz w „Marka i ustawienia” (brand.colors). Bloki odwołują się do nich po id.
+// Kolory marki definiowane raz w „Marka” → Kolory marki (brand.colors). Bloki odwołują się do nich po id.
 function brandColors(site) { return (site.brand.colors || []).filter((c) => c && c.hex); }
 function colorById(site, id) {
   const all = brandColors(site);
@@ -214,7 +214,7 @@ const BLOCKS = {
   palette: (ctx, b, site) => {
     const all = brandColors(site);
     const items = b.colors && b.colors.length ? b.colors.map((id) => colorById(site, id)).filter(Boolean) : all;
-    if (!items.length) return `<p class="block__empty text-small">Dodaj kolory w „Marka i ustawienia”.</p>`;
+    if (!items.length) return `<p class="block__empty text-small">Dodaj kolory w „Marka” → Kolory marki.</p>`;
     return `<div class="palette">${items.map((c) => `
     <div class="swatch${isLight(c.hex) ? " is--light" : ""}">
       <button class="swatch__chip" type="button" data-copy="${esc(c.hex)}" style="background:${esc(c.hex)}" aria-label="Kopiuj ${esc(c.hex)}"><span class="swatch__copy"><span class="button is--copy text-body"><span class="button__label">Kopiuj HEX</span></span></span></button>
@@ -382,9 +382,14 @@ export function sidebarTheme(project) {
   const fg = dark ? "#FFFFFF" : "#000000";
   let t = 0.6, muted = mix(fg, bg, t);
   while (contrastRatio(muted, bg) < 4.5 && t < 1) { t += 0.05; muted = mix(fg, bg, Math.min(1, t)); }
-  const accent = hex6(b.accent) || "#000000";
+  const accent = accentOf(b) || "#000000";
   const accentOk = contrastRatio(accent, bg) >= 4.5;
   return { bg, fg, muted, active: accentOk ? accent : fg, underline: !accentOk, dark, name: c.name || "", ratio: contrastRatio(muted, bg) };
+}
+// Akcent: kolor z palety (aktualizuje się razem z paletą) albo własny HEX
+export function accentOf(b) {
+  if (b.accentColor && b.accentColor !== "custom") return hex6((b.colors || []).find((x) => x.id === b.accentColor)?.hex) || hex6(b.accent);
+  return hex6(b.accent);
 }
 // Kolor logo: "file" (bez zmian) | "auto" (biel/czerń do tła paska) | id koloru marki | "custom" (logoHex)
 export function logoColor(b, th = sidebarTheme({ brand: b })) {
@@ -424,7 +429,8 @@ export function siteCss(project, figmaVars, baseCss, url, studioFonts = []) {
   const b = project.brand || {};
   const font = fontOf(project);
   const overrides = { "font/ui/family": FONT_FAMILY[font] };
-  if (b.accent) overrides["brand/accent"] = b.accent;
+  const acc = accentOf(b);
+  if (acc) overrides["brand/accent"] = acc;
   const faces = font === "geist" ? geistFaces(url) : font === "areal" ? fontFaces([{ family: "ABC Areal Variable", files: studioFonts }], url) : "";
   return [faces, tokensCss(figmaVars, overrides), baseCss, sidebarCss(project)].join("\n");
 }
@@ -466,7 +472,7 @@ ${b.favicon ? `<link rel="icon" href="${esc(ctx.url(b.favicon))}">` : ""}
 <meta property="og:title" content="${esc(title)}">
 ${b.ogImage && b.siteUrl ? `<meta property="og:image" content="${esc(new URL(b.ogImage, b.siteUrl.replace(/\/?$/, "/")).href)}">` : ""}
 ${ctx.css.inline != null ? `<style>${ctx.css.inline}</style>` : `<link rel="stylesheet" href="${esc(ctx.css.href)}">`}
-${ctx.preview ? `<style>[data-kh]{cursor:pointer}[data-kh="block"]:hover{outline:1px dashed rgba(0,0,0,.35);outline-offset:6px}.contrast__pair.is--empty .contrast__sample{display:grid;place-items:center;border:1px dashed var(--border-strong);color:var(--text-subtle);text-align:center}</style>` : ""}
+${ctx.preview ? `<style>[data-kh]{cursor:pointer}[data-kh="block"]:hover{outline:1px dashed rgba(0,0,0,.35);outline-offset:6px}.kh-spot{outline:2px solid #2F6BFF!important;outline-offset:-2px;animation:kh-spot 1.6s ease forwards}@keyframes kh-spot{0%,60%{outline-color:#2F6BFF}100%{outline-color:transparent}}.contrast__pair.is--empty .contrast__sample{display:grid;place-items:center;border:1px dashed var(--border-strong);color:var(--text-subtle);text-align:center}</style>` : ""}
 </head>
 <body>
 <div class="page">
