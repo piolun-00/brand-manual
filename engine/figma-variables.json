@@ -74,14 +74,14 @@
      "name": "color/neutral/600",
      "type": "COLOR",
      "values": {
-      "Value": "#737373"
+      "Value": "#6e6e6e"
      }
     },
     {
      "name": "color/red/500",
      "type": "COLOR",
      "values": {
-      "Value": "#ff0000"
+      "Value": "#d70000"
      }
     },
     {

@@ -46,6 +46,10 @@ Przycisk akcji bloku (ZIP, GLB) stoi w jego belce opisu; bez belki — w nagłó
 | `editor/` | edytor (Preact + htm, bez budowania) |
 | `vendor/` | biblioteki edytora: Preact, htm, JSZip, bcryptjs, DOMPurify, three.js (konwersja OBJ) |
 
+## Testy
+`cd tests && npm install && npm test` — Playwright przechodzi przez edytor i eksport: lista kontrolna, komplet plików,
+hasło i szyfrowanie, backup bez hasła, kotwice, Lottie z dysku i leniwe ładowanie, konwersja OBJ → GLB, sprzątanie plików, axe (WCAG).
+
 ## Wdrożenie
 Każdy push na `main` publikuje edytor na GitHub Pages. Numer wersji (`version.json`, `?v=` w `index.html`) nadaje workflow przy wdrożeniu — `scripts/release.sh` służy tylko do testów lokalnych.
 
