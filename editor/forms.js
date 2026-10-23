@@ -83,7 +83,7 @@ export function FontList({ b, up, ctx }) {
         drag=${{ group: "fonts", index: i, onMove: (from, to) => up((x) => moveTo(x.fonts, from, to)) }}
         onRemove=${() => { if (confirm(`Usunąć krój „${f.name || f.family}” z Marki? Bloki, które go pokazują, wrócą do grafiki SVG.`)) up((x) => { x.fonts.splice(i, 1); }); }}>
         <div class="grid2"><${Text} label="Nazwa wyświetlana" value=${f.name} placeholder=${f.family} onInput=${(v) => up((x) => { x.fonts[i].name = v; })} />
-        <${Text} label="Odlewnia" value=${f.foundry} onInput=${(v) => up((x) => { x.fonts[i].foundry = v; })} /></div>
+        <${Text} label="Odlewnia / autor" value=${f.foundry} onInput=${(v) => up((x) => { x.fonts[i].foundry = v; })} /></div>
         <div class="font-styles">${st.map((s) => { const k = f.styles.indexOf(s); return html`<div class="font-styles__row">
           <input type="text" aria-label="Nazwa odmiany" value=${s.label} onInput=${(e) => up((x) => { x.fonts[i].styles[k].label = e.target.value; })} />
           <select aria-label="Grubość" value=${String(s.weight)} onChange=${(e) => up((x) => { x.fonts[i].styles[k].weight = Number(e.target.value); })}>${Object.entries(WEIGHT_NAMES).map(([w, n]) => html`<option value=${w}>${w} ${n}</option>`)}</select>

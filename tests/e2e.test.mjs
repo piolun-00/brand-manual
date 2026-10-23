@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
-import { FIX, OUT, JSZip, browser, editor, openGroup, setPassword, exportManual, chapter, addBlock } from "./helpers.mjs";
+import { FIX, OUT, JSZip, browser, editor, openGroup, setPassword, exportManual, chapter, addBlock, loadProject } from "./helpers.mjs";
 const require = createRequire(import.meta.url);
 
 // ——— testy ———
@@ -152,6 +152,22 @@ test("rozdział: zwinięte karty pokazują podsumowanie i puste pola", async () 
   await (await p.$('.panel input[type=file][multiple][accept*="json"]')).setInputFiles(path.join(FIX, "obrot.json"));
   await p.waitForTimeout(600); await p.click('.panel .card__title:has-text("Animacja Lottie")');
   assert.match(await p.locator('.panel .card:has-text("Animacja Lottie") .card__sub').innerText(), /1 animacja/);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test("typografia: krój bez adresu — bez martwego linku, zostaje nazwa i autor", async () => {
+  const p = await editor("single");
+  await loadProject(p, { edit: (d) => {
+    for (const c of d.chapters) for (const s of c.sections) for (const b of s.blocks) if (b.type === "typeface") {
+      b.foundry = "Jan Autor"; b.license = { ...(b.license || {}), kind: "note", href: "" };
+    }
+  } });
+  const { dir } = await exportManual(p, "kroj-bez-linku");
+  const html = fs.readdirSync(dir, { recursive: true }).filter((f) => f.endsWith(".html")).map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join("\n");
+  assert.match(html, /class="typeface /, "blok Typografia jest w eksporcie");
+  assert.doesNotMatch(html, /typeface__link/, "bez adresu nie ma linku (ani href=\"#\")");
+  assert.match(html, /typeface__name[^>]*>[^<]*<br>Jan Autor/, "autor widoczny pod nazwą kroju");
   assert.deepEqual(p.errors, []);
   await p.context().close();
 });

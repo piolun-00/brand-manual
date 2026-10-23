@@ -247,7 +247,7 @@ export function TypefaceBlock({ b, set, ctx }) {
     <${Select} label="Krój" value=${font ? b.font : ""} options=${fontOptions(ctx)} hint=${(ctx.fonts || []).length ? "" : "Kroje dodajesz w Marka → Kroje marki."} onChange=${(v) => set((x) => { x.font = v || null; })} />
     ${font && !font.licensed && html`<p class="f__warn">Bez potwierdzonej licencji krój widać tylko w podglądzie — w eksporcie blok pokaże grafikę SVG.</p>`}
     <div class="grid2"><${Text} label="Nazwa kroju" value=${b.name} placeholder=${font ? font.name || font.family : ""} onInput=${(v) => set((x) => { x.name = v; })} />
-    <${Text} label="Odlewnia" value=${b.foundry} placeholder=${font?.foundry || ""} onInput=${(v) => set((x) => { x.foundry = v; })} /></div>
+    <${Text} label="Odlewnia / autor" value=${b.foundry} placeholder=${font?.foundry || ""} onInput=${(v) => set((x) => { x.foundry = v; })} /></div>
     ${font
       ? html`<${Text} label="Tekst przykładowy" value=${b.sample} placeholder="Zażółć gęślą jaźń" onInput=${(v) => set((x) => { x.sample = v; })} />`
       : html`<${Text} label="Odmiany" value=${b.weights} placeholder="Regular, Medium, Bold" onInput=${(v) => set((x) => { x.weights = v; })} />`}
@@ -257,7 +257,7 @@ export function TypefaceBlock({ b, set, ctx }) {
     ${l.kind === "file"
       ? html`<${FileField} label="Plik kroju (ZIP)" value=${l.file} accept=".zip" folder="files" ctx=${ctx} onChange=${(p) => set((x) => { x.license = { ...l, file: p }; })} />`
       : html`<div class="grid2"><${Text} label="Tekst linku" value=${l.linkLabel} onInput=${(v) => set((x) => { x.license = { ...l, linkLabel: v }; })} />
-        <${Text} label="Adres odlewni" value=${l.href} placeholder="https://" onInput=${(v) => set((x) => { x.license = { ...l, href: v }; })} /></div>`}`;
+        <${Text} label="Adres kroju" value=${l.href} placeholder="https://" hint="Bez adresu nie ma linku — zostaje nazwa i autor." onInput=${(v) => set((x) => { x.license = { ...l, href: v }; })} /></div>`}`;
 }
 // Skala: z kroju marki liczy się sama (baza × mnożnik), bez kroju — grafika SVG / PNG
 export function TypeScaleBlock({ b, set, ctx }) {

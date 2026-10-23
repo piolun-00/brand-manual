@@ -406,7 +406,8 @@ const BLOCKS = {
     ${specimen}
     <div class="typeface__meta"><span class="typeface__name text-small-relaxed">${t(name)}<br>${t(b.foundry || f?.foundry || "")}</span><span class="typeface__weights text-small-relaxed">${t(weights)}</span>
       <div class="typeface__license"><span class="typeface__note text-small-relaxed">${t(l.note)}</span>${free ? button(ctx, "download", l.file, "Pobierz")
-        : `<a class="typeface__link text-small-relaxed" href="${esc(l.href || "#")}" target="_blank" rel="noopener"><span class="typeface__link-label">${t(l.linkLabel || "Przejdź do kroju")}</span>${icon("external")}</a>`}</div>
+        : l.href ? `<a class="typeface__link text-small-relaxed" href="${esc(l.href)}" target="_blank" rel="noopener"><span class="typeface__link-label">${t(l.linkLabel || "Przejdź do kroju")}</span>${icon("external")}</a>`
+        : ""}</div>
     </div></div>`;
   },
 

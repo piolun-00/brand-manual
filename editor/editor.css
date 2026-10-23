@@ -122,7 +122,10 @@ button { cursor: pointer; }
 }
 
 .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
-.check { display: flex; align-items: center; gap: 8px; }
+/* Pole wyboru przy pierwszym wierszu etykiety — przy tekście na dwie linie nie ląduje między wierszami.
+   Stały rozmiar 14 px + margines = (wysokość wiersza − 14 px) / 2, więc przy jednej linii wygląda jak wyśrodkowane. */
+.check { display: flex; align-items: flex-start; gap: 8px; }
+.check > input[type=checkbox] { flex: none; width: 14px; height: 14px; margin: calc((1lh - 14px) / 2) 0 0; }
 .check__chip { display: inline-block; width: 14px; height: 14px; border: 1px solid var(--line); vertical-align: -2px; flex: none; }
 .menu__file { display: grid; gap: 4px; padding: 6px 8px; }
 .menu__file small { color: var(--muted); }
