@@ -299,6 +299,10 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 .model__note { display: none; max-width: 32ch; text-align: center; color: var(--text-subtle); padding: var(--space-16); }
 .model.is--local .model__note { display: block; }
 .model.is--local model-viewer { visibility: hidden; }
+.footer a { color: inherit; }
+.footer__link { text-decoration: underline; text-decoration-color: transparent; text-underline-offset: .2em; transition: text-decoration-color .15s ease; }
+.footer__link:hover, .footer__link:focus-visible { text-decoration-color: currentColor; }
+.footer__logo-link { display: inline-block; }
 .model__actions { display: flex; justify-content: flex-end; margin-top: var(--space-12); }
 
 .video { position: relative; width: 100%; aspect-ratio: 16 / 9; background: var(--bg-placeholder); display: grid; place-items: center; overflow: hidden; }

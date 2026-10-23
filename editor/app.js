@@ -455,6 +455,11 @@ function ModelBlock({ b, set, ctx }) {
       <${Select} label="Tło" value=${b.background || "surface"} options=${[["surface", "Białe pole"], ["transparent", "Przezroczyste"]]} onChange=${(v) => set((x) => { x.background = v; })} />
     </div>
     <div class="grid2">
+      <${Select} label="Ustawienie modelu" value=${b.upright || "file"} options=${[["file", "Jak w pliku"], ["flip", "Do góry nogami — odwróć"], ["stand-x", "Leży — postaw (pion = oś Z: Rhino, SketchUp, C4D)"], ["stand-x2", "Leży — postaw odwrotnie"], ["stand-z", "Leży na boku — obróć w prawo"], ["stand-z2", "Leży na boku — obróć w lewo"]]} onChange=${(v) => set((x) => { x.upright = v; })} />
+      <${Select} label="Obróć wokół pionu" value=${String(b.yaw || 0)} options=${[["0", "0°"], ["90", "90°"], ["180", "180°"], ["270", "270°"]]} onChange=${(v) => set((x) => { x.yaw = Number(v); })} />
+    </div>
+    <p class="note">Model leży albo stoi do góry nogami? Programy 3D różnie zapisują, która oś to „góra” — wybierz ustawienie, przy którym model stoi prosto, a obrót kręci go wokół pionu. „Obróć wokół pionu” ustawia, która strona patrzy na widza.</p>
+    <div class="grid2">
       <${Select} label="Obrót" value=${b.autoRotate === false ? "off" : String(b.speed || 20)} options=${[["off", "Bez obrotu"], ["10", "Wolny"], ["20", "Średni"], ["40", "Szybki"]]} onChange=${(v) => set((x) => { x.autoRotate = v !== "off"; if (v !== "off") x.speed = Number(v); })} />
       <${Text} label="Opis dla czytników ekranu" value=${b.alt} placeholder="np. Butelka z etykietą" onInput=${(v) => set((x) => { x.alt = v; })} />
     </div>

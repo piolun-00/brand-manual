@@ -162,6 +162,16 @@ function srcset(ctx, path, layout) {
   return ` srcset="${esc(ctx.url(variantOf(path)))} ${v.half}w, ${esc(ctx.url(path))} ${v.full}w" sizes="${SIZES[layout] || SIZES["1"]}"`;
 }
 
+// Model 3D: programy różnie zapisują, która oś jest „do góry” (OBJ z Blendera, Rhino, C4D często leży).
+// Ustawienie = obrót całego modelu (roll pitch yaw w model-viewer) + obrót wokół pionu, żeby patrzył przodem.
+export const MODEL_UPRIGHT = {
+  file: [0, 0], flip: [180, 0], "stand-x": [0, -90], "stand-x2": [0, 90], "stand-z": [-90, 0], "stand-z2": [90, 0]
+};
+function modelOrientation(b) {
+  const [roll, pitch] = MODEL_UPRIGHT[b.upright] || MODEL_UPRIGHT.file;
+  return `${roll}deg ${pitch}deg ${Number(b.yaw) || 0}deg`;
+}
+
 // Rząd zdjęć. layout: 1 | 2-equal | wide-narrow | narrow-wide · ratio: 4/3 | 3/4 | auto
 function imagesRow(ctx, b) {
   const mod = { "1": "is--1up", "wide-narrow": "is--wide-narrow", "narrow-wide": "is--narrow-wide" }[b.layout] || "is--2up";
@@ -256,7 +266,7 @@ const BLOCKS = {
   // Model 3D (GLB): obraca się sam, można go chwycić i obrócić; przewijanie strony nie zoomuje modelu
   model: (ctx, b) => {
     const ratio = b.ratio && b.ratio !== "auto" ? b.ratio.replace("/", " / ") : "16 / 9";
-    const viewer = b.file ? `<model-viewer src="${esc(ctx.url(b.file))}" alt="${esc(b.alt || b.label || "Model 3D")}" camera-controls disable-zoom touch-action="pan-y" interaction-prompt="none"${b.autoRotate === false ? "" : ` auto-rotate auto-rotate-delay="0" rotation-per-second="${b.speed || 20}deg"`} shadow-intensity="${b.shadow === false ? 0 : 0.7}" exposure="1"><div slot="progress-bar"></div></model-viewer>
+    const viewer = b.file ? `<model-viewer src="${esc(ctx.url(b.file))}" alt="${esc(b.alt || b.label || "Model 3D")}" orientation="${modelOrientation(b)}" min-camera-orbit="auto 0deg auto" max-camera-orbit="auto 180deg auto" camera-controls disable-zoom touch-action="pan-y" interaction-prompt="none"${b.autoRotate === false ? "" : ` auto-rotate auto-rotate-delay="0" rotation-per-second="${b.speed || 20}deg"`} shadow-intensity="${b.shadow === false ? 0 : 0.7}" exposure="1"><div slot="progress-bar"></div></model-viewer>
       <span class="model__loader" aria-hidden="true"><span></span></span>
       <span class="model__note text-small">Model 3D wyświetli się po wgraniu manuala na serwer — przeglądarka nie otwiera modeli z dysku.</span>` : `<span class="gallery__placeholder text-small">Model 3D — GLB lub OBJ</span>`;
     return `<div class="model${b.background === "transparent" ? " is--transparent" : ""}" style="aspect-ratio:${ratio}">${viewer}</div>${b.download && b.file && ctx.headerTaken !== b.id ? `<div class="model__actions">${button(ctx, "download", b.file, "Pobierz model (GLB)")}</div>` : ""}`;
@@ -322,9 +332,9 @@ const LOGO_KHOREI = `<svg class="footer__logo" viewBox="0 0 84 22" role="img" ar
 function footer(site) {
   const b = site.brand;
   return `<footer class="footer">
-  <div class="footer__brand">${LOGO_KHOREI}</div>
+  <div class="footer__brand"><a class="footer__logo-link" href="https://khorei.com" target="_blank" rel="noopener" aria-label="KHOREI — khorei.com">${LOGO_KHOREI}</a></div>
   <div class="footer__cols">
-    <div class="footer__col"><span class="footer__text text-footer">Masz pytania?<br>${esc(b.contact || "")}</span><span class="footer__text text-footer">Designed by KHOREI</span></div>
+    <div class="footer__col"><span class="footer__text text-footer">Masz pytania?<br>${/@/.test(b.contact || "") ? `<a class="footer__link" href="mailto:${esc(String(b.contact).trim())}">${esc(String(b.contact).trim())}</a>` : esc(b.contact || "")}</span><span class="footer__text text-footer">Designed by <a class="footer__link" href="https://khorei.com" target="_blank" rel="noopener">KHOREI</a></span></div>
     <div class="footer__col"><span class="footer__text text-footer">${t(b.name)}<br>${t(b.documentTitle)}</span><span class="footer__text text-footer">©${new Date().getFullYear()} ${t(b.name)}</span></div>
     <div class="footer__col"><span class="footer__text text-footer">Wersja ${esc(b.version)}<br>${t(b.date)}</span><span class="footer__text text-footer">KHR</span></div>
   </div>
