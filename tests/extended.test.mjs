@@ -463,11 +463,12 @@ test("demo kodu: bez licencji brak zakładki i not; własna licencja z pliku LIC
 test("demo kodu na dotyku: strona przewija się nad demem, demo działa dopiero po dotknięciu", async () => {
   const p = await editor("single");
   await loadProject(p, { edit: (d) => { const ch = d.chapters.find((c) => c.title === "Animacje"); ch.sections[0].blocks = [
-    { id: "t1", type: "code", line: true, label: "Dotyk", html: "<p>Hej</p>", css: "", js: "", license: "none", height: 480 }]; } });
+    { id: "t1", type: "code", line: true, label: "Dotyk", html: "<p>Hej</p>", css: "", js: "", license: "none", height: 480, startLabel: "Włącz efekty" }]; } });
   const { url } = await exportManual(p, "demo-dotyk");
   const v = await viewer(url, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   await v.evaluate(() => document.querySelector(".code-demo").scrollIntoView({ block: "center" })); await v.waitForTimeout(400);
   assert.ok(await v.isVisible("[data-code-shield]"), "warstwa „Dotknij, aby uruchomić demo”");
+  assert.equal((await v.$eval(".code-demo__start", (e) => e.textContent)).trim(), "Włącz efekty", "własny napis startu");
   await v.tap("[data-code-shield]");
   assert.ok(await v.$eval(".code-demo", (e) => e.classList.contains("is--active")));
   assert.ok(!(await v.isVisible("[data-code-shield]")) && await v.isVisible("[data-code-done]"), "demo aktywne, jest „Gotowe”");

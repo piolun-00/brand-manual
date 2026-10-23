@@ -185,6 +185,7 @@ export function CodeBlock({ b, set, ctx }) {
       <${Select} label="Wysokość podglądu" value=${String(b.height || 480)} options=${[["320", "320 px"], ["480", "480 px"], ["640", "640 px"], ["800", "800 px"]]} onChange=${(v) => set((x) => { x.height = Number(v); })} />
       <label class="check is--line"><input type="checkbox" checked=${b.download !== false} onChange=${(e) => set((x) => { x.download = e.target.checked; })} />Pobieranie kodu (ZIP)</label>
     </div>
+    <${Text} label="Napis startu na telefonie i tablecie" value=${b.startLabel} placeholder="Dotknij, aby uruchomić demo" hint="Pasek pod demem na ekranach dotykowych — do jego dotknięcia palec przewija manual, a nie demo." onInput=${(v) => set((x) => { x.startLabel = v; })} />
     <b class="group__sub">Licencja kodu</b>
     <${Select} label="Licencja" value=${lm} options=${[["none", "Bez licencji — bez zakładki „Licencja”"], ["brand", "Do stosowania w marce zamawiającego"], ["view", "Tylko do wglądu — pokaz rozwiązania"], ["owned", "Prawa przeniesione na zamawiającego (umowa)"], ["custom", "Własny tekst licencji (wklej albo wgraj LICENSE)"]]} onChange=${(v) => set((x) => { x.license = v; })} />
     ${lm === "custom" && html`<${Text} label="Treść licencji" multiline code rows="8" value=${b.licenseText} placeholder="Wklej tekst licencji albo wgraj plik LICENSE razem z kodem" onInput=${(v) => set((x) => { x.licenseText = v; })} />`}

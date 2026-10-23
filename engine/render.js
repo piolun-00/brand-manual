@@ -387,7 +387,7 @@ const BLOCKS = {
       ${lic?.mode === "view" ? "" : ctx.preview ? `<button type="button" class="code-demo__tool text-small" data-code-open>Otwórz ↗</button>` : `<a class="code-demo__tool text-small" href="${esc(ctx.url(demoPath(b) + "index.html"))}" target="_blank" rel="noopener">Otwórz ↗</a>`}
     </span></div>
   <div class="code-demo__panel code-demo__stage" id="${id}-run" role="tabpanel"><iframe class="code-demo__frame" title="${esc(b.label || "Demo kodu")}" style="height:${h}px" ${src}></iframe><button type="button" class="code-demo__shield" data-code-shield aria-label="Uruchom demo"></button></div>
-  <button type="button" class="code-demo__start text-small" data-code-shield>Dotknij, aby uruchomić demo</button>
+  <button type="button" class="code-demo__start text-small" data-code-shield>${esc((b.startLabel || "").trim() || "Dotknij, aby uruchomić demo")}</button>
   ${showCode ? parts.map(([k, l, v]) => `<pre class="code-demo__panel code-demo__code${lic?.mode === "view" ? " is--locked" : ""}" id="${id}-${k}" role="tabpanel" aria-label="${l}" tabindex="0" hidden><code>${esc((H ? (k === "html" ? H.html : H.code) + "\n\n" : "") + v)}</code></pre>`).join("") : ""}
   ${lic ? `<pre class="code-demo__panel code-demo__code code-demo__licence" id="${id}-license" role="tabpanel" aria-label="Licencja" tabindex="0" hidden>${esc(demoLicenseText(lic))}</pre>
   <p class="code-demo__license text-small">© ${lic.year} ${esc(lic.author || "Radosław Prośniak (KHOREI)")} · ${esc(CODE_LICENSES[lic.mode])} · ${lic.mode === "view" ? "kodu nie wolno kopiować ani wykorzystywać · " : lic.mode === "brand" ? "tylko w kanałach marki " + esc(lic.brand) + " · " : lic.mode === "owned" ? "prawa: " + esc(lic.brand) + " · " : ""}warunki w zakładce „Licencja”</p>` : ""}
