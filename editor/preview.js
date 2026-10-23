@@ -111,6 +111,10 @@ export function Preview({ project, page, setPage, urls, focus, studio, onSelect,
       if (e.source !== frame.current?.contentWindow) return;
       if (e.data?.khorei === "page") setPage(e.data.page);
       if (e.data?.khorei === "select") selectRef.current?.({ section: e.data.section, block: e.data.block });
+      if (e.data?.khorei === "open-demo" && e.source === frame.current?.contentWindow) {
+        const url = URL.createObjectURL(new Blob([String(e.data.html || "")], { type: "text/html" }));
+        window.open(url, "_blank"); setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
     };
     addEventListener("message", on); return () => removeEventListener("message", on);
   }, []);

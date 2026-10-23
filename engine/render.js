@@ -384,7 +384,7 @@ const BLOCKS = {
       <button type="button" class="code-demo__tool text-small" data-code-done hidden>Gotowe</button>
       <button type="button" class="code-demo__tool text-small" data-code-restart>Uruchom ponownie</button>
       ${lic?.mode === "view" ? "" : `<button type="button" class="code-demo__tool text-small" data-code-copy hidden>Kopiuj</button>`}
-      ${ctx.preview || lic?.mode === "view" ? "" : `<a class="code-demo__tool text-small" href="${esc(ctx.url(demoPath(b) + "index.html"))}" target="_blank" rel="noopener">Otwórz ↗</a>`}
+      ${lic?.mode === "view" ? "" : ctx.preview ? `<button type="button" class="code-demo__tool text-small" data-code-open>Otwórz ↗</button>` : `<a class="code-demo__tool text-small" href="${esc(ctx.url(demoPath(b) + "index.html"))}" target="_blank" rel="noopener">Otwórz ↗</a>`}
     </span></div>
   <div class="code-demo__panel code-demo__stage" id="${id}-run" role="tabpanel"><iframe class="code-demo__frame" title="${esc(b.label || "Demo kodu")}" style="height:${h}px" ${src}></iframe><button type="button" class="code-demo__shield" data-code-shield aria-label="Uruchom demo"></button></div>
   <button type="button" class="code-demo__start text-small" data-code-shield>Dotknij, aby uruchomić demo</button>

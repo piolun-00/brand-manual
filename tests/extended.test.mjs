@@ -444,6 +444,8 @@ test("demo kodu: bez licencji brak zakładki i not; własna licencja z pliku LIC
   assert.equal(await p.inputValue('.panel .f:has-text("Licencja") select'), "view", "nowy blok: domyślnie tylko do wglądu");
   await p.selectOption('.panel .f:has-text("Licencja") select', "none"); await p.waitForTimeout(500);
   assert.deepEqual(await prev.$$eval(".code-demo [data-code-tab]", (t) => t.map((x) => x.dataset.codeTab)), ["run", "html", "css", "js"], "bez licencji — bez zakładki Licencja");
+  const [pop] = await Promise.all([p.waitForEvent("popup"), prev.click(".code-demo [data-code-open]")]);
+  await pop.waitForLoadState(); assert.ok(await pop.$(".licznik"), "Otwórz ↗ w podglądzie otwiera demo w nowej karcie"); await pop.close();
   let { zip } = await exportManual(p, "demo-bez-licencji");
   let inner = await JSZip.loadAsync(await zip.file(Object.keys(zip.files).find((f) => /-kod\.zip$/.test(f))).async("nodebuffer"));
   assert.ok(!inner.files["LICENSE.txt"], "bez LICENSE.txt"); assert.doesNotMatch(await inner.file("style.css").async("string"), /Wszelkie prawa/, "bez noty w pliku");

@@ -129,6 +129,12 @@ export const RUNTIME = `
     }
     if (e.target.closest("[data-code-shield]")) { setActive(demo, true); return; }
     if (e.target.closest("[data-code-done]")) { setActive(demo, false); return; }
+    if (e.target.closest("[data-code-open]")) {
+      // Podgląd w edytorze: demo nie ma jeszcze własnej strony — otwieramy jego kod jako plik tymczasowy
+      // (ramka podglądu nie może otwierać okien — prosimy o to edytor)
+      parent.postMessage({ khorei: "open-demo", html: demo.querySelector("iframe").getAttribute("srcdoc") || "" }, "*");
+      return;
+    }
     if (e.target.closest("[data-code-restart]")) {
       const f = demo.querySelector("iframe");
       if (f.hasAttribute("srcdoc")) f.srcdoc = f.srcdoc; else f.src = f.src;
