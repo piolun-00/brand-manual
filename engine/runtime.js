@@ -113,7 +113,7 @@ export const RUNTIME = `
     if (tab) {
       demo.querySelectorAll("[data-code-tab]").forEach((t) => { const on = t === tab; t.classList.toggle("is--on", on); t.setAttribute("aria-selected", String(on)); });
       demo.querySelectorAll('[role="tabpanel"]').forEach((p) => { p.hidden = p.id !== tab.getAttribute("aria-controls"); });
-      demo.querySelector("[data-code-copy]").hidden = tab.dataset.codeTab === "run";
+      const cp = demo.querySelector("[data-code-copy]"); if (cp) cp.hidden = tab.dataset.codeTab === "run";
       demo.querySelector("[data-code-restart]").hidden = tab.dataset.codeTab !== "run";
       return;
     }

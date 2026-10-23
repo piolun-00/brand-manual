@@ -15,7 +15,7 @@
 const VQ = new URL(import.meta.url).search;
 const { tokensCss, fontFaces } = await import("./tokens.js" + VQ);
 const { RUNTIME } = await import("./runtime.js" + VQ);
-const { htmlHeader, codeHeader, metaTags } = await import("./legal.js" + VQ);
+const { htmlHeader, codeHeader, metaTags, demoHeaders, demoSig, CODE_LICENSES } = await import("./legal.js" + VQ);
 
 // ——— Narzędzia ———
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -142,6 +142,11 @@ function toc(ctx, chapter) {
 //  — gdy oba miejsca zajęte → nad blokiem, w panelu.
 const hasMeta = (b) => !!(b.line || (b.label || "").trim() || (b.text || "").trim());
 // ——— Demo kodu ———
+// Dane do noty licencyjnej dema (sygnatura z manuala + znacznik bloku; w podglądzie sygnatura jeszcze nie istnieje)
+export function demoLicense(b, brand = {}, legal = null) {
+  return { label: b.label || "Demo kodu", brand: brand.name || "", author: b.author || "", mode: b.license || "view", contract: b.contract || "",
+    year: legal?.year || new Date().getFullYear(), sig: demoSig(legal?.sig || "KHOREI-BM-PODGLAD", b.id), url: (brand.siteUrl || "").trim(), contact: brand.contact || "" };
+}
 export const demoPath = (b) => `demos/${slugify(b.label || "") || "demo"}-${String(b.id || "x").slice(0, 6)}/`;
 // Wklejony cały dokument → zostaje treść <body> i zewnętrzne biblioteki z <head>; lokalne style i skrypty
 // zastępujemy naszymi plikami style.css / script.js (to te same treści z pól CSS i JS)
@@ -156,21 +161,23 @@ export function demoParts(html) {
   return { head: keep, body };
 }
 // Dokument demo. inline: CSS i JS w środku (podgląd w edytorze); inaczej osobne pliki (eksport, ZIP)
-export function demoDoc(b, { fonts = "", inline = true } = {}) {
+export function demoDoc(b, { fonts = "", inline = true, lic = null } = {}) {
   const { head, body } = demoParts(b.html);
+  const H = lic ? demoHeaders(lic) : null;
   return `<!doctype html>
-<html lang="pl">
+${H ? H.html + "\n" : ""}<html lang="pl"${lic ? ` data-build="${esc(lic.sig)}"` : ""}>
 <head>
 <meta charset="utf-8">
+${lic ? `<meta name="robots" content="noindex, noai, noimageai">\n<meta name="tdm-reservation" content="1">\n<meta name="copyright" content="© ${lic.year} ${esc(lic.author || "Radosław Prośniak (KHOREI)")} — ${esc(CODE_LICENSES[lic.mode] || "")}">\n` : ""}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(b.label || "Demo kodu")}</title>
 ${fonts ? `<style>${fonts}</style>\n` : ""}<style>html,body{margin:0}body{font-family:"Geist",system-ui,sans-serif}</style>
 ${head}
-${inline ? `<style>\n${String(b.css || "").replace(/<\/style/gi, "<\\/style")}\n</style>` : `<link rel="stylesheet" href="style.css">`}
+${inline ? `<style>\n${H ? H.code + "\n" : ""}${String(b.css || "").replace(/<\/style/gi, "<\\/style")}\n</style>` : `<link rel="stylesheet" href="style.css">`}
 </head>
 <body>
 ${body}
-${inline ? `<script>\n${String(b.js || "").replace(/<\/script/gi, "<\\/script")}\n</script>` : `<script src="script.js"></script>`}
+${inline ? `<script>\n${H ? H.code + "\n" : ""}${String(b.js || "").replace(/<\/script/gi, "<\\/script")}\n</script>` : `<script src="script.js"></script>`}
 </body>
 </html>`;
 }
@@ -356,23 +363,26 @@ const BLOCKS = {
   // Skala typograficzna jako grafika (SVG/PNG) — bez webfontu klienta. Szerokość kolumny, wysokość z pliku.
   // Demo kodu: działający przykład (HTML / CSS / JS) w ramce + podgląd kodu w zakładkach.
   // W eksporcie każde demo to osobny folder demos/<id>/ — da się go otworzyć i skopiować w całości.
-  code: (ctx, b) => {
+  code: (ctx, b, site) => {
+    const lic = demoLicense(b, site?.brand || {}, ctx.legal), H = demoHeaders(lic);
+    const showCode = b.showCode !== false;
     const parts = [["html", "HTML", b.html], ["css", "CSS", b.css], ["js", "JS", b.js]].filter(([, , v]) => (v || "").trim());
     if (!parts.length) return `<div class="code-demo is--empty"><span class="gallery__placeholder text-small">Demo kodu — wklej albo wgraj HTML, CSS i JS</span></div>`;
     const id = `demo-${esc(b.id || "x")}`, h = Number(b.height) || 480;
     const src = ctx.preview
-      ? `srcdoc="${esc(demoDoc(b, { fonts: ctx.demoFonts || "" }))}" sandbox="allow-scripts allow-popups allow-pointer-lock"`
+      ? `srcdoc="${esc(demoDoc(b, { fonts: ctx.demoFonts || "", lic }))}" sandbox="allow-scripts allow-popups allow-pointer-lock"`
       : `src="${esc(ctx.url(demoPath(b) + "index.html"))}" loading="lazy"`;
     const tab = (key, label, on) => `<button type="button" class="code-demo__tab text-small${on ? " is--on" : ""}" role="tab" aria-selected="${on}" aria-controls="${id}-${key}" data-code-tab="${key}">${label}</button>`;
     return `<div class="code-demo" data-code-demo>
-  <div class="code-demo__bar" role="tablist">${tab("run", "Podgląd", true)}${parts.map(([k, l]) => tab(k, l, false)).join("")}
+  <div class="code-demo__bar" role="tablist">${tab("run", "Podgląd", true)}${showCode ? parts.map(([k, l]) => tab(k, l, false)).join("") : ""}
     <span class="code-demo__tools">
       <button type="button" class="code-demo__tool text-small" data-code-restart>Uruchom ponownie</button>
-      <button type="button" class="code-demo__tool text-small" data-code-copy hidden>Kopiuj</button>
+      ${lic.mode === "view" ? "" : `<button type="button" class="code-demo__tool text-small" data-code-copy hidden>Kopiuj</button>`}
       ${ctx.preview ? "" : `<a class="code-demo__tool text-small" href="${esc(ctx.url(demoPath(b) + "index.html"))}" target="_blank" rel="noopener">Otwórz ↗</a>`}
     </span></div>
   <div class="code-demo__panel" id="${id}-run" role="tabpanel"><iframe class="code-demo__frame" title="${esc(b.label || "Demo kodu")}" style="height:${h}px" ${src}></iframe></div>
-  ${parts.map(([k, l, v]) => `<pre class="code-demo__panel code-demo__code" id="${id}-${k}" role="tabpanel" aria-label="${l}" tabindex="0" hidden><code>${esc(v)}</code></pre>`).join("")}
+  ${showCode ? parts.map(([k, l, v]) => `<pre class="code-demo__panel code-demo__code${lic.mode === "view" ? " is--locked" : ""}" id="${id}-${k}" role="tabpanel" aria-label="${l}" tabindex="0" hidden><code>${esc((k === "html" ? H.html : H.code) + "\n\n" + v)}</code></pre>`).join("") : ""}
+  <p class="code-demo__license text-small">© ${lic.year} ${esc(lic.author || "Radosław Prośniak (KHOREI)")} · ${esc(CODE_LICENSES[lic.mode])} · ${lic.mode === "view" ? "kodu nie wolno kopiować ani wykorzystywać" : lic.mode === "brand" ? "tylko w kanałach marki " + esc(lic.brand) : "prawa: " + esc(lic.brand)} · warunki w LICENSE.txt w paczce kodu</p>
 </div>${b.download !== false && !ctx.placed?.has?.(b.id) ? `<div class="code-demo__actions">${button(ctx, "download", ctx.codeZips?.get?.(b.id || "") || null, "Pobierz kod (ZIP)")}</div>` : ""}`;
   },
 

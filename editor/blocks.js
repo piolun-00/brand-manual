@@ -182,6 +182,13 @@ export function CodeBlock({ b, set, ctx }) {
       <${Select} label="Wysokość podglądu" value=${String(b.height || 480)} options=${[["320", "320 px"], ["480", "480 px"], ["640", "640 px"], ["800", "800 px"]]} onChange=${(v) => set((x) => { x.height = Number(v); })} />
       <label class="check is--line"><input type="checkbox" checked=${b.download !== false} onChange=${(e) => set((x) => { x.download = e.target.checked; })} />Pobieranie kodu (ZIP)</label>
     </div>
+    <b class="group__sub">Licencja kodu</b>
+    <${Select} label="Licencja" value=${b.license || "view"} options=${[["brand", "Do stosowania w marce zamawiającego"], ["view", "Tylko do wglądu — pokaz rozwiązania"], ["owned", "Prawa przeniesione na zamawiającego (umowa)"]]} onChange=${(v) => set((x) => { x.license = v; if (v === "view") x.download = false; })} />
+    <div class="grid2">
+      <${Text} label="Autor kodu" value=${b.author} placeholder="Radosław Prośniak (KHOREI)" onInput=${(v) => set((x) => { x.author = v; })} />
+      ${(b.license || "view") === "owned" ? html`<${Text} label="Umowa (nr / data)" value=${b.contract} placeholder="np. umowa z 12.10.2026" onInput=${(v) => set((x) => { x.contract = v; })} />` : html`<label class="check is--line"><input type="checkbox" checked=${b.showCode !== false} onChange=${(e) => set((x) => { x.showCode = e.target.checked; })} />Pokazuj kod w zakładkach</label>`}
+    </div>
+    <p class="note">${{ brand: "Zamawiający może używać kodu tylko w kanałach swojej marki (także przez swoich wykonawców); bez innych marek, odsprzedaży i publikowania źródeł.", view: "Kod tylko do obejrzenia: bez prawa kopiowania i użycia — także dla zamawiającego. W manualu nie ma przycisku „Kopiuj”, a kodu nie da się zaznaczyć myszą.", owned: "Prawa majątkowe ma zamawiający; Ty zachowujesz autorstwo. Osoby oglądające manual i tak nie dostają żadnych praw." }[b.license || "view"]} Każdy plik dema dostaje notę i sygnaturę, paczka ZIP — plik LICENSE.txt. To utrudnia i daje podstawę prawną, ale kodu działającego w przeglądarce nie da się w pełni ukryć.</p>
     <p class="note">Demo działa na żywo w ramce — w podglądzie i w manualu. W eksporcie trafia też do folderu demos/ jako osobna, działająca strona (backup rozwiązania dla klienta). Krój manuala jest dostępny w demo jako „Geist”. Obrazki i fonty spoza kodu dodawaj jako pełne adresy https.</p>`;
 }
 

@@ -345,4 +345,7 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 .code-demo__tools { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--space-4); }
 .code-demo__frame { display: block; width: 100%; border: 0; background: #fff; }
 .code-demo__code { margin: 0; padding: var(--space-16); max-height: 480px; overflow: auto; font: 12px/1.6 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--text-primary); white-space: pre; tab-size: 2; }
+/* Tylko do wglądu: bez zaznaczania i kopiowania myszą (to utrudnienie, nie zabezpieczenie — prawo daje nota) */
+.code-demo__code.is--locked { -webkit-user-select: none; user-select: none; }
+.code-demo__license { margin: 0; padding: var(--space-8) var(--space-12); border-top: 1px solid var(--border-subtle); color: var(--text-subtle); }
 .code-demo__actions { display: flex; justify-content: flex-end; margin-top: var(--space-12); }

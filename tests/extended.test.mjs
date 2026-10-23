@@ -374,7 +374,14 @@ test("demo kodu: wgranie plików, podgląd na żywo, zakładki, eksport z folder
   assert.match(await zip.file(dir).async("string"), /fonts\/geist/, "demo ma dostęp do kroju manuala");
   const zpath = Object.keys(zip.files).find((f) => /^files\/.*-kod\.zip$/.test(f));
   const inner = await JSZip.loadAsync(await zip.file(zpath).async("nodebuffer"));
-  assert.deepEqual(Object.keys(inner.files).sort(), ["CZYTAJ.txt", "index.html", "script.js", "style.css"]);
+  assert.deepEqual(Object.keys(inner.files).sort(), ["CZYTAJ.txt", "LICENSE.txt", "index.html", "script.js", "style.css"]);
+  // licencja: nota i sygnatura w każdym pliku, LICENSE.txt w paczce
+  const sig = (await zip.file("index.html").async("string")).match(/data-build="([^"]+)"/)[1];
+  const css = await inner.file("style.css").async("string"), lic = await inner.file("LICENSE.txt").async("string");
+  assert.match(css, new RegExp("^/\\* [\\s\\S]*Sygnatura: " + sig + "-D[0-9A-F]{6}"), "nota z sygnaturą manuala na początku CSS");
+  assert.match(await inner.file("script.js").async("string"), /Wszelkie prawa zastrzeżone/);
+  assert.match(await inner.file("index.html").async("string"), /<html lang="pl" data-build="KHOREI-BM-\d{4}-[0-9A-F]{16}-D[0-9A-F]{6}"/);
+  assert.match(lic, /Licencja: Do stosowania w marce zamawiającego/); assert.match(lic, /nie oznaczają udzielenia licencji/);
   const v = await viewer(url);
   await v.evaluate(() => document.querySelector(".code-demo").scrollIntoView()); await v.waitForTimeout(800);
   const ef = await demoFrame(v);
@@ -384,6 +391,8 @@ test("demo kodu: wgranie plików, podgląd na żywo, zakładki, eksport z folder
   await v.click('.code-demo [data-code-tab="css"]');
   assert.ok(await v.isVisible(".code-demo__code:not([hidden])")); assert.ok(!(await v.isVisible(".code-demo iframe")));
   assert.match(await v.$eval(".code-demo__code:not([hidden])", (e) => e.textContent), /\.licznik/);
+  assert.match(await v.$eval(".code-demo__code:not([hidden])", (e) => e.textContent), /^\/\* [\s\S]*Wszelkie prawa zastrzeżone/, "kod w zakładce zaczyna się od noty");
+  assert.match(await v.$eval(".code-demo__license", (e) => e.textContent), /Do stosowania w marce/);
   assert.deepEqual([...v.errors, ...v.missing], []);
   await v.context().close(); await p.context().close();
 });
@@ -402,4 +411,20 @@ test("Shift+Spacja wstawia twardą spację w polach tekstowych (nie w polach kod
   await p.focus(c); await p.keyboard.type("a"); await p.keyboard.press("Shift+Space"); await p.keyboard.type("b");
   assert.equal(await p.inputValue(c), "a b", "w polu kodu zwykła spacja");
   await p.context().close();
+});
+
+test("demo kodu „Tylko do wglądu”: bez kopiowania, kod niezaznaczalny; opcja ukrycia kodu", async () => {
+  const p = await editor("single");
+  await loadProject(p, { edit: (d) => { const ch = d.chapters.find((c) => c.title === "Animacje"); ch.sections[0].blocks = [
+    { id: "v1", type: "code", line: true, label: "Pokaz", html: "<p>Hej</p>", css: "p{color:red}", js: "window.__demo=1", license: "view", height: 320 },
+    { id: "h1", type: "code", line: true, label: "Ukryty", html: "<p>Hej</p>", css: "p{}", js: "", license: "brand", showCode: false, height: 320 }]; } });
+  const { url } = await exportManual(p, "demo-wglad");
+  const v = await viewer(url);
+  const demos = await v.$$(".code-demo");
+  assert.equal(await demos[0].$("[data-code-copy]"), null, "bez przycisku Kopiuj");
+  assert.equal(await demos[0].$eval(".code-demo__code", (e) => getComputedStyle(e).userSelect), "none");
+  assert.match(await demos[0].$eval(".code-demo__license", (e) => e.textContent), /Tylko do wglądu/);
+  assert.equal((await demos[1].$$("[data-code-tab]")).length, 1, "ukryty kod: tylko zakładka Podgląd");
+  assert.equal(await demos[1].$(".code-demo__code"), null);
+  await v.context().close(); await p.context().close();
 });

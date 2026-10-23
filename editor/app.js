@@ -22,7 +22,7 @@ function Safe({ children, label }) {
 }
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
-const { BASE_CSS, CAN_FOLDER, demoDoc, demoFonts, demoPath, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, uid, usedAssets, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
+const { BASE_CSS, CAN_FOLDER, demoDoc, demoFonts, demoLicense, demoPath, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, uid, usedAssets, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
 const { ChapterForm } = await import("./blocks.js" + Q);
 const { BrandForm, PublishForm, StudioForm, brandWarnings } = await import("./forms.js" + Q);
 const { Preview } = await import("./preview.js" + Q);
@@ -416,14 +416,19 @@ function App() {
     for (const bl of codeBlocks) {
       const dir = demoPath(bl);
       const fonts = font === "geist" ? demoFonts((p) => "../../" + p) : "";
-      zip.file(dir + "index.html", demoDoc(bl, { fonts, inline: false }));
-      zip.file(dir + "style.css", bl.css || "");
-      zip.file(dir + "script.js", bl.js || "");
+      // Każdy plik dema dostaje notę licencyjną i sygnaturę — także po skopiowaniu z manuala
+      const lic = demoLicense(bl, project.brand, extra.legal), H = legal.demoHeaders(lic);
+      const css = `${H.code}\n\n${bl.css || ""}`, js = `${H.code}\n\n${bl.js || ""}`;
+      zip.file(dir + "index.html", demoDoc(bl, { fonts, inline: false, lic }));
+      zip.file(dir + "style.css", css);
+      zip.file(dir + "script.js", js);
+      zip.file(dir + "LICENSE.txt", legal.demoLicenseText(lic));
       if (bl.download === false) continue;
       const cz = new JSZip();
-      cz.file("index.html", demoDoc(bl, { inline: false }));
-      cz.file("style.css", bl.css || ""); cz.file("script.js", bl.js || "");
-      cz.file("CZYTAJ.txt", `${bl.label || "Demo kodu"} — ${project.brand.name || ""}\n\nOtwórz index.html w przeglądarce. Kod: index.html (treść), style.css, script.js.\nKrój Geist (OFL) nie jest dołączony — strona użyje kroju systemowego, dopóki nie podłączysz własnego.\n`);
+      cz.file("index.html", demoDoc(bl, { inline: false, lic }));
+      cz.file("style.css", css); cz.file("script.js", js);
+      cz.file("LICENSE.txt", legal.demoLicenseText(lic));
+      cz.file("CZYTAJ.txt", `${bl.label || "Demo kodu"} — ${project.brand.name || ""}\n\nLicencja: ${legal.CODE_LICENSES[lic.mode]} — warunki w LICENSE.txt. Pobranie paczki nie jest udzieleniem licencji.\n\nOtwórz index.html w przeglądarce. Kod: index.html (treść), style.css, script.js.\nKrój Geist (OFL) nie jest dołączony — strona użyje kroju systemowego, dopóki nie podłączysz własnego.\n`);
       const zpath = `files/${slugify(project.brand.name) || "marka"}-${slugify(bl.label || "") || "demo"}-kod.zip`;
       zip.file(zpath, await cz.generateAsync({ type: "blob", compression: "DEFLATE" }));
       extra.codeZips.set(bl.id, zpath);
