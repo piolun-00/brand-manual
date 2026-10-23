@@ -671,22 +671,10 @@ function BrandForm({ b, set, ctx }) {
       <${ColorList} b=${b} up=${up} ctx=${ctx} />
     <//>
 
-    <${Group} id="look" title="Wygląd manuala" open=${open.look} onToggle=${toggle} warn=${w.look} onSpot=${() => ctx.spot(".sidebar")}
-      summary=${[font === "geist" ? "Geist" : font === "areal" ? "Areal" : "systemowy", th ? `pasek ${th.name}` : "pasek biały", lcName].join(" · ")}>
-      <b class="group__sub">Krój</b>
-      <${Select} label="Krój manuala" value=${font} options=${[["geist", "Geist (domyślny, darmowa licencja OFL)"], ["areal", "ABC Areal — tylko z licencją webową klienta"], ["system", "Systemowy (SF Pro, Segoe UI, Helvetica, Arial)"]]} onChange=${(v) => up((x) => { x.font = v; })} />
-      <p class="note">${font === "areal" ? "Licencja Dinamo obejmuje jedną domenę i jednego licencjobiorcę — klient musi kupić własną licencję webową na swoją domenę. Pliki wgrywasz w menu projektu → Krój ABC Areal." : font === "geist" ? "Geist jest na licencji SIL Open Font License — wolno go dołączyć do strony klienta. Pliki (ok. 95 KB) trafiają do eksportu." : "Bez plików fontu — każdy zobaczy krój swojego systemu."}</p>
-
-      <b class="group__sub">Akcent</b>
-      <${ColorPick} label="Kolor akcentu" b=${b} value=${b.accentColor || (b.accent ? "custom" : "")} hex=${b.accent || "#000000"} defLabel="Domyślny (czarny)"
-        onPick=${(v) => up((x) => { x.accentColor = v || null; if (v === "custom" && !x.accent) x.accent = "#000000"; if (!v) x.accent = null; })} onHex=${(v) => up((x) => { x.accent = v; })} />
-      <p class="note">Linki, aktywna pozycja spisu, przyciski. Kolor z palety zmienia się razem z paletą.</p>
-
-      <b class="group__sub">Pasek boczny</b>
-      <${FileField} label="Logo (SVG)" value=${b.logo} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 210, h: 72 }} hint="Ramka 210×72 z Figmy, przezroczysta" onChange=${(p) => up((x) => { x.logo = p; })} />
-      <${ColorPick} label="Kolor paska" b=${b} value=${th || b.sidebarColor === "custom" ? b.sidebarColor : ""} hex=${b.sidebarHex} defLabel="Domyślny (biały)"
-        onPick=${(v) => up((x) => { x.sidebarColor = v || null; if (v === "custom" && !x.sidebarHex) x.sidebarHex = "#1C1C1C"; })} onHex=${(v) => up((x) => { x.sidebarHex = v; })} />
-      ${th && html`<p class="note">Tekst spisu: ${th.dark ? "jasny" : "ciemny"} (kontrast ${th.ratio.toFixed(1).replace(".", ",")}:1).${th.underline ? ` Akcent ma na tym tle tylko ${contrastRatio(th.bg, accent).toFixed(1).replace(".", ",")}:1, więc aktywna pozycja będzie ${th.dark ? "biała" : "czarna"} z podkreśleniem.` : " Aktywna pozycja w kolorze akcentu."} Ten sam kolor ma menu „Indeks” i górny pasek na tablecie i telefonie.</p>`}
+    <${Group} id="look" title="Logo i oprawa" open=${open.look} onToggle=${toggle} warn=${w.look} onSpot=${() => ctx.spot(".sidebar")}
+      summary=${[b.logo ? lcName : "bez logo", th ? `pasek ${th.name}` : "pasek biały", font === "geist" ? "Geist" : font === "areal" ? "Areal" : "systemowy"].join(" · ")}>
+      <b class="group__sub">Logo</b>
+      <${FileField} label="Plik logo (SVG)" value=${b.logo} accept=".svg,image/svg+xml,image/png" folder="media" ctx=${ctx} expect=${{ w: 210, h: 72 }} hint="Ramka 210×72 z Figmy, przezroczysta" onChange=${(p) => up((x) => { x.logo = p; })} />
       <${ColorPick} label="Kolor logo (SVG)" b=${b} value=${lc} hex=${b.logoHex} extra=${[["file", "Z pliku"], ["auto", "Automatycznie — biel lub czerń do tła"]]}
         onPick=${(v) => up((x) => { x.logoColor = v; if (v === "custom" && !x.logoHex) x.logoHex = "#FFFFFF"; })} onHex=${(v) => up((x) => { x.logoHex = v; })} />
       ${lc !== "file" && html`<p class="note">Logo staje się jednobarwne — wszystkie elementy dostają ten kolor. Logo wielobarwne zostaw „Z pliku”.</p>`}
@@ -694,9 +682,35 @@ function BrandForm({ b, set, ctx }) {
         hint=${th?.dark ? (b.logoDark ? "Używane teraz — pasek jest ciemny." : "Pasek jest ciemny: wgraj jasną wersję logo albo ustaw kolor logo wyżej.") : "Używane automatycznie, gdy pasek jest ciemny."}
         onChange=${(p) => up((x) => { x.logoDark = p; })} />`}
 
+
+      <b class="group__sub">Pasek boczny</b>
+      <${ColorPick} label="Kolor paska" b=${b} value=${th || b.sidebarColor === "custom" ? b.sidebarColor : ""} hex=${b.sidebarHex} defLabel="Domyślny (biały)"
+        onPick=${(v) => up((x) => { x.sidebarColor = v || null; if (v === "custom" && !x.sidebarHex) x.sidebarHex = "#1C1C1C"; })} onHex=${(v) => up((x) => { x.sidebarHex = v; })} />
+      ${th && html`<p class="note">Tekst spisu: ${th.dark ? "jasny" : "ciemny"} (kontrast ${th.ratio.toFixed(1).replace(".", ",")}:1).${th.underline ? ` Akcent ma na tym tle tylko ${contrastRatio(th.bg, accent).toFixed(1).replace(".", ",")}:1, więc aktywna pozycja będzie ${th.dark ? "biała" : "czarna"} z podkreśleniem.` : " Aktywna pozycja w kolorze akcentu."} Ten sam kolor ma menu „Indeks” i górny pasek na tablecie i telefonie.</p>`}
+      <b class="group__sub">Akcent</b>
+      <${ColorPick} label="Kolor akcentu" b=${b} value=${b.accentColor || (b.accent ? "custom" : "")} hex=${b.accent || "#000000"} defLabel="Domyślny (czarny)"
+        onPick=${(v) => up((x) => { x.accentColor = v || null; if (v === "custom" && !x.accent) x.accent = "#000000"; if (!v) x.accent = null; })} onHex=${(v) => up((x) => { x.accent = v; })} />
+      <p class="note">Linki, aktywna pozycja spisu, przyciski. Kolor z palety zmienia się razem z paletą.</p>
+
+      <b class="group__sub">Krój</b>
+      <${Select} label="Krój manuala" value=${font} options=${[["geist", "Geist (domyślny, darmowa licencja OFL)"], ["areal", "ABC Areal — tylko z licencją webową klienta"], ["system", "Systemowy (SF Pro, Segoe UI, Helvetica, Arial)"]]} onChange=${(v) => up((x) => { x.font = v; })} />
+      <p class="note">${font === "areal" ? "Licencja Dinamo obejmuje jedną domenę i jednego licencjobiorcę — klient musi kupić własną licencję webową na swoją domenę. Pliki wgrywasz w menu projektu → Krój ABC Areal." : font === "geist" ? "Geist jest na licencji SIL Open Font License — wolno go dołączyć do strony klienta. Pliki (ok. 95 KB) trafiają do eksportu." : "Bez plików fontu — każdy zobaczy krój swojego systemu."}</p>
+
       <b class="group__sub">Okładka</b>
       <${FileField} label="Zdjęcie okładki manuala (opcjonalne)" value=${b.cover} accept="image/jpeg,image/png,image/webp" folder="media" ctx=${ctx} hint="Szablon z Figmy: 1440×900, eksport 2x. Bez zdjęcia okładka ma kolor tła." onChange=${(p) => up((x) => { x.cover = p; })} />
     <//>
+  </div>`;
+}
+
+// Studio: podpis KHOREI w stopce manuala
+function StudioForm({ b, set, ctx }) {
+  const up = (fn) => set((x) => fn(x));
+  useEffect(() => { ctx.spot(".footer"); }, []);
+  return html`<div class="panel__inner">
+    <h2 class="h">Studio</h2>
+    <p class="note">Podpis studia w stopce każdej strony manuala.</p>
+    <${Text} label="E-mail kontaktowy" value=${b.contact} placeholder="studio@khorei.com" hint="Stoi w stopce pod „Masz pytania?”. W gotowym manualu klik otwiera program pocztowy." onInput=${(v) => up((x) => { x.contact = v; })} />
+    <p class="note">Logo KHOREI i „Designed by KHOREI” linkują do khorei.com. Nota prawna i sygnatura wdrożenia trafiają do eksportu automatycznie (LICENSE.txt).</p>
   </div>`;
 }
 
@@ -706,13 +720,12 @@ function PublishForm({ b, set, ctx }) {
   const w = brandWarnings(b);
   const pw = (b.password || "").trim();
   return html`<div class="panel__inner">
-    <h2 class="h">Publikacja</h2>
+    <h2 class="h">Wydanie</h2>
     <p class="note">Ustawienia na koniec — przed eksportem dla klienta.</p>
 
-    <${Group} id="address" title="Adres i stopka" open=${open.address} onToggle=${toggle} onSpot=${() => ctx.spot(".footer")}
-      summary=${[(b.siteUrl || "").replace(/^https?:\/\//, "").replace(/\/$/, "") || "bez adresu", b.contact].filter(Boolean).join(" · ")}>
+    <${Group} id="address" title="Adres manuala" open=${open.address} onToggle=${toggle}
+      summary=${(b.siteUrl || "").replace(/^https?:\/\//, "").replace(/\/$/, "") || "bez adresu"}>
       <${Text} label="Adres manuala" value=${b.siteUrl} placeholder="https://klient.pl/brandbook/" hint="Wpisywany do licencji (LICENSE.txt) jako adres, pod którym klient może uruchomić manual. Potrzebny też do obrazka udostępniania." onInput=${(v) => up((x) => { x.siteUrl = v; })} />
-      <${Text} label="E-mail w stopce" value=${b.contact} hint="W gotowym manualu klik otwiera program pocztowy." onInput=${(v) => up((x) => { x.contact = v; })} />
     <//>
 
     <${Group} id="access" title="Dostęp" open=${open.access} onToggle=${toggle}
@@ -1352,12 +1365,15 @@ function App() {
         </span>
       </li>`)}</ol>
       <button type="button" class="btn is--add" onClick=${() => { const nc = newChapter(); update((p) => { p.chapters.push(nc); }); setView(nc.id); setPage(nc.id); }}>+ Dodaj rozdział</button>
-      <span class="nav__label">Przed eksportem</span>
-      <button type="button" class=${view === "publish" ? "is--on" : ""} onClick=${() => setView("publish")}>Publikacja${publishWarn ? html` <span class="nav__dot" title="Coś wymaga uwagi"></span>` : null}</button>
+      <span class="nav__label">Publikacja</span>
+      <button type="button" class=${view === "publish" ? "is--on" : ""} onClick=${() => setView("publish")}>Wydanie${publishWarn ? html` <span class="nav__dot" title="Coś wymaga uwagi"></span>` : null}</button>
+      <button type="button" class=${view === "studio" ? "is--on" : ""} onClick=${() => setView("studio")}>Studio</button>
     </nav>
     <main class="panel">
       ${view === "publish"
         ? html`<${PublishForm} b=${project.brand} ctx=${ctx} set=${(fn) => update((p) => fn(p.brand))} />`
+        : view === "studio"
+        ? html`<${StudioForm} b=${project.brand} ctx=${ctx} set=${(fn) => update((p) => fn(p.brand))} />`
         : view === "brand" || !chapter
         ? html`<${BrandForm} b=${project.brand} ctx=${ctx} set=${(fn) => update((p) => fn(p.brand))} />`
         : html`<${ChapterForm} key=${chapter.id + (single ? "s" : "m")} single=${single} c=${chapter} num=${site.chapters[chapterIndex].num} ctx=${ctx}
