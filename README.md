@@ -43,7 +43,10 @@ Przycisk akcji bloku (ZIP, GLB) stoi w jego belce opisu; bez belki — w nagłó
 | `engine/base.css` | układ manuala (klasy = warstwy w Figmie, BEM) |
 | `engine/vendor/` | odtwarzacze dołączane do eksportu tylko, gdy są użyte (Lottie, model-viewer) |
 | `engine/sample*.json` | przykładowa treść (multi i single site) |
-| `editor/` | edytor (Preact + htm, bez budowania) |
+| `editor/app.js` | edytor: stan, zapis, eksport, układ okna (Preact + htm, bez budowania) |
+| `editor/core.js` | wspólne: wersja, silnik, dane startowe, migracja, pliki |
+| `editor/fields.js`, `blocks.js`, `forms.js`, `preview.js` | pola formularza, bloki / sekcje / rozdziały, Marka / Publikacja, podgląd |
+| `editor/store.js` | IndexedDB (projekty, pliki, meta) |
 | `vendor/` | biblioteki edytora: Preact, htm, JSZip, bcryptjs, DOMPurify, three.js (konwersja OBJ) |
 
 ## Testy

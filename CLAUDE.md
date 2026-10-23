@@ -6,6 +6,9 @@ i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po pol
 
 ## Architektura
 - Statyczny edytor w przeglądarce (GitHub Pages), bez builda: ES modules, Preact + htm, import map w `index.html`.
+- Edytor w modułach: `core` → `fields` → `blocks` / `forms` / `preview` → `app`. Moduły importują się nawzajem
+  dynamicznie z `?v=` (`const Q = new URL(import.meta.url).search`), żeby wersja w adresie obejmowała wszystkie pliki.
+  Bez cykli — zależności idą tylko w prawo.
 - Dane: IndexedDB (`editor/store.js`: projects, assets, meta). Opcjonalny zapis do folderu (File System Access API).
 - `engine/render.js` — jeden kod dla podglądu (iframe srcdoc, podmiana treści bez przeładowania) i eksportu.
   `ctx.preview` rozróżnia tryby. Akcje bloków: belka opisu bloku → nagłówek sekcji → panel.
