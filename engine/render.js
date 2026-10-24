@@ -490,9 +490,35 @@ function chapterContent(ctx, c, site, single) {
 
 const LOGO_KHOREI = `<svg class="footer__logo" viewBox="0 0 84 22" role="img" aria-label="KHOREI" fill="currentColor"><path d="M0 0.1226H1.07295V2.759H1.14302L3.9765 0.1226H5.23338V0.253982L2.03642 3.20132L5.32097 6.29756V6.42894H3.99401L1.14302 3.72685H1.07295V6.42894H0V0.1226Z"/><path d="M38.9807 0.122591H40.058V2.79403H43.1149V0.122591H44.1966V6.42893H43.1149V3.73122H40.058V6.42893H38.9807V0.122591Z"/><path d="M77.2998 3.27579C77.2998 1.20434 78.5566 0 80.5142 0C82.4762 0 83.7331 1.20434 83.7331 3.27579C83.7331 5.34725 82.4762 6.55158 80.5142 6.55158C78.5566 6.55158 77.2998 5.34725 77.2998 3.27579ZM78.399 3.27579C78.399 4.77793 79.2092 5.64067 80.5142 5.64067C81.8193 5.64067 82.6295 4.77793 82.6295 3.27579C82.6295 1.77366 81.8193 0.910915 80.5142 0.910915C79.2092 0.910915 78.399 1.77366 78.399 3.27579Z"/><path d="M3.16662 15.6937C4.28337 15.6937 5.17238 16.3331 5.17238 17.5155C5.17238 18.6979 4.32716 19.3373 3.28924 19.3373H2.62795L5.17238 21.8686V22H3.96367L1.30099 19.3154H1.21341V22H0.149211V15.6937H3.16662ZM1.21341 18.5009H3.00458C3.66149 18.5009 4.12571 18.1768 4.12571 17.5461C4.12571 16.9111 3.66149 16.5827 3.00458 16.5827H1.21341V18.5009Z"/><path d="M39.3201 15.6937H43.7958V16.5827H40.3931V18.3738H43.3579V19.2629H40.3931V21.111H43.8572V22H39.3201V15.6937Z"/><path d="M79.9756 15.6935H81.0573V21.9999H79.9756V15.6935Z"/></svg>`;
 
-function footer(site) {
+// Pas studia projektowego (opcjonalny): nad linią drugie studio — logo, nazwa, autor, e-mail, www.
+// Pod linią zostaje stopka KHOREI bez zmian. Puste pola znikają; logo SVG przebarwia się na kolor tekstu stopki.
+export const studioOf = (b = {}) => { const s = b.studio || {}; return s.on && [s.name, s.author, s.email, s.www, s.logo].some((v) => String(v || "").trim()) ? s : null; };
+const wwwHref = (u) => { const v = String(u || "").trim(); return !v ? "" : /^https?:\/\//i.test(v) ? v : "https://" + v; };
+const wwwLabel = (u) => String(u || "").trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
+function footerStudio(b, ctx) {
+  const s = studioOf(b);
+  if (!s) return "";
+  const name = String(s.name || "").trim(), author = String(s.author || "").trim(), email = String(s.email || "").trim(), www = wwwHref(s.www);
+  const svg = s.logo && ctx.svgText?.[s.logo];
+  // Logo w stałym polu 160×40 (jak logo w pasku: proporcje z pliku, wyrównane do lewej)
+  const logo = svg ? `<span class="footer__studio-mark">${inlineSvg(svg, name || "Studio projektowe", "currentColor").replace('class="sidebar__logo-svg"', 'class="footer__studio-logo"')}</span>`
+    : s.logo ? `<span class="footer__studio-mark"><img class="footer__studio-logo" src="${esc(ctx.url(s.logo))}" alt="${esc(name)}"></span>`
+    : `<span class="footer__text text-footer">${t(name)}</span>`;
+  const mark = www ? `<a class="footer__logo-link" href="${esc(www)}" target="_blank" rel="noopener" aria-label="${esc(name || wwwLabel(s.www))}">${logo}</a>` : logo;
+  const contact = [email && `<a class="footer__link" href="mailto:${esc(email)}">${esc(email)}</a>`, www && `<a class="footer__link" href="${esc(www)}" target="_blank" rel="noopener">${esc(wwwLabel(s.www))}</a>`].filter(Boolean).join("<br>");
+  return `<div class="footer__studio">
+    <div class="footer__brand">${mark}</div>
+    <div class="footer__cols">
+      <div class="footer__col"><span class="footer__text text-footer">Projekt identyfikacji${name ? `<br>${t(name)}` : ""}</span>${author ? `<span class="footer__text text-footer">${t(author)}</span>` : ""}</div>
+      ${contact ? `<div class="footer__col"><span class="footer__text text-footer">${contact}</span></div>` : ""}
+    </div>
+  </div>
+  <hr class="footer__rule">`;
+}
+function footer(site, ctx = {}) {
   const b = site.brand;
-  return `<footer class="footer">
+  return `<footer class="footer${studioOf(b) ? " has--studio" : ""}">
+  ${footerStudio(b, ctx)}
   <div class="footer__brand"><a class="footer__logo-link" href="https://khorei.com" target="_blank" rel="noopener" aria-label="KHOREI — khorei.com">${LOGO_KHOREI}</a></div>
   <div class="footer__cols">
     <div class="footer__col"><span class="footer__text text-footer">Masz pytania?<br>${/@/.test(b.contact || "") ? `<a class="footer__link" href="mailto:${esc(String(b.contact).trim())}">${esc(String(b.contact).trim())}</a>` : esc(b.contact || "")}</span><span class="footer__text text-footer">Designed by <a class="footer__link" href="https://khorei.com" target="_blank" rel="noopener">KHOREI</a></span></div>
@@ -592,6 +618,18 @@ function coverCss(project) {
   const c = coverTheme(project.brand || {});
   return `:root{--cover-fg:${c.fg}${c.bg ? `;--cover-bg:${c.bg}` : ""}}`;
 }
+// Stopka: kolor tła wybiera użytkownik (z palety albo własny), tekst i logo dobierają się same — min. 4,5:1.
+// Bez wyboru stopka zostaje w kolorach z tokenów (bg/media, text/primary).
+export function footerTheme(b = {}) {
+  const bg = pickHex(b, b.footerColor, b.footerHex);
+  if (!bg) return null;
+  const fg = contrastRatio(bg, "#FFFFFF") >= contrastRatio(bg, "#000000") ? "#FFFFFF" : "#000000";
+  return { bg, fg, ratio: contrastRatio(fg, bg) };
+}
+function footerCss(project) {
+  const f = footerTheme(project.brand || {});
+  return f ? `:root{--footer-bg:${f.bg};--footer-fg:${f.fg}}` : "";
+}
 function sidebarCss(project) {
   const th = sidebarTheme(project);
   if (!th) return "";
@@ -606,7 +644,7 @@ export function siteCss(project, figmaVars, baseCss, url, studioFonts = [], { li
   const acc = accentOf(b);
   if (acc) overrides["brand/accent"] = acc;
   const faces = font === "geist" ? geistFaces(url) : font === "areal" ? fontFaces([{ family: "ABC Areal Variable", files: studioFonts }], url) : "";
-  return [faces, brandFontFaces(b, url, { licensedOnly }), tokensCss(figmaVars, overrides), baseCss, sidebarCss(project), coverCss(project)].join("\n");
+  return [faces, brandFontFaces(b, url, { licensedOnly }), tokensCss(figmaVars, overrides), baseCss, sidebarCss(project), coverCss(project), footerCss(project)].join("\n");
 }
 
 // Czy któryś rozdział ma blok danego typu (skrypty Lottie / 3D ładujemy tylko wtedy — na każdej stronie,
@@ -655,7 +693,7 @@ ${topbar(chapter)}
 ${content}
 </main>
 </div>
-${showFooter ? footer(site) : ""}
+${showFooter ? footer(site, ctx) : ""}
 <script>${lg ? codeHeader(lg) + "\n" : ""}${RUNTIME}</script>
 </body>
 </html>`;

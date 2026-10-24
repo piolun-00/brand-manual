@@ -15,7 +15,7 @@ import htm from "htm";
 // więc po aktualizacji przeglądarka nie zmiesza starych plików z nowymi.
 export const VERSION = new URL(import.meta.url).searchParams.get("v") || "dev";
 export const Q = `?v=${VERSION}`;
-export const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets, GEIST_FILES, fontOf, variantOf, uses, sidebarTheme, contrastRatio, accentOf, coverTheme, demoDoc, demoPath, demoParts, demoFonts, demoLicense, brandFont, fontStyles, SCALE_RATIOS, typeScale } = await import("../engine/render.js" + Q);
+export const { renderPage, renderSite, siteCss, prepare, slugify, usedAssets, GEIST_FILES, fontOf, variantOf, uses, sidebarTheme, contrastRatio, accentOf, coverTheme, demoDoc, demoPath, demoParts, demoFonts, demoLicense, brandFont, fontStyles, SCALE_RATIOS, typeScale, footerTheme, studioOf } = await import("../engine/render.js" + Q);
 // Pliki kroju Geist leżą w silniku: w podglądzie ładowane z edytora, w eksporcie kopiowane do fonts/geist/
 export const ENGINE_URL = (p) => new URL("../engine/" + p, import.meta.url).href;
 // Odtwarzacze dołączane do strony tylko, gdy manual ma blok Lottie / 3D (assets/… w eksporcie ← engine/vendor/…)

@@ -78,10 +78,17 @@ export function metaTags({ sig, year }) {
 }
 
 // Licencja dla klienta — plik LICENSE.txt w każdym eksporcie
-export function licenseText({ brand, title, sig, year, url, libs, fonts = [] }) {
+export function licenseText({ brand, title, sig, year, url, libs, fonts = [], studio = null }) {
   const where = url ? `pod adresem ${url}` : "pod adresem internetowym uzgodnionym z autorem";
+  // Drugie studio (pas w stopce): autor identyfikacji i treści manuala, w tym doboru typografii.
+  // KHOREI zostaje autorem kodu i szablonu — to dwa różne utwory, licencja mówi o obu.
+  const st = studio && (clean(studio.name) || clean(studio.author)) ? {
+    who: [clean(studio.name), clean(studio.author)].filter(Boolean).join(", "),
+    contact: [clean(studio.email), clean(studio.www)].filter(Boolean).join(" · "),
+  } : null;
   return `BRANDMANUAL — ${clean(brand)}${title ? ` · ${clean(title)}` : ""}
-Copyright © ${year} ${AUTHOR}. Wszelkie prawa zastrzeżone.
+Copyright © ${year} ${AUTHOR}. Wszelkie prawa zastrzeżone.${st ? `
+Identyfikacja wizualna i treść manuala: ${st.who}.` : ""}
 Sygnatura wdrożenia: ${sig}
 
 
@@ -148,7 +155,16 @@ zamawiającym i jego kliencie końcowym.
 
 Autor kodu nie ponosi odpowiedzialności za skutki użycia tych materiałów
 bez wymaganych licencji.
-${fonts.length ? `
+${st ? `
+AUTORSTWO IDENTYFIKACJI I TREŚCI. Identyfikacja wizualna marki
+${clean(brand)} oraz treść manuala — zasady stosowania znaku, kolorystyka,
+dobór i zasady stosowania typografii, opisy i przykłady — są autorstwa:
+${st.who}${st.contact ? ` (${st.contact})` : ""}.
+Prawa do tych utworów reguluje umowa między ich autorem a zamawiającym;
+niniejsza licencja ich nie obejmuje. Pytania o zasady identyfikacji
+i dobór krojów pisma kieruj do autora identyfikacji, a o licencje krojów —
+do ich właścicieli.
+` : ""}${fonts.length ? `
 KROJE PISMA OSADZONE W MANUALU. Poniższe kroje zostały osadzone na stronie
 (pliki w folderze fonts/marka/) wyłącznie na podstawie oświadczenia
 zamawiającego, że posiada ważną licencję webfont obejmującą ich osadzenie
@@ -193,7 +209,8 @@ wyraźne polecenie.
 6. AUTOR I KONTAKT
 
 Autorem kodu i szablonu jest Radosław Prośniak, KHOREI.
-W sprawie licencji wykraczającej poza zakres z punktu 2 — kontakt z autorem.
+W sprawie licencji wykraczającej poza zakres z punktu 2 — kontakt z autorem.${st ? `
+Autor identyfikacji i treści manuala: ${st.who}${st.contact ? ` — ${st.contact}` : ""}.` : ""}
 `;
 }
 

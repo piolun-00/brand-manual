@@ -27,6 +27,10 @@ i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po pol
   `licensed` + `licensedAt`). Bloki Typografia / Skala wybierają krój (`b.font`), zakładki odmian `[data-type-style]`; skala modularna
   `typeScale(base, ratio)`. Krój bez potwierdzonej licencji: tylko podgląd — eksport go pomija (pliki i @font-face), blok wraca do SVG;
   LICENSE.txt wymienia osadzone kroje z datą oświadczenia. Pliki krojów nigdy do repo (test: KaTeX, MIT, w `tests/fixtures/font`).
+- Stopka (`footer` w `render.js`, formularz Studio): podpis KHOREI zawsze; opcjonalny pas studia projektowego nad linią
+  (`brand.studio`: on, logo SVG, name, author, email, www — `studioOf`), logo przebarwiane na kolor tekstu stopki.
+  Kolor tła stopki `brand.footerColor` / `footerHex` (`footerTheme`: tekst biały/czarny, ≥ 4.5:1). Z pasem LICENSE.txt
+  przypisuje studiu autorstwo identyfikacji i treści (w tym doboru typografii); KHOREI zostaje autorem kodu i szablonu.
 - Eksport (`exportZip` w `editor/app.js`): lista kontrolna → pliki, wersje @1x, plakaty MP4, ZIP-y ikon / Lottie,
   odtwarzacze tylko gdy użyte, licencja (`engine/legal.js`), sygnatura `KHOREI-BM-rok-…`, hasło (AES-GCM w `lock.js`
   albo `.htaccess` + bcrypt).

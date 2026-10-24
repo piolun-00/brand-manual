@@ -171,3 +171,40 @@ test("typografia: krój bez adresu — bez martwego linku, zostaje nazwa i autor
   assert.deepEqual(p.errors, []);
   await p.context().close();
 });
+
+test("stopka: pas studia projektowego nad linią, kolor tła stopki, autorstwo w LICENSE.txt", async () => {
+  const p = await editor("single");
+  await loadProject(p, { edit: (d) => {
+    d.brand.studio = { on: true, logo: "media/studio.svg", name: "Studio Testowe", author: "Anna Projektantka", email: "hej@studio.test", www: "studio.test" };
+    d.brand.footerColor = "custom"; d.brand.footerHex = "#1C1C1C";
+  }, assets: { "media/studio.svg": "logo-test.svg" } });
+  // formularz Studio pokazuje pola pasa i kontrast stopki
+  await p.click('.nav > button:has-text("Studio")');
+  assert.equal(await p.locator('.check:has-text("studio, które zaprojektowało") input').isChecked(), true);
+  assert.match(await p.locator(".panel").innerText(), /kontrast \d+,\d:1/);
+  const { dir, url, zip } = await exportManual(p, "stopka-studio");
+  const html = fs.readFileSync(path.join(dir, "index.html"), "utf8");
+  assert.match(html, /class="footer has--studio"/);
+  assert.match(html, /footer__studio[\s\S]*<svg[^>]*class="footer__studio-logo"[\s\S]*footer__rule[\s\S]*Designed by/, "pas studia nad linią, stopka KHOREI pod spodem");
+  assert.match(html, /href="mailto:hej@studio\.test"/);
+  assert.match(html, /href="https:\/\/studio\.test"/, "www bez protokołu dostaje https://");
+  assert.match(await zip.file("assets/style.css").async("string"), /--footer-bg:#1C1C1C;--footer-fg:#FFFFFF/);
+  const lic = await zip.file("LICENSE.txt").async("string");
+  assert.match(lic, /Identyfikacja wizualna i treść manuala: Studio Testowe, Anna Projektantka/);
+  assert.match(lic, /AUTORSTWO IDENTYFIKACJI I TREŚCI[\s\S]*dobór i zasady stosowania typografii/);
+  assert.match(lic, /Autorem kodu i szablonu jest Radosław Prośniak, KHOREI/, "KHOREI zostaje autorem kodu");
+  // w manualu: kolor stopki i czytelny tekst
+  const v = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+  await v.goto(url, { waitUntil: "networkidle" });
+  assert.equal(await v.$eval(".footer", (e) => getComputedStyle(e).backgroundColor), "rgb(28, 28, 28)");
+  assert.equal(await v.$eval(".footer__studio .footer__text", (e) => getComputedStyle(e).color), "rgb(255, 255, 255)");
+  await v.context().close();
+  // pas wyłączony: obecna stopka bez zmian, licencja bez drugiego studia
+  await loadProject(p, { edit: (d) => { d.brand.studio = { on: false, name: "Studio Testowe" }; } });
+  const off = await exportManual(p, "stopka-bez-studia");
+  const html2 = fs.readFileSync(path.join(off.dir, "index.html"), "utf8");
+  assert.doesNotMatch(html2, /footer__studio|footer__rule/);
+  assert.doesNotMatch(await off.zip.file("LICENSE.txt").async("string"), /Studio Testowe/);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});

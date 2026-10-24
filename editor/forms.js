@@ -11,7 +11,7 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
-const { accentOf, contrastRatio, coverTheme, fontOf, html, moveTo, sidebarTheme, uid, readFontFile, styleLabel, WEIGHT_NAMES } = await import("./core.js" + Q);
+const { accentOf, contrastRatio, coverTheme, fontOf, footerTheme, html, moveTo, sidebarTheme, uid, readFontFile, styleLabel, WEIGHT_NAMES } = await import("./core.js" + Q);
 const { Color, FileField, Group, Row, Select, Text, useGroups } = await import("./fields.js" + Q);
 // ——— Marka ———
 // ——— Marka i Publikacja: grupy (akordeon z podsumowaniem i ostrzeżeniem) ———
@@ -189,15 +189,33 @@ export function BrandForm({ b, set, ctx }) {
   </div>`;
 }
 
-// Studio: podpis KHOREI w stopce manuala
+// Studio: stopka manuala — podpis KHOREI (zawsze), opcjonalny pas studia projektowego nad linią, kolor tła stopki
 export function StudioForm({ b, set, ctx }) {
   const up = (fn) => set((x) => fn(x));
   useEffect(() => { ctx.spot(".footer"); }, []);
+  const st = b.studio || {};
+  const upS = (fn) => up((x) => { x.studio = { ...(x.studio || {}) }; fn(x.studio); });
+  const ft = footerTheme(b);
   return html`<div class="panel__inner">
     <h2 class="h">Studio</h2>
-    <p class="note">Podpis studia w stopce każdej strony manuala.</p>
+    <p class="note">Stopka każdej strony manuala.</p>
     <${Text} label="E-mail kontaktowy" value=${b.contact} placeholder="studio@khorei.com" hint="Stoi w stopce pod „Masz pytania?”. W gotowym manualu klik otwiera program pocztowy." onInput=${(v) => up((x) => { x.contact = v; })} />
     <p class="note">Logo KHOREI i „Designed by KHOREI” linkują do khorei.com. Nota prawna i sygnatura wdrożenia trafiają do eksportu automatycznie (LICENSE.txt).</p>
+
+    <b class="group__sub">Studio projektowe</b>
+    <label class="check is--line"><input type="checkbox" checked=${!!st.on} onChange=${(e) => upS((s) => { s.on = e.target.checked; })} />Pokaż w stopce studio, które zaprojektowało identyfikację</label>
+    ${st.on && html`
+      <p class="note">Nad linią: logo, nazwa, autor, e-mail i strona studia. Pod linią zostaje stopka KHOREI. Puste pola nie pojawiają się w manualu. LICENSE.txt przypisuje studiu autorstwo identyfikacji i treści manuala, w tym doboru typografii.</p>
+      <${FileField} label="Logo studia (SVG)" value=${st.logo} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} hint="Przebarwia się na kolor tekstu stopki. Pole 160×40, proporcje z pliku." onChange=${(p) => upS((s) => { s.logo = p; })} />
+      <div class="grid2"><${Text} label="Nazwa studia" value=${st.name} onInput=${(v) => upS((s) => { s.name = v; })} />
+      <${Text} label="Autor" value=${st.author} placeholder="Imię i nazwisko" onInput=${(v) => upS((s) => { s.author = v; })} /></div>
+      <div class="grid2"><${Text} label="E-mail" value=${st.email} onInput=${(v) => upS((s) => { s.email = v; })} />
+      <${Text} label="Strona www" value=${st.www} placeholder="studio.pl" onInput=${(v) => upS((s) => { s.www = v; })} /></div>`}
+
+    <b class="group__sub">Kolor stopki</b>
+    <${ColorPick} label="Tło stopki" b=${b} value=${b.footerColor || ""} hex=${b.footerHex} defLabel="Domyślny (jasnoszary)"
+      onPick=${(v) => up((x) => { x.footerColor = v || null; if (v === "custom" && !x.footerHex) x.footerHex = "#1C1C1C"; })} onHex=${(v) => up((x) => { x.footerHex = v; })} />
+    ${ft && html`<p class="note">Tekst i logo w stopce: ${ft.fg === "#FFFFFF" ? "białe" : "czarne"} (kontrast ${ft.ratio.toFixed(1).replace(".", ",")}:1).</p>`}
   </div>`;
 }
 

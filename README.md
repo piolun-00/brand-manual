@@ -10,7 +10,7 @@ Każdy manual to osobna instancja: uzupełniasz w edytorze → **Eksport ZIP** �
 1. Otwórz edytor (GitHub Pages). Lista projektów: przycisk z nazwą marki u góry.
 2. **Marka** — grupy: *Dokument* (nazwa, wersja, tryb multi / single), *Kolory marki* (zwijane: nazwa + HEX), *Kroje marki* (pliki OTF / TTF / WOFF2, nazwa wyświetlana, potwierdzenie licencji webfont), *Logo i oprawa* (logo i jego kolor, pasek boczny, akcent, krój, okładka). Ostrzeżenia wypływają na nagłówki grup.
 3. **Rozdziały** → sekcje → bloki. Podgląd obok, z suwakiem szerokości; kliknięcie w ustawienie podświetla jego miejsce w podglądzie.
-4. **Publikacja** — *Wydanie* (adres manuala, dostęp / hasło, favicon i obrazek linku) oraz *Studio* (kontakt w stopce).
+4. **Publikacja** — *Wydanie* (adres manuala, dostęp / hasło, favicon i obrazek linku) oraz *Studio* (stopka: kontakt, opcjonalny pas studia projektowego nad linią, kolor tła stopki).
 5. **Eksport ZIP** — najpierw lista kontrolna (brak adresu, puste miejsca, brakujące pliki, ostrzeżenia marki), potem gotowa strona do wgrania. Działa z dowolnego folderu na serwerze.
 6. **Zapisuj w folderze…** (Chrome / Edge) — każda zmiana trafia też na dysk. W Safari: **Backup na dysk** (`.khorei`) i **Wczytaj backup**. Backup nie zawiera hasła manuala.
 

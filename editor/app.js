@@ -22,7 +22,7 @@ function Safe({ children, label }) {
 }
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
-const { BASE_CSS, CAN_FOLDER, demoDoc, demoFonts, demoLicense, demoPath, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, uid, usedAssets, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
+const { BASE_CSS, CAN_FOLDER, demoDoc, demoFonts, demoLicense, demoPath, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, studioOf, uid, usedAssets, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
 const { ChapterForm } = await import("./blocks.js" + Q);
 const { BrandForm, PublishForm, StudioForm, brandWarnings } = await import("./forms.js" + Q);
 const { Preview } = await import("./preview.js" + Q);
@@ -254,7 +254,7 @@ function App() {
   const bw = project ? brandWarnings(project.brand) : {};
   const brandWarn = !!(bw.doc || bw.colors || bw.fonts || bw.look), publishWarn = !!(bw.share || bw.access);
   // Logo SVG jako tekst (do zmiany koloru): wczytywane, gdy zmienia się plik logo
-  const logoPaths = [project?.brand?.logo, project?.brand?.logoDark].filter((p) => p && /\.svg$/i.test(p));
+  const logoPaths = [project?.brand?.logo, project?.brand?.logoDark, project?.brand?.studio?.logo].filter((p) => p && /\.svg$/i.test(p));
   useEffect(() => {
     let live = true;
     (async () => {
@@ -452,7 +452,7 @@ function App() {
     if (uses(site, "lottie")) libs.push(L.lottie);
     if (uses(site, "model")) libs.push(L.modelViewer, L.three);
     const fonts = (project.brand.fonts || []).filter((f) => f.licensed && (f.styles || []).some((s) => s.file)).map((f) => ({ name: f.name || f.family, styles: f.styles.filter((s) => s.file).map((s) => s.label), date: f.licensedAt }));
-    zip.file("LICENSE.txt", legal.licenseText({ ...extra.legal, url: (project.brand.siteUrl || "").trim(), libs, fonts }));
+    zip.file("LICENSE.txt", legal.licenseText({ ...extra.legal, url: (project.brand.siteUrl || "").trim(), libs, fonts, studio: studioOf(project.brand) }));
     zip.file("THIRD-PARTY-NOTICES.txt", libs.length ? legal.noticesText(libs) : "Manual nie zawiera składników open source.\n");
     zip.file("robots.txt", legal.robotsText(!!project.brand.indexable));
     for (const l of libs) zip.file(`licenses/${l.file}`, await fetch(ENGINE_URL(`licenses/${l.file}`)).then((r) => r.blob()));
