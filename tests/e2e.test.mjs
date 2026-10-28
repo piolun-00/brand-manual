@@ -237,3 +237,14 @@ test("ostrzeżenia: po eksporcie pływająca lista, „Pokaż” prowadzi do pol
   assert.deepEqual(p.errors, []);
   await p.context().close();
 });
+
+test("zdjęcia: blok przełączony z 1 na 2 zdjęcia pokazuje dwa miejsca i liczy dwa braki", async () => {
+  const p = await editor("single");
+  await loadProject(p, { edit: (d) => { d.chapters[0].sections[0].blocks = [{ id: "imgs1", type: "images", label: "", text: "", layout: "2-equal", ratio: "4/3", items: [{ image: null, caption: "" }] }]; } });
+  await p.click(".nav li > button >> nth=0"); await p.waitForTimeout(600);
+  const fr = p.frames().find((f) => f !== p.mainFrame());
+  assert.equal(await fr.$eval(".gallery__row", (r) => r.querySelectorAll(".gallery__item").length), 2, "dwa miejsca w podglądzie");
+  assert.match(await p.locator('.panel [data-card="imgs1"] .card__warn').innerText(), /2 puste pola/);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});

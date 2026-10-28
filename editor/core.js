@@ -200,7 +200,7 @@ export function blockInfo(b) {
   const LAYOUT = { "2-equal": "2 równe", "wide-narrow": "szerokie + wąskie", "narrow-wide": "wąskie + szerokie", "1": "1 zdjęcie" };
   let sub = "", holes = 0;
   switch (b.type) {
-    case "images": sub = `${LAYOUT[b.layout] || ""} · ${b.ratio === "auto" ? "oryginalne" : (b.ratio || "").replace("/", ":")}`; holes = lack("image"); break;
+    case "images": { const n = b.layout === "1" ? 1 : 2; sub = `${LAYOUT[b.layout] || ""} · ${b.ratio === "auto" ? "oryginalne" : (b.ratio || "").replace("/", ":")}`; holes = n - items.slice(0, n).filter((i) => i.image).length; break; }
     case "specimens": sub = plural(items.length, "znak", "znaki", "znaków"); holes = lack("svg"); break;
     case "icons": sub = plural(items.filter((i) => i.svg).length, "ikona", "ikony", "ikon"); holes = lack("svg"); break;
     case "lottie": sub = plural(items.filter((i) => i.file).length, "animacja", "animacje", "animacji"); holes = lack("file"); break;

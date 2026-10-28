@@ -276,7 +276,9 @@ function modelOrientation(b) {
 function imagesRow(ctx, b) {
   const mod = { "1": "is--1up", "wide-narrow": "is--wide-narrow", "narrow-wide": "is--narrow-wide" }[b.layout] || "is--2up";
   const ratio = b.ratio && b.ratio !== "auto" ? b.ratio : null;
-  const items = (b.items || []).slice(0, b.layout === "1" ? 1 : 2);
+  // Liczba miejsc wynika z układu, nie z danych: blok przełączony z „1 zdjęcie” na „2 zdjęcia” ma w danych jedno miejsce,
+  // a drugie i tak musi się pokazać (zdjęcie albo zaślepka) — tak samo jak w formularzu
+  const items = Array.from({ length: b.layout === "1" ? 1 : 2 }, (_, i) => (b.items || [])[i] || { image: null, caption: "" });
   return `<div class="gallery__row ${mod}">${items.map((i) => `
     <figure class="gallery__item"><div class="gallery__image"${ratio ? ` style="aspect-ratio:${ratio}"` : ""}>${i.image ? `<img src="${esc(ctx.url(i.image))}"${srcset(ctx, i.image, b.layout)} alt="${esc(i.alt || i.caption || "")}" loading="lazy">` : `<span class="gallery__placeholder text-small">Zdjęcie</span>`}</div>${i.caption ? `<figcaption class="gallery__caption text-caption">${t(i.caption)}</figcaption>` : ""}</figure>`).join("")}
   </div>`;

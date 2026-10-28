@@ -19,7 +19,7 @@ export function ImagesBlock({ b, set, ctx }) {
   const items = Array.from({ length: count }, (_, i) => b.items?.[i] || { image: null, caption: "" });
   return html`
     <div class="grid2">
-      <${Select} label="Układ rzędu" value=${b.layout} onChange=${(v) => set((x) => { x.layout = v; })}
+      <${Select} label="Układ rzędu" value=${b.layout} onChange=${(v) => set((x) => { x.layout = v; const n = v === "1" ? 1 : 2; x.items = Array.from({ length: Math.max(n, (x.items || []).length) }, (_, i) => (x.items || [])[i] || { image: null, caption: "" }); })}
         options=${[["2-equal", "2 zdjęcia, równe"], ["wide-narrow", "2 zdjęcia, szerokie + wąskie"], ["narrow-wide", "2 zdjęcia, wąskie + szerokie"], ["1", "1 zdjęcie, cała szerokość"]]} />
       <${Select} label="Proporcje" value=${b.ratio} onChange=${(v) => set((x) => { x.ratio = v; })}
         options=${[["4/3", "4:3 poziome"], ["3/4", "3:4 pionowe"], ["auto", "Oryginalne"]]} />
