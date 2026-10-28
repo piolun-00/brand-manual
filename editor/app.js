@@ -25,6 +25,16 @@ const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
 const { BASE_CSS, CAN_FOLDER, demoDoc, demoFonts, demoLicense, demoPath, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, studioOf, uid, usedAssets, BLOCK_TYPES, blockInfo, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
 const { ChapterForm } = await import("./blocks.js" + Q);
 const { BrandForm, PublishForm, StudioForm, brandWarnings } = await import("./forms.js" + Q);
+// JSZip (ok. 95 KB, prawie 1/5 tego, co edytor pobiera na starcie) wczytujemy dopiero, gdy jest potrzebny:
+// eksport, backup, wczytanie backupu. Raz wczytany zostaje w pamięci; przy błędzie sieci można spróbować ponownie.
+let zipLib = null;
+const ZipLib = () => zipLib ??= window.JSZip ? Promise.resolve(window.JSZip) : new Promise((ok, fail) => {
+  const s = document.createElement("script");
+  s.src = new URL("../vendor/jszip.min.js", import.meta.url).href;
+  s.onload = () => ok(window.JSZip);
+  s.onerror = () => { zipLib = null; s.remove(); fail(new Error("Nie udało się wczytać biblioteki ZIP — sprawdź połączenie i spróbuj ponownie.")); };
+  document.head.append(s);
+});
 const { Preview } = await import("./preview.js" + Q);
 // ——— Aplikacja ———
 function App() {
@@ -365,6 +375,7 @@ function App() {
     const step = (detail, p) => { lastP = p ?? lastP; setBusy({ title, detail, p: lastP }); setStatus(detail); };
     step("Zbieram pliki…", 0.02);
     try {
+    const JSZip = await ZipLib();
     const zip = new JSZip();
     const font = fontOf(project), missing = [];
     const extra = { variants: new Map(), posters: new Set(), iconZips: new Map() };
@@ -528,6 +539,8 @@ function App() {
     finally { setTimeout(() => setBusy(null), 400); }
   }
   async function backup() {
+    let JSZip;
+    try { JSZip = await ZipLib(); } catch (e) { setStatus(e.message); return; }
     const zip = new JSZip();
     // Hasło nie trafia do pliku backupu — .khorei krąży mailem / dyskami, a hasło chroni manual klienta
     zip.file("project.json", projectJson(pid, { ...project, brand: { ...project.brand, password: "" } }));
@@ -587,6 +600,7 @@ function App() {
   }
   async function restore(file) {
     try {
+      const JSZip = await ZipLib();
       const zip = await JSZip.loadAsync(file);
       const meta = JSON.parse(await zip.file("project.json").async("string"));
       const files = Object.entries(zip.files).filter(([, e]) => !e.dir).map(([name, e]) => ({ path: name, getBlob: async () => new Blob([await e.async("arraybuffer")], { type: mimeOf(name) }) }));

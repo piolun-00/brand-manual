@@ -248,3 +248,16 @@ test("zdjęcia: blok przełączony z 1 na 2 zdjęcia pokazuje dwa miejsca i licz
   assert.deepEqual(p.errors, []);
   await p.context().close();
 });
+
+test("wydajność: biblioteka ZIP wczytuje się dopiero przy backupie / eksporcie", async () => {
+  const ctx = await browser.newContext({ acceptDownloads: true });
+  const p = await ctx.newPage(); const zipReq = [];
+  p.on("request", (r) => { if (/jszip/.test(r.url())) zipReq.push(r.url()); });
+  const { base } = await import("./helpers.mjs");
+  await p.goto(base + "/", { waitUntil: "networkidle" }); await p.waitForSelector(".panel");
+  assert.equal(zipReq.length, 0, "na starcie edytora JSZip nie jest pobierany");
+  const [dl] = await Promise.all([p.waitForEvent("download"), p.click('button:has-text("Backup na dysk")')]);
+  assert.ok(dl.suggestedFilename().endsWith(".khorei"));
+  assert.equal(zipReq.length, 1, "przy backupie wczytuje się raz");
+  await ctx.close();
+});
