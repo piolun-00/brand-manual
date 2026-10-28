@@ -208,3 +208,32 @@ test("stopka: pas studia projektowego nad linią, kolor tła stopki, autorstwo w
   assert.deepEqual(p.errors, []);
   await p.context().close();
 });
+
+test("ostrzeżenia: po eksporcie pływająca lista, „Pokaż” prowadzi do pola, lista liczy się na bieżąco", async () => {
+  const p = await editor("single");
+  assert.equal(await p.locator(".dock").count(), 0, "przed pierwszym eksportem etykiety nie ma");
+  await p.click('button:has-text("Eksport ZIP")'); await p.waitForSelector(".precheck");
+  const n = await p.locator(".precheck__list li").count();
+  await p.click('.precheck button:has-text("Wróć")');
+  await p.waitForSelector(".dock__btn");
+  assert.equal(Number(await p.locator(".dock__count").innerText()), n, "etykieta pokazuje liczbę ostrzeżeń");
+  // blok z pustymi polami: otwarta karta bloku, podświetlenie, kursor w środku
+  await p.click(".dock__btn");
+  const titles = await p.$$eval(".dock__panel .precheck__body b", (a) => a.map((x) => x.textContent));
+  assert.ok(titles.length > 3 && new Set(titles).size === titles.length, "pozycje listy się nie powtarzają");
+  const item = p.locator(".dock__panel li", { hasText: "puste" }).first();
+  assert.ok(await item.count(), "puste miejsca rozpisane na bloki");
+  await item.locator("button").click(); await p.waitForTimeout(700);
+  const card = await p.evaluate(() => { const a = document.activeElement.closest("[data-card]"); return a && { open: a.classList.contains("is--open"), flash: a.classList.contains("is--flash") }; });
+  assert.deepEqual(card, { open: true, flash: true }, "kursor w otwartej, podświetlonej karcie bloku");
+  assert.equal(await p.evaluate(() => document.activeElement.textContent.trim()), "Wgraj", "kursor na brakującym pliku, nie w polu opcjonalnym");
+
+  // brak adresu: zakładka Wydanie, grupa otwarta, kursor w polu „Adres manuala”
+  await p.click(".dock__btn");
+  await p.locator(".dock__panel li", { hasText: "Brak adresu manuala" }).locator("button").click(); await p.waitForTimeout(700);
+  assert.equal(await p.evaluate(() => document.activeElement.closest(".f")?.querySelector(".f__label")?.textContent.trim()), "Adres manuala");
+  await p.keyboard.type("https://klient.pl/brandbook/"); await p.waitForTimeout(1500);
+  assert.equal(Number(await p.locator(".dock__count").innerText()), n - 1, "po uzupełnieniu ostrzeżenie znika z listy");
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});

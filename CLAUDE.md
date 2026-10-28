@@ -31,6 +31,11 @@ i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po pol
   (`brand.studio`: on, logo SVG, name, author, email, www — `studioOf`), logo przebarwiane na kolor tekstu stopki.
   Kolor tła stopki `brand.footerColor` / `footerHex` (`footerTheme`: tekst biały/czarny, ≥ 4.5:1). Z pasem LICENSE.txt
   przypisuje studiu autorstwo identyfikacji i treści (w tym doboru typografii); KHOREI zostaje autorem kodu i szablonu.
+- Lista kontrolna (`exportChecks` w `app.js`): każda pozycja ma adres `go = { view, group?, field?, section?, block? }`;
+  puste miejsca rozpisane na bloki (`blockInfo`), brakujące pliki wskazują blok, który ich używa. `goTo(go)` otwiera zakładkę,
+  grupę (`useGroups(defaults, ctx.want)`, `data-group`) albo kartę bloku (`select`), przewija, podświetla (`.is--flash`)
+  i ustawia kursor w pierwszym pustym polu (najpierw plik, pola „opcjonalne” pomija). Po pierwszym eksporcie lista zostaje
+  jako pływająca etykieta `.dock` „Ostrzeżenia N” w lewym dolnym rogu i przelicza się po każdej zmianie (600 ms).
 - Eksport (`exportZip` w `editor/app.js`): lista kontrolna → pliki, wersje @1x, plakaty MP4, ZIP-y ikon / Lottie,
   odtwarzacze tylko gdy użyte, licencja (`engine/legal.js`), sygnatura `KHOREI-BM-rok-…`, hasło (AES-GCM w `lock.js`
   albo `.htaccess` + bcrypt).

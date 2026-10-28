@@ -32,7 +32,8 @@ export const ICONS = {
   duplicate: "M5.5 5.5H13.5V13.5H5.5Z M10.5 5.5V2.5H2.5V10.5H5.5",
   up: "M8 13.5V2.5M3.5 7L8 2.5L12.5 7",
   down: "M8 2.5V13.5M3.5 9L8 13.5L12.5 9",
-  close: "M3.5 3.5L12.5 12.5M12.5 3.5L3.5 12.5"
+  close: "M3.5 3.5L12.5 12.5M12.5 3.5L3.5 12.5",
+  warn: "M8 2L14.5 13.5H1.5Z M8 6.5V9.5 M8 11.25V12"
 };
 export const Icon = ({ name }) => html`<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d=${ICONS[name]} stroke="currentColor" stroke-width="1.25" stroke-linecap="square" /></svg>`;
 export const Grip = () => html`<svg class="ico" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">${[4, 8, 12].flatMap((y) => [6, 10].map((x) => html`<circle cx=${x} cy=${y} r="1.1" fill="currentColor" />`))}</svg>`;

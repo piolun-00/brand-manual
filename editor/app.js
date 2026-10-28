@@ -22,7 +22,7 @@ function Safe({ children, label }) {
 }
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
-const { BASE_CSS, CAN_FOLDER, demoDoc, demoFonts, demoLicense, demoPath, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, studioOf, uid, usedAssets, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
+const { BASE_CSS, CAN_FOLDER, demoDoc, demoFonts, demoLicense, demoPath, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, studioOf, uid, usedAssets, BLOCK_TYPES, blockInfo, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
 const { ChapterForm } = await import("./blocks.js" + Q);
 const { BrandForm, PublishForm, StudioForm, brandWarnings } = await import("./forms.js" + Q);
 const { Preview } = await import("./preview.js" + Q);
@@ -38,6 +38,9 @@ function App() {
   const [page, setPage] = useState("index");
   const [status, setStatus] = useState("");
   const [checks, setChecks] = useState(null); // lista kontrolna przed eksportem
+  // Po pierwszym eksporcie lista zostaje jako pływająca etykieta „Ostrzeżenia” i liczy się na bieżąco
+  const [dock, setDock] = useState(false), [dockItems, setDockItems] = useState([]), [dockOpen, setDockOpen] = useState(false);
+  const [want, setWant] = useState(null); // { group, n } — grupa formularza do otwarcia po „Pokaż”
   const [busy, setBusy] = useState(null); // { title, detail, p } — nakładka „Przygotowuję manual” przy dłuższych operacjach
   const [menu, setMenu] = useState(false);
   const [focus, setFocus] = useState(-1);
@@ -250,7 +253,7 @@ function App() {
     return out;
   };
   const fonts = (project?.brand?.fonts || []).filter((f) => (f.styles || []).some((s) => s.file));
-  const ctx = { urls, addFile, paletteNames, colors, fonts, switchMode, setBusy, spot, colorUsage };
+  const ctx = { urls, addFile, paletteNames, colors, fonts, switchMode, setBusy, spot, colorUsage, want };
   const bw = project ? brandWarnings(project.brand) : {};
   const brandWarn = !!(bw.doc || bw.colors || bw.fonts || bw.look), publishWarn = !!(bw.share || bw.access);
   // Logo SVG jako tekst (do zmiany koloru): wczytywane, gdy zmienia się plik logo
@@ -271,32 +274,87 @@ function App() {
 
   // ——— Eksport i backup ———
   // Lista kontrolna przed eksportem: to, co klient zobaczy jako błąd albo pustkę
+  // Lista kontrolna: każda pozycja wie, gdzie jest brak — go = { view, group?, field?, section?, block? }
   async function exportChecks() {
     const out = [], b = project.brand, site = prepare(project);
-    if (!(b.siteUrl || "").trim()) out.push({ t: "Brak adresu manuala", d: "Licencja (LICENSE.txt) nie wskaże adresu, pod którym działa manual.", go: "publish" });
+    const GROUP = { doc: "Dokument", colors: "Kolory marki", fonts: "Kroje marki", look: "Logo i oprawa" };
+    if (!(b.siteUrl || "").trim()) out.push({ t: "Brak adresu manuala", d: "Licencja (LICENSE.txt) nie wskaże adresu, pod którym działa manual.", go: { view: "publish", group: "address", field: "Adres manuala" } });
     const w = brandWarnings(b);
-    for (const [k, v] of Object.entries(w)) if (v && k !== "share") out.push({ t: v[0].toUpperCase() + v.slice(1), d: k === "fonts" ? "Marka → Kroje marki. Bez potwierdzenia krój nie trafi do eksportu — bloki pokażą grafikę SVG." : "Marka → " + ({ doc: "Dokument", colors: "Kolory marki", look: "Logo i oprawa" }[k] || ""), go: "brand" });
-    if (w.share) out.push({ t: "Obrazek linku bez adresu manuala", d: "Bez adresu podgląd linku w Slacku / mailu się nie pokaże.", go: "publish" });
+    for (const [k, v] of Object.entries(w)) if (v && GROUP[k]) out.push({ t: v[0].toUpperCase() + v.slice(1), d: k === "fonts" ? "Marka → Kroje marki. Bez potwierdzenia krój nie trafi do eksportu — bloki pokażą grafikę SVG." : "Marka → " + GROUP[k], go: { view: "brand", group: k } });
+    if (w.share) out.push({ t: "Obrazek linku bez adresu manuala", d: "Bez adresu podgląd linku w Slacku / mailu się nie pokaże.", go: { view: "publish", group: "address", field: "Adres manuala" } });
+    // Brakujące pliki — każdy wskazuje blok (albo zakładkę), który go używa
     const keys = new Set(await store.assetKeys(pid));
-    const lost = usedAssets(project).filter((p) => !keys.has(p));
-    if (lost.length) out.push({ t: `Brakuje plików: ${lost.length}`, d: lost.slice(0, 3).map((p) => p.split("/").pop()).join(", ") + (lost.length > 3 ? "…" : "") + " — wgraj je ponownie." });
-    // Puste miejsca: liczymy zaślepki w podglądzie każdej strony
+    const owner = (path) => {
+      for (const c of project.chapters || []) {
+        if (c.cover === path || c.downloadAll === path) return { view: c.id };
+        for (const sc of c.sections || []) {
+          if (JSON.stringify(sc.action || {}).includes(path)) return { view: c.id, section: sc.id };
+          for (const bl of sc.blocks || []) if (JSON.stringify(bl).includes(path)) return { view: c.id, section: sc.id, block: bl.id };
+        }
+      }
+      return JSON.stringify(b.studio || {}).includes(path) ? { view: "studio" } : /^(ogImage|favicon)$/.test(Object.keys(b).find((k) => b[k] === path) || "") ? { view: "publish" } : { view: "brand" };
+    };
+    for (const p of usedAssets(project).filter((x) => !keys.has(x))) out.push({ t: `Brakuje pliku: ${p.split("/").pop()}`, d: "Plik zniknął z pamięci przeglądarki — wgraj go ponownie.", go: owner(p) });
+    // Puste miejsca: najpierw konkretne bloki (karta bloku z liczbą pustych pól), potem reszta z podglądu
     const ctx = { preview: true, url: (p) => p, svgText: {}, link: () => 'href="#"', css: { inline: "" } };
-    // Każdy rozdział osobno (także w single site), żeby wskazać, gdzie są braki
     const holes = (chapters) => (renderPage({ ...project, brand: { ...b, mode: "single" }, chapters }, "index", ctx).match(/__placeholder/g) || []).length;
     const base = holes([]);
-    for (const c of project.chapters || []) {
-      const n = holes([c]) - base;
-      if (n > 0) out.push({ t: `„${c.title}”: ${n} ${n === 1 ? "puste miejsce" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "puste miejsca" : "pustych miejsc"}`, d: "Zostaną puste pola — uzupełnij albo usuń bloki.", go: c.id });
+    for (const [ci, c] of (project.chapters || []).entries()) {
+      const num = site.chapters[ci]?.num || "", name = `${num} ${c.title || "Rozdział"}`.trim();
+      let inBlocks = 0;
+      // kilka bloków tego samego typu w rozdziale → „blok 2 z 3”, żeby pozycje na liście dało się odróżnić
+      const all = (c.sections || []).flatMap((sc) => sc.blocks || []), ofType = (t) => all.filter((x) => x.type === t);
+      for (const sc of c.sections || []) for (const bl of sc.blocks || []) {
+        const info = blockInfo(bl);
+        if (!info.holes) continue;
+        inBlocks += info.holes;
+        const where = b.mode === "single" || (c.sections || []).length < 2 ? name : `${name} › ${sc.title || "Sekcja"}`;
+        const same = ofType(bl.type), nth = same.length > 1 && !bl.label ? `, blok ${same.indexOf(bl) + 1} z ${same.length}` : "";
+        out.push({ t: `${where} — ${BLOCK_TYPES[bl.type] || bl.type}${bl.label ? ` „${bl.label}”` : ""}${nth}`, d: `${info.warn[0].toUpperCase() + info.warn.slice(1)} — uzupełnij albo usuń blok.`, go: { view: c.id, section: sc.id, block: bl.id } });
+      }
+      const rest = holes([c]) - base - inBlocks;
+      if (rest > 0) out.push({ t: `${name}: ${rest} ${rest === 1 ? "puste miejsce" : rest % 10 >= 2 && rest % 10 <= 4 && (rest % 100 < 10 || rest % 100 >= 20) ? "puste miejsca" : "pustych miejsc"}`, d: "Puste teksty albo pola w sekcjach — zostaną zaślepki.", go: { view: c.id, section: c.sections?.[0]?.id } });
     }
-    for (const c of site.chapters) if (!(c.sections || []).length) out.push({ t: `„${c.title}” nie ma sekcji`, d: "Rozdział wyeksportuje się jako sama okładka.", go: c.id });
+    for (const c of site.chapters) if (!(c.sections || []).length) out.push({ t: `„${c.title}” nie ma sekcji`, d: "Rozdział wyeksportuje się jako sama okładka.", go: { view: c.id } });
     return out;
   }
+  // „Pokaż”: otwórz zakładkę, grupę albo kartę bloku, przewiń, podświetl i ustaw kursor w pierwszym pustym polu
+  function goTo(g) {
+    setChecks(null); setDockOpen(false);
+    if (!g) return;
+    setView(g.view);
+    if (g.view === "brand") setPage("index");
+    else if (g.view !== "publish" && g.view !== "studio") setPage(g.view);
+    if (g.group) setWant({ group: g.group, n: Date.now() });
+    if (g.section) setSelect({ section: g.section, block: g.block || null, n: Date.now() });
+    setTimeout(() => {
+      const panel = document.querySelector(".panel");
+      let el = g.block || g.section ? panel?.querySelector(`[data-card="${g.block || g.section}"]`) : g.group ? panel?.querySelector(`[data-group="${g.group}"]`) : panel?.querySelector(".panel__inner");
+      if (el && g.field) el = [...el.querySelectorAll(".f")].find((f) => f.querySelector(".f__label")?.textContent.trim() === g.field) || el;
+      if (!el) return;
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      el.classList.remove("is--flash"); void el.offsetWidth; el.classList.add("is--flash");
+      setTimeout(() => el.classList.remove("is--flash"), 1800);
+      // pierwsze puste pole: tekst bez wartości albo plik bez wgranego pliku (wtedy przycisk „Wgraj”)
+      // brak to najczęściej plik — najpierw pusty plik, potem puste pole tekstowe; pola opcjonalne pomijamy
+      const optional = (i) => /opcjonaln/i.test(i.closest(".f")?.querySelector(".f__label")?.textContent || "");
+      const empty = el.querySelector(".file__thumb.is--empty")?.parentElement.querySelector(".btn")
+        || [...el.querySelectorAll('input:not([type=checkbox]):not([type=file]):not([type=color]), textarea')].find((i) => !i.value.trim() && !optional(i));
+      (empty || el.querySelector("button, input, textarea"))?.focus({ preventScroll: true });
+    }, 280);
+  }
+  // Pływająca lista: po pierwszym eksporcie przelicza się po każdej zmianie (z opóźnieniem, żeby nie liczyć przy każdej literze)
+  useEffect(() => {
+    if (!dock || !project) return;
+    const t = setTimeout(() => { exportChecks().then(setDockItems).catch(() => {}); }, 600);
+    return () => clearTimeout(t);
+  }, [dock, project]);
   async function startExport() {
     if (busy || checks) return; // drugi klik w trakcie eksportu nie uruchamia drugiego ZIP-a
     setStatus("Sprawdzam manual…");
     let items = [];
     try { items = await exportChecks(); } catch (e) { console.warn(e); }
+    setDock(true); setDockItems(items);
     if (items.length) { setChecks(items); setStatus(""); return; }
     exportZip();
   }
@@ -566,15 +624,27 @@ function App() {
   const chapter = project.chapters.find((c) => c.id === view);
   const chapterIndex = project.chapters.indexOf(chapter);
 
-  return html`<div class=${`app${newVersion ? " has--banner" : ""}`}>
+  return html`<div class=${`app${newVersion ? " has--banner" : ""}${dock && dockItems.length ? " has--dock" : ""}`}>
     ${newVersion && html`<div class="banner">Jest nowa wersja edytora. Zapisz pracę i odśwież stronę skrótem <b>Cmd+Shift+R</b> — wszystkie projekty zostaną.
       <button type="button" class="btn is--primary" onClick=${() => location.reload()}>Odśwież</button></div>`}
+    ${dock && dockItems.length > 0 && !checks && html`<div class="dock" onKeyDown=${(e) => { if (e.key === "Escape") setDockOpen(false); }}>
+      ${dockOpen && html`<div class="dock__panel" id="dock-list" role="region" aria-label="Ostrzeżenia przed eksportem">
+        <span class="dock__head"><b>Ostrzeżenia — ${dockItems.length}</b><button type="button" class="dock__close" aria-label="Zamknij listę" onClick=${() => setDockOpen(false)}><${Icon} name="close" /></button></span>
+        <ul class="precheck__list">${dockItems.map((c) => html`<li>
+          <span class="precheck__body"><b>${c.t}</b><span>${c.d}</span></span>
+          ${c.go && html`<button type="button" class="btn is--ghost precheck__go" onClick=${() => goTo(c.go)}>Pokaż</button>`}
+        </li>`)}</ul>
+      </div>`}
+      <button type="button" class=${`dock__btn${dockOpen ? " is--on" : ""}`} aria-expanded=${dockOpen} aria-controls="dock-list" onClick=${() => setDockOpen(!dockOpen)}>
+        <${Icon} name="warn" /><span>Ostrzeżenia</span><span class="dock__count">${dockItems.length}</span>
+      </button>
+    </div>`}
     ${checks && html`<div class="busy" role="dialog" aria-modal="true" aria-labelledby="checks-title" onKeyDown=${(e) => { if (e.key === "Escape") setChecks(null); }}>
       <div class="busy__card precheck">
         <b class="busy__title" id="checks-title">Przed eksportem — ${checks.length} ${checks.length === 1 ? "rzecz" : "rzeczy"} do sprawdzenia</b>
         <ul class="precheck__list">${checks.map((c) => html`<li>
           <span class="precheck__body"><b>${c.t}</b><span>${c.d}</span></span>
-          ${c.go && html`<button type="button" class="btn is--ghost precheck__go" onClick=${() => { setChecks(null); setView(c.go); if (c.go !== "publish") setPage(c.go === "brand" ? "index" : c.go); }}>Pokaż</button>`}
+          ${c.go && html`<button type="button" class="btn is--ghost precheck__go" onClick=${() => goTo(c.go)}>Pokaż</button>`}
         </li>`)}</ul>
         <span class="precheck__actions">
           <button type="button" class="btn is--ghost" ref=${(el) => el && !el.dataset.f && (el.dataset.f = 1, el.focus())} onClick=${() => setChecks(null)}>Wróć</button>

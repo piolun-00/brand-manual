@@ -128,13 +128,15 @@ export function Row({ id, title, onUp, onDown, onRemove, onDuplicate, open, onTo
 
 // ——— Grupy (akordeon z podsumowaniem i ostrzeżeniem) — Marka, Publikacja, rozdział ———
 export const GROUPS_KEY = "kh-groups";
-export function useGroups(defaults) {
+// want = { group, n } — „Pokaż” z listy ostrzeżeń otwiera wskazaną grupę (n: każde kliknięcie działa, także ponowne)
+export function useGroups(defaults, want) {
   const [open, setOpen] = useState(() => { try { return JSON.parse(localStorage.getItem(GROUPS_KEY)) || defaults; } catch { return defaults; } });
+  useEffect(() => { if (want?.group) setOpen((o) => o[want.group] ? o : { ...o, [want.group]: true }); }, [want?.n]);
   const toggle = (id) => setOpen((o) => { const n = { ...o, [id]: !o[id] }; try { localStorage.setItem(GROUPS_KEY, JSON.stringify(n)); } catch {} return n; });
   return [open, toggle];
 }
 export function Group({ id, title, summary, warn, open, onToggle, onSpot, children }) {
-  return html`<section class=${`group${open ? " is--open" : ""}`}>
+  return html`<section class=${`group${open ? " is--open" : ""}`} data-group=${id}>
     <button type="button" class="group__head" aria-expanded=${open} onClick=${() => { onToggle(id); if (!open && onSpot) onSpot(); }}>
       <span class="group__chev" aria-hidden="true">${open ? "−" : "+"}</span>
       <span class="group__title">${title}</span>

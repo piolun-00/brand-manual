@@ -120,7 +120,7 @@ export function brandWarnings(b) {
 
 export function BrandForm({ b, set, ctx }) {
   const up = (fn) => set((x) => fn(x));
-  const [open, toggle] = useGroups({ doc: true });
+  const [open, toggle] = useGroups({ doc: true }, ctx.want);
   const th = sidebarTheme({ brand: b });
   const w = brandWarnings(b);
   const font = fontOf({ brand: b });
@@ -221,7 +221,7 @@ export function StudioForm({ b, set, ctx }) {
 
 export function PublishForm({ b, set, ctx }) {
   const up = (fn) => set((x) => fn(x));
-  const [open, toggle] = useGroups({ doc: true });
+  const [open, toggle] = useGroups({ doc: true }, ctx.want);
   const w = brandWarnings(b);
   const pw = (b.password || "").trim();
   return html`<div class="panel__inner">
