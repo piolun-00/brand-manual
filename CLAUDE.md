@@ -62,7 +62,7 @@ i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po pol
 
 ## Figma
 Dedykowany plik „Brand Manual (PRD)”: `WEqpBOOCNfbF2ptFAqLood` (duplikat starego pliku — numery węzłów i zmienne bez zmian).
-Strony: Cover 33:2 · Read me 3001:8197 (mapa pliku) · Widoki manuala 1303:548 (desktop, mobile i tablet) · Komponenty 3008:787 · Szablony eksportu 3008:788 · Branding 3001:8196 (naming i branding produktu) · Szkice 3008:789 · Archiwum 3001:1281.
+Strony: Cover 33:2 · Read me 3001:8197 (mapa pliku) · Widoki manuala 1303:548 (desktop, mobile i tablet) · Komponenty 3008:787 · Edytor 3062:2 (interfejs edytora: ostrzeżenia `dock`) · Szablony eksportu 3008:788 · Branding 3001:8196 (naming i branding produktu) · Szkice 3008:789 · Archiwum 3001:1281.
 Środowisko Figmy przez API nie ma krojów ABC Areal ani Aujournuit — węzłów z tymi krojami nie da się przenosić ani edytować tekstu (tylko pozycja).
 Stary plik `nWmpctwP4yNlI3BulXAUk2` — już nie używać.
 Zmienne `bg/sidebar`, `text/sidebar`, `text/sidebar-active`, `bg/cover`, `text/cover`.
