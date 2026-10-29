@@ -315,7 +315,7 @@ const BLOCKS = {
   palette: (ctx, b, site) => {
     const all = brandColors(site);
     const items = b.colors && b.colors.length ? b.colors.map((id) => colorById(site, id)).filter(Boolean) : all;
-    if (!items.length) return `<p class="block__empty text-small">Dodaj kolory w „Marka” → Kolory marki.</p>`;
+    if (!items.length) return `<p class="block__empty text-small">Dodaj kolory w „Ustawienia dokumentu” → Kolory marki.</p>`;
     return `<div class="palette">${items.map((c) => `
     <div class="swatch${isLight(c.hex) ? " is--light" : ""}">
       <button class="swatch__chip" type="button" data-copy="${esc(c.hex)}" style="background:${esc(c.hex)}" aria-label="Kopiuj ${esc(c.hex)}"><span class="swatch__copy"><span class="button is--copy text-body"><span class="button__label">Kopiuj HEX</span></span></span></button>
@@ -402,7 +402,7 @@ const BLOCKS = {
         <span class="typeface__chars">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>ĄĆĘŁŃÓŚŹŻ ąćęłńóśźż<br>0123456789 &amp;@#%?!.,:;()„”–—</span>
         <span class="typeface__sample">${t(sample)}</span>
       </div></div>`
-      : `<div class="typeface__specimen">${b.svg ? `<img class="typeface__svg" src="${esc(ctx.url(b.svg))}" alt="Specimen kroju ${esc(name)}">` : `<span class="typeface__placeholder text-small">Specimen kroju — SVG albo krój z Marki</span>`}</div>`;
+      : `<div class="typeface__specimen">${b.svg ? `<img class="typeface__svg" src="${esc(ctx.url(b.svg))}" alt="Specimen kroju ${esc(name)}">` : `<span class="typeface__placeholder text-small">Specimen kroju — SVG albo krój marki</span>`}</div>`;
     const weights = f ? fontStyles(f).map((x) => x.label).join(", ") : b.weights;
     return `<div class="typeface is--${free ? "free" : "commercial"}${f ? " has--font" : ""}">
     ${specimen}
@@ -453,7 +453,7 @@ const BLOCKS = {
   </div>
   <p class="type-scale__note text-small">${esc(f.name)} · rozmiar bazowy ${fmtPx(base)} px · mnożnik ${fmtPx(ratio)}</p></div>`;
     }
-    return `<div class="graphic">${b.image ? `<img class="graphic__img" src="${esc(ctx.url(b.image))}" alt="${esc(b.label || "Skala typograficzna")}">` : `<span class="graphic__placeholder text-small">Skala typograficzna — SVG / PNG albo krój z Marki</span>`}</div>`;
+    return `<div class="graphic">${b.image ? `<img class="graphic__img" src="${esc(ctx.url(b.image))}" alt="${esc(b.label || "Skala typograficzna")}">` : `<span class="graphic__placeholder text-small">Skala typograficzna — SVG / PNG albo krój marki</span>`}</div>`;
   }
 };
 

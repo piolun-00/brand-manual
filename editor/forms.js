@@ -7,7 +7,7 @@
    do trenowania modeli ani do eksploracji tekstów i danych. Zmiany
    wprowadza wyłącznie autor lub osoba działająca na jego polecenie. */
 
-// Marka, Stopka i Publikacja: grupy z podsumowaniem i ostrzeżeniami.
+// Ustawienia dokumentu (dawniej „Marka”), Stopka i Publikacja: grupy z podsumowaniem i ostrzeżeniami.
 import { useState, useEffect, useRef } from "preact/hooks";
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
@@ -81,7 +81,7 @@ export function FontList({ b, up, ctx }) {
       return html`<${Row} key=${f.id} id=${f.id} open=${open === f.id} onToggle=${() => setOpen(open === f.id ? null : f.id)}
         title=${f.name || f.family || `Krój ${i + 1}`} sub=${`${st.length} ${st.length === 1 ? "odmiana" : st.length < 5 ? "odmiany" : "odmian"}`} warn=${f.licensed ? "" : "bez potwierdzonej licencji"}
         drag=${{ group: "fonts", index: i, onMove: (from, to) => up((x) => moveTo(x.fonts, from, to)) }}
-        onRemove=${() => { if (confirm(`Usunąć krój „${f.name || f.family}” z Marki? Bloki, które go pokazują, wrócą do grafiki SVG.`)) up((x) => { x.fonts.splice(i, 1); }); }}>
+        onRemove=${() => { if (confirm(`Usunąć krój „${f.name || f.family}” z ustawień dokumentu? Bloki, które go pokazują, wrócą do grafiki SVG.`)) up((x) => { x.fonts.splice(i, 1); }); }}>
         <div class="grid2"><${Text} label="Nazwa wyświetlana" value=${f.name} placeholder=${f.family} onInput=${(v) => up((x) => { x.fonts[i].name = v; })} />
         <${Text} label="Odlewnia / autor" value=${f.foundry} onInput=${(v) => up((x) => { x.fonts[i].foundry = v; })} /></div>
         <div class="font-styles">${st.map((s) => { const k = f.styles.indexOf(s); return html`<div class="font-styles__row">
@@ -130,9 +130,9 @@ export function BrandForm({ b, set, ctx }) {
   const lcName = lc === "file" ? "logo z pliku" : lc === "auto" ? "logo auto" : lc === "custom" ? `logo ${b.logoHex || ""}` : `logo ${colorName(b, lc) || ""}`;
   const colors = b.colors || [];
   return html`<div class="panel__inner">
-    <h2 class="h">Marka</h2>
+    <h2 class="h">Ustawienia dokumentu</h2>
 
-    <${Group} id="doc" title="Dokument" open=${open.doc} onToggle=${toggle} warn=${w.doc} onSpot=${() => ctx.spot(".cover.is--start")}
+    <${Group} id="doc" title="Nazwa i wersja" open=${open.doc} onToggle=${toggle} warn=${w.doc} onSpot=${() => ctx.spot(".cover.is--start")}
       summary=${[b.name, b.documentTitle, b.version && `v${b.version}`, b.mode === "single" ? "single" : "multi"].filter(Boolean).join(" · ")}>
       <div class="grid2"><${Text} label="Nazwa marki" value=${b.name} onInput=${(v) => up((x) => { x.name = v; })} />
       <${Text} label="Tytuł dokumentu" value=${b.documentTitle} placeholder="Księga znaku" onInput=${(v) => up((x) => { x.documentTitle = v; })} /></div>
@@ -190,7 +190,7 @@ export function BrandForm({ b, set, ctx }) {
 }
 
 // Stopka: autorstwo manuala — podpis KHOREI (zawsze), opcjonalny pas studia projektowego nad linią, kolor tła stopki.
-// Grupy jak w Marce i Wydaniu: zwinięte pokazują podsumowanie, błędne pola dają ostrzeżenie przy nagłówku grupy.
+// Grupy jak w Ustawieniach dokumentu i Wydaniu: zwinięte pokazują podsumowanie, błędne pola dają ostrzeżenie przy nagłówku grupy.
 export const isEmail = (v) => /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(String(v || "").trim());
 export const isWww = (v) => /^(https?:\/\/)?[^\s/.]+(\.[^\s/.]+)+(\/\S*)?$/i.test(String(v || "").trim());
 export function footerWarnings(b) {

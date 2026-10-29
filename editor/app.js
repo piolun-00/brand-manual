@@ -23,7 +23,10 @@ function Safe({ children, label }) {
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
 const { BASE_CSS, CAN_FOLDER, demoDoc, demoFonts, demoLicense, demoPath, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, studioOf, uid, usedAssets, BLOCK_TYPES, blockInfo, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
-const { ChapterForm } = await import("./blocks.js" + Q);
+const { ChapterForm, checkLottie } = await import("./blocks.js" + Q);
+// Wynik sprawdzenia animacji Lottie na plik: pliki w projekcie mają unikalne ścieżki (dopisek -ab12), więc ta sama
+// ścieżka = ten sam plik. Każdą animację czytamy raz, a lista ostrzeżeń przelicza się szybko jak dotąd.
+const lottieCache = new Map();
 const { BrandForm, PublishForm, StudioForm, brandWarnings, footerWarnings } = await import("./forms.js" + Q);
 // JSZip (ok. 95 KB, prawie 1/5 tego, co edytor pobiera na starcie) wczytujemy dopiero, gdy jest potrzebny:
 // eksport, backup, wczytanie backupu. Raz wczytany zostaje w pamięci; przy błędzie sieci można spróbować ponownie.
@@ -287,10 +290,10 @@ function App() {
   // Lista kontrolna: każda pozycja wie, gdzie jest brak — go = { view, group?, field?, section?, block? }
   async function exportChecks() {
     const out = [], b = project.brand, site = prepare(project);
-    const GROUP = { doc: "Dokument", colors: "Kolory marki", fonts: "Kroje marki", look: "Logo i oprawa" };
+    const GROUP = { doc: "Nazwa i wersja", colors: "Kolory marki", fonts: "Kroje marki", look: "Logo i oprawa" };
     if (!(b.siteUrl || "").trim()) out.push({ t: "Brak adresu manuala", d: "Licencja (LICENSE.txt) nie wskaże adresu, pod którym działa manual.", go: { view: "publish", group: "address", field: "Adres manuala" } });
     const w = brandWarnings(b);
-    for (const [k, v] of Object.entries(w)) if (v && GROUP[k]) out.push({ t: v[0].toUpperCase() + v.slice(1), d: k === "fonts" ? "Marka → Kroje marki. Bez potwierdzenia krój nie trafi do eksportu — bloki pokażą grafikę SVG." : "Marka → " + GROUP[k], go: { view: "brand", group: k } });
+    for (const [k, v] of Object.entries(w)) if (v && GROUP[k]) out.push({ t: v[0].toUpperCase() + v.slice(1), d: k === "fonts" ? "Ustawienia dokumentu → Kroje marki. Bez potwierdzenia krój nie trafi do eksportu — bloki pokażą grafikę SVG." : "Ustawienia dokumentu → " + GROUP[k], go: { view: "brand", group: k } });
     const fw = footerWarnings(b);
     if (fw.credit) out.push({ t: "E-mail kontaktowy w stopce bez @ lub domeny", d: "Stopka → Autor manuala. W manualu będzie zwykłym tekstem, bez linku.", go: { view: "studio", group: "credit", field: "E-mail kontaktowy" } });
     if (fw.studio) out.push({ t: `Studio w stopce — ${fw.studio}`, d: "Stopka → Studio projektowe. W manualu pole będzie zwykłym tekstem, bez linku.", go: { view: "studio", group: "studio" } });
@@ -324,6 +327,15 @@ function App() {
         const where = b.mode === "single" || (c.sections || []).length < 2 ? name : `${name} › ${sc.title || "Sekcja"}`;
         const same = ofType(bl.type), nth = same.length > 1 && !bl.label ? `, blok ${same.indexOf(bl) + 1} z ${same.length}` : "";
         out.push({ t: `${where} — ${BLOCK_TYPES[bl.type] || bl.type}${bl.label ? ` „${bl.label}”` : ""}${nth}`, d: `${info.warn[0].toUpperCase() + info.warn.slice(1)} — uzupełnij albo usuń blok.`, go: { view: c.id, section: sc.id, block: bl.id } });
+      }
+      // Lottie: wyrażenia After Effects i obrazki w osobnych plikach — w eksporcie nie zadziałają
+      for (const sc of c.sections || []) for (const bl of sc.blocks || []) if (bl.type === "lottie") for (const it of bl.items || []) {
+        if (!it.file || !keys.has(it.file)) continue;
+        let r = lottieCache.get(it.file);
+        if (!r) { const blob = await store.getAsset(pid, it.file).catch(() => null); r = blob ? await checkLottie(blob) : { ok: true }; lottieCache.set(it.file, r); }
+        const what = it.name || it.file.split("/").pop();
+        if (r.expr) out.push({ t: `${name} — Lottie „${what}”: wyrażenia After Effects`, d: "W manualu mogą nie działać. Bodymovin: „Convert expressions to keyframes”.", go: { view: c.id, section: sc.id, block: bl.id } });
+        if (r.extImg) out.push({ t: `${name} — Lottie „${what}”: obrazki w osobnych plikach`, d: "Nie pojawią się w manualu. Bodymovin: obrazki „Include in json”.", go: { view: c.id, section: sc.id, block: bl.id } });
       }
       const rest = holes([c]) - base - inBlocks;
       if (rest > 0) out.push({ t: `${name}: ${rest} ${rest === 1 ? "puste miejsce" : rest % 10 >= 2 && rest % 10 <= 4 && (rest % 100 < 10 || rest % 100 >= 20) ? "puste miejsca" : "pustych miejsc"}`, d: "Puste teksty albo pola w sekcjach — zostaną zaślepki.", go: { view: c.id, section: c.sections?.[0]?.id } });
@@ -718,7 +730,7 @@ function App() {
       </span>
     </header>
     <nav class="nav">
-      <button type="button" class=${view === "brand" ? "is--on" : ""} onClick=${() => { setView("brand"); setPage("index"); }}>Marka${brandWarn ? html` <span class="nav__dot" title="Coś wymaga uwagi"></span>` : null}</button>
+      <button type="button" class=${view === "brand" ? "is--on" : ""} onClick=${() => { setView("brand"); setPage("index"); }}>Ustawienia dokumentu${brandWarn ? html` <span class="nav__dot" title="Coś wymaga uwagi"></span>` : null}</button>
       <span class="nav__label">Rozdziały</span>
       <ol>${site.chapters.map((c, i) => html`<li class=${`${view === c.id ? "is--on" : ""}${navOver === i ? " is--over" : ""}`} draggable="true"
         onDragStart=${(e) => { e.dataTransfer.setData("kh/chapters", String(i)); e.dataTransfer.effectAllowed = "move"; }}

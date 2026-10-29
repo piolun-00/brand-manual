@@ -8,7 +8,7 @@ Każdy manual to osobna instancja: uzupełniasz w edytorze → **Eksport ZIP** �
 
 ## Jak pracować
 1. Otwórz edytor (GitHub Pages). Lista projektów: przycisk z nazwą marki u góry.
-2. **Marka** — grupy: *Dokument* (nazwa, wersja, tryb multi / single), *Kolory marki* (zwijane: nazwa + HEX), *Kroje marki* (pliki OTF / TTF / WOFF2, nazwa wyświetlana, potwierdzenie licencji webfont), *Logo i oprawa* (logo i jego kolor, pasek boczny, akcent, krój, okładka). Ostrzeżenia wypływają na nagłówki grup.
+2. **Ustawienia dokumentu** — grupy: *Nazwa i wersja* (nazwa, wersja, tryb multi / single), *Kolory marki* (zwijane: nazwa + HEX), *Kroje marki* (pliki OTF / TTF / WOFF2, nazwa wyświetlana, potwierdzenie licencji webfont), *Logo i oprawa* (logo i jego kolor, pasek boczny, akcent, krój, okładka). Ostrzeżenia wypływają na nagłówki grup.
 3. **Rozdziały** → sekcje → bloki. Podgląd obok, z suwakiem szerokości; kliknięcie w ustawienie podświetla jego miejsce w podglądzie.
 4. **Publikacja** — *Wydanie* (adres manuala, dostęp / hasło, favicon i obrazek linku) oraz *Stopka* (autorstwo: kontakt KHOREI, opcjonalny pas studia projektowego nad linią, kolor tła stopki).
 5. **Eksport ZIP** — najpierw lista kontrolna (brak adresu, puste miejsca, brakujące pliki, ostrzeżenia marki), potem gotowa strona do wgrania. Działa z dowolnego folderu na serwerze.
@@ -27,8 +27,8 @@ Skrót: **Shift+Spacja** w polu tekstowym wstawia twardą spację (np. „Nazwa 
 | Logo | znaki na polach (specimeny SVG) |
 | Kolorystyka | kolory marki z HEX / RGB / CMYK |
 | Kontrast kolorów | pary kolorów z poziomem WCAG |
-| Typografia | krój z Marki: specimen na żywo z zakładkami odmian; bez kroju — grafika SVG |
-| Skala typograficzna | krój z Marki: skala z rozmiaru bazowego i mnożnika (H1–H6, tekst, podpis); bez kroju — grafika |
+| Typografia | krój marki: specimen na żywo z zakładkami odmian; bez kroju — grafika SVG |
+| Skala typograficzna | krój marki: skala z rozmiaru bazowego i mnożnika (H1–H6, tekst, podpis); bez kroju — grafika |
 | Animacja Lottie | 4 w rzędzie, pobieranie JSON i ZIP |
 | Video | MP4 (z klatką startową) lub embed |
 | Model 3D | GLB lub OBJ, obrót 360° |
@@ -50,7 +50,7 @@ Przycisk akcji bloku (ZIP, GLB) stoi w jego belce opisu; bez belki — w nagłó
 | `engine/sample*.json` | przykładowa treść (multi i single site) |
 | `editor/app.js` | edytor: stan, zapis, eksport, układ okna (Preact + htm, bez budowania) |
 | `editor/core.js` | wspólne: wersja, silnik, dane startowe, migracja, pliki |
-| `editor/fields.js`, `blocks.js`, `forms.js`, `preview.js` | pola formularza, bloki / sekcje / rozdziały, Marka / Publikacja, podgląd |
+| `editor/fields.js`, `blocks.js`, `forms.js`, `preview.js` | pola formularza, bloki / sekcje / rozdziały, Ustawienia dokumentu / Stopka / Wydanie, podgląd |
 | `editor/store.js` | IndexedDB (projekty, pliki, meta) |
 | `vendor/` | biblioteki edytora: Preact, htm, JSZip, bcryptjs, DOMPurify, three.js (konwersja OBJ) |
 

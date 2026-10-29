@@ -120,7 +120,7 @@ test("Model 3D: OBJ konwertuje się do GLB", async () => {
 
 test("sprzątanie nieużywanych plików", async () => {
   const p = await editor("single");
-  await p.click('.nav > button:has-text("Marka")');
+  await p.click('.nav > button:has-text("Ustawienia dokumentu")');
   const f = '.f:has-text("Plik logo") input[type=file]';
   await openGroup(p, "Logo i oprawa", f);
   await (await p.$(f)).setInputFiles(path.join(FIX, "logo-test.svg")); await p.waitForTimeout(500);
@@ -277,6 +277,20 @@ test("stopka: błędny e-mail i www studia — ostrzeżenie w formularzu i na li
   const html = fs.readFileSync(path.join(dir, "index.html"), "utf8");
   assert.match(html, /footer__studio[\s\S]*cweewcwe<br>cwweew/, "wartości widoczne jako zwykły tekst");
   assert.doesNotMatch(html, /mailto:cweewcwe|href="https:\/\/cwweew"/, "bez martwych linków");
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test("ostrzeżenia: animacje Lottie z wyrażeniami i obrazkami w osobnych plikach są na liście przed eksportem", async () => {
+  const p = await editor("single");
+  await loadProject(p, { edit: (d) => { d.chapters[0].sections[0].blocks.push({ id: "lot1", type: "lottie", label: "", text: "", line: true, items: [{ name: "Wyrażenia", file: "media/w.json" }, { name: "Obrazek", file: "media/o.json" }] }); },
+    assets: { "media/w.json": "lottie-wyrazenia.json", "media/o.json": "lottie-obrazek.json" } });
+  await p.click('button:has-text("Eksport ZIP")'); await p.waitForSelector(".precheck");
+  const items = await p.locator(".precheck__list li").allInnerTexts();
+  assert.ok(items.some((t) => /Lottie „Wyrażenia”: wyrażenia After Effects/.test(t)));
+  assert.ok(items.some((t) => /Lottie „Obrazek”: obrazki w osobnych plikach/.test(t)));
+  await p.locator(".precheck__list li", { hasText: "Lottie „Wyrażenia”" }).locator("button").click(); await p.waitForTimeout(700);
+  assert.equal(await p.evaluate(() => !!document.activeElement.closest('[data-card="lot1"].is--open')), true, "„Pokaż” otwiera blok Lottie");
   assert.deepEqual(p.errors, []);
   await p.context().close();
 });

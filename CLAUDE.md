@@ -5,6 +5,7 @@ Pisze po polsku, jest ekspertem od designu, nie programuje — opisuje logikę, 
 i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po polsku.
 
 ## Architektura
+- Nawigacja edytora: Ustawienia dokumentu (widok `brand`, `BrandForm`; dawniej „Marka”) · Rozdziały · Wydanie (`publish`) · Stopka (`studio`).
 - Statyczny edytor w przeglądarce (GitHub Pages), bez builda: ES modules, Preact + htm, import map w `index.html`.
 - Edytor w modułach: `core` → `fields` → `blocks` / `forms` / `preview` → `app`. Moduły importują się nawzajem
   dynamicznie z `?v=` (`const Q = new URL(import.meta.url).search`), żeby wersja w adresie obejmowała wszystkie pliki.
@@ -33,7 +34,8 @@ i zawsze tłumaczy „dlaczego”. Komunikaty w UI i komentarze w kodzie: po pol
   Kolor tła stopki `brand.footerColor` / `footerHex` (`footerTheme`: tekst biały/czarny, ≥ 4.5:1). Z pasem LICENSE.txt
   przypisuje studiu autorstwo identyfikacji i treści (w tym doboru typografii); KHOREI zostaje autorem kodu i szablonu.
 - Lista kontrolna (`exportChecks` w `app.js`): każda pozycja ma adres `go = { view, group?, field?, section?, block? }`;
-  puste miejsca rozpisane na bloki (`blockInfo`), brakujące pliki wskazują blok, który ich używa. `goTo(go)` otwiera zakładkę,
+  puste miejsca rozpisane na bloki (`blockInfo`), brakujące pliki wskazują blok, który ich używa, Lottie z wyrażeniami / obrazkami
+  w osobnych plikach (`checkLottie`, wynik zapamiętany na ścieżkę pliku w `lottieCache`). `goTo(go)` otwiera zakładkę,
   grupę (`useGroups(defaults, ctx.want)`, `data-group`) albo kartę bloku (`select`), przewija, podświetla (`.is--flash`)
   i ustawia kursor w pierwszym pustym polu (najpierw plik, pola „opcjonalne” pomija). Po pierwszym eksporcie lista zostaje
   jako pływająca etykieta `.dock` „Ostrzeżenia N” w lewym dolnym rogu i przelicza się po każdej zmianie (600 ms).

@@ -141,7 +141,7 @@ test("zdjęcia i okładka: wersja @1x dla telefonu, srcset, MP4 z klatką starto
 
 test("backup: zapis i wczytanie w czystej przeglądarce odtwarza projekt z plikami", async () => {
   const p = await editor("single");
-  await p.click('.nav > button:has-text("Marka")');
+  await p.click('.nav > button:has-text("Ustawienia dokumentu")');
   await p.fill('.f:has-text("Nazwa marki") input', "Backup Test"); await p.waitForTimeout(300);
   const f = '.f:has-text("Plik logo") input[type=file]';
   await openGroup(p, "Logo i oprawa", f); await p.setInputFiles(f, path.join(ROOT, "tests/fixtures/logo-test.svg")); await p.waitForTimeout(600);
@@ -159,7 +159,7 @@ test("backup: zapis i wczytanie w czystej przeglądarce odtwarza projekt z plika
 
 test("cofnij / przywróć", async () => {
   const p = await editor("single");
-  await p.click('.nav > button:has-text("Marka")');
+  await p.click('.nav > button:has-text("Ustawienia dokumentu")');
   const f = '.f:has-text("Nazwa marki") input';
   const before = await p.inputValue(f);
   await p.fill(f, "Zmiana 1"); await p.waitForTimeout(900);
@@ -268,7 +268,7 @@ test("wydajność: pierwsze wejście lekkie, eksport ze zdjęciami w rozsądnym 
 
 test("Marka: ciemny pasek bez akcentu nie wysypuje formularza (regresja)", async () => {
   const p = await editor("single");
-  await p.click('.nav > button:has-text("Marka")');
+  await p.click('.nav > button:has-text("Ustawienia dokumentu")');
   await openGroup(p, "Logo i oprawa", '.f:has-text("Kolor paska") select');
   await p.selectOption('.f:has-text("Kolor paska") select', { label: "Grafit — #1C1C1C" }); await p.waitForTimeout(500);
   assert.match(await p.locator(".panel").innerText(), /Tekst spisu: jasny/);
@@ -403,7 +403,7 @@ test("demo kodu: wgranie plików, podgląd na żywo, zakładki, eksport z folder
 
 test("Shift+Spacja wstawia twardą spację w polach tekstowych (nie w polach kodu)", async () => {
   const p = await editor("single");
-  await p.click('.nav > button:has-text("Marka")');
+  await p.click('.nav > button:has-text("Ustawienia dokumentu")');
   const f = '.f:has-text("Nazwa marki") input';
   await p.fill(f, "Nazwa"); await p.focus(f); await p.keyboard.press("End");
   await p.keyboard.press("Shift+Space"); await p.keyboard.type("Marki"); await p.waitForTimeout(500);
@@ -483,7 +483,7 @@ test("demo kodu na dotyku: strona przewija się nad demem, demo działa dopiero 
 
 test("kroje marki: wgranie odmian, licencja, specimen z zakładkami, skala z mnożnika, eksport tylko z licencją", async () => {
   const p = await editor("single");
-  await p.click('.nav > button:has-text("Marka")');
+  await p.click('.nav > button:has-text("Ustawienia dokumentu")');
   const add = 'button:has-text("+ Dodaj krój")';
   await openGroup(p, "Kroje marki", add);
   const FF = (n) => path.join(ROOT, "tests/fixtures/font", n);
@@ -513,7 +513,7 @@ test("kroje marki: wgranie odmian, licencja, specimen z zakładkami, skala z mno
   assert.ok(!Object.keys(zip.files).some((f) => f.startsWith("fonts/marka/")), "bez licencji krój nie trafia do eksportu");
   assert.ok(!(await zip.file("assets/style.css").async("string")).includes("kh-font-"));
   // potwierdzenie licencji
-  await p.click('.nav > button:has-text("Marka")');
+  await p.click('.nav > button:has-text("Ustawienia dokumentu")');
   await openGroup(p, "Kroje marki", add);
   if (!(await p.isVisible('.check:has-text("Klient ma licencję webfont") input'))) await p.click('.card__title:has-text("Krój testowy")');
   await p.check('.check:has-text("Klient ma licencję webfont") input'); await p.waitForTimeout(300);

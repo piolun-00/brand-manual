@@ -206,7 +206,7 @@ export function blockInfo(b) {
     case "lottie": sub = plural(items.filter((i) => i.file).length, "animacja", "animacje", "animacji"); holes = lack("file"); break;
     case "model": sub = fileLabel(b.file); holes = b.file ? 0 : 1; break;
     case "video": sub = (b.source || "file") === "file" ? fileLabel(b.file) : "embed"; holes = (b.source || "file") === "file" ? (b.file ? 0 : 1) : (b.embed ? 0 : 1); break;
-    case "typeface": sub = b.name || (b.font ? "krój z Marki" : ""); holes = b.svg || b.font ? 0 : 1; break;
+    case "typeface": sub = b.name || (b.font ? "krój marki" : ""); holes = b.svg || b.font ? 0 : 1; break;
     case "typeScale": sub = b.font ? `mnożnik ${String(b.ratio === "custom" ? b.ratioCustom : b.ratio || "1.25").replace(".", ",")}` : ""; holes = b.image || b.font ? 0 : 1; break;
     case "palette": sub = (b.colors || []).length ? plural(b.colors.length, "kolor", "kolory", "kolorów") : "wszystkie kolory marki"; break;
     case "contrast": sub = plural((b.pairs || []).length, "para", "pary", "par"); break;
@@ -222,7 +222,7 @@ export const sectionInfo = (s) => {
 };
 
 // ——— Pliki krojów: nazwa rodziny, odmiana, grubość i kursywa odczytane z tabel OpenType (OTF / TTF) ———
-// WOFF2 jest skompresowany — wtedy zgadujemy z nazwy pliku (Bold, Medium, Italic…), do poprawienia w Marce.
+// WOFF2 jest skompresowany — wtedy zgadujemy z nazwy pliku (Bold, Medium, Italic…), do poprawienia w Ustawieniach dokumentu.
 const WEIGHTS = [[100, /thin|hairline/i], [200, /extra\s*light|ultra\s*light/i], [300, /light/i], [500, /medium/i], [600, /semi\s*bold|demi/i], [800, /extra\s*bold|ultra\s*bold/i], [900, /black|heavy/i], [700, /bold/i]];
 export const WEIGHT_NAMES = { 100: "Thin", 200: "ExtraLight", 300: "Light", 400: "Regular", 500: "Medium", 600: "SemiBold", 700: "Bold", 800: "ExtraBold", 900: "Black" };
 const guessWeight = (s) => (WEIGHTS.find(([, re]) => re.test(s)) || [400])[0];
