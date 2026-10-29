@@ -500,14 +500,18 @@ const wwwLabel = (u) => String(u || "").trim().replace(/^https?:\/\//i, "").repl
 function footerStudio(b, ctx) {
   const s = studioOf(b);
   if (!s) return "";
-  const name = String(s.name || "").trim(), author = String(s.author || "").trim(), email = String(s.email || "").trim(), www = wwwHref(s.www);
+  const name = String(s.name || "").trim(), author = String(s.author || "").trim(), email = String(s.email || "").trim();
+  // Link tylko dla poprawnego adresu — literówka w formularzu nie daje martwego linku, zostaje zwykłym tekstem
+  const mailOk = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email), wwwOk = /^(https?:\/\/)?[^\s/.]+(\.[^\s/.]+)+(\/\S*)?$/i.test(String(s.www || "").trim());
+  const www = wwwOk ? wwwHref(s.www) : "", wwwText = String(s.www || "").trim();
   const svg = s.logo && ctx.svgText?.[s.logo];
   // Logo w stałym polu 160×40 (jak logo w pasku: proporcje z pliku, wyrównane do lewej)
   const logo = svg ? `<span class="footer__studio-mark">${inlineSvg(svg, name || "Studio projektowe", "currentColor").replace('class="sidebar__logo-svg"', 'class="footer__studio-logo"')}</span>`
     : s.logo ? `<span class="footer__studio-mark"><img class="footer__studio-logo" src="${esc(ctx.url(s.logo))}" alt="${esc(name)}"></span>`
     : `<span class="footer__text text-footer">${t(name)}</span>`;
   const mark = www ? `<a class="footer__logo-link" href="${esc(www)}" target="_blank" rel="noopener" aria-label="${esc(name || wwwLabel(s.www))}">${logo}</a>` : logo;
-  const contact = [email && `<a class="footer__link" href="mailto:${esc(email)}">${esc(email)}</a>`, www && `<a class="footer__link" href="${esc(www)}" target="_blank" rel="noopener">${esc(wwwLabel(s.www))}</a>`].filter(Boolean).join("<br>");
+  const contact = [email && (mailOk ? `<a class="footer__link" href="mailto:${esc(email)}">${esc(email)}</a>` : esc(email)),
+    wwwText && (www ? `<a class="footer__link" href="${esc(www)}" target="_blank" rel="noopener">${esc(wwwLabel(s.www))}</a>` : esc(wwwText))].filter(Boolean).join("<br>");
   return `<div class="footer__studio">
     <div class="footer__brand">${mark}</div>
     <div class="footer__cols">

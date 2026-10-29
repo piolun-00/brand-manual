@@ -7,7 +7,7 @@
    do trenowania modeli ani do eksploracji tekstów i danych. Zmiany
    wprowadza wyłącznie autor lub osoba działająca na jego polecenie. */
 
-// Marka, Studio i Publikacja: grupy z podsumowaniem i ostrzeżeniami.
+// Marka, Stopka i Publikacja: grupy z podsumowaniem i ostrzeżeniami.
 import { useState, useEffect, useRef } from "preact/hooks";
 
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
@@ -189,33 +189,56 @@ export function BrandForm({ b, set, ctx }) {
   </div>`;
 }
 
-// Studio: stopka manuala — podpis KHOREI (zawsze), opcjonalny pas studia projektowego nad linią, kolor tła stopki
+// Stopka: autorstwo manuala — podpis KHOREI (zawsze), opcjonalny pas studia projektowego nad linią, kolor tła stopki.
+// Grupy jak w Marce i Wydaniu: zwinięte pokazują podsumowanie, błędne pola dają ostrzeżenie przy nagłówku grupy.
+export const isEmail = (v) => /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(String(v || "").trim());
+export const isWww = (v) => /^(https?:\/\/)?[^\s/.]+(\.[^\s/.]+)+(\/\S*)?$/i.test(String(v || "").trim());
+export function footerWarnings(b) {
+  const st = b.studio || {}, w = {};
+  if ((b.contact || "").trim() && !isEmail(b.contact)) w.credit = "do poprawy: e-mail";
+  if (st.on) {
+    const bad = [(st.email || "").trim() && !isEmail(st.email) && "e-mail", (st.www || "").trim() && !isWww(st.www) && "www"].filter(Boolean);
+    if (bad.length) w.studio = `do poprawy: ${bad.join(", ")}`;
+  }
+  return w;
+}
 export function StudioForm({ b, set, ctx }) {
   const up = (fn) => set((x) => fn(x));
+  const [open, toggle] = useGroups({ credit: true }, ctx.want);
   useEffect(() => { ctx.spot(".footer"); }, []);
   const st = b.studio || {};
   const upS = (fn) => up((x) => { x.studio = { ...(x.studio || {}) }; fn(x.studio); });
-  const ft = footerTheme(b);
+  const ft = footerTheme(b), w = footerWarnings(b);
+  const badEmail = st.on && (st.email || "").trim() && !isEmail(st.email), badWww = st.on && (st.www || "").trim() && !isWww(st.www);
   return html`<div class="panel__inner">
-    <h2 class="h">Studio</h2>
-    <p class="note">Stopka każdej strony manuala.</p>
-    <${Text} label="E-mail kontaktowy" value=${b.contact} placeholder="studio@khorei.com" hint="Stoi w stopce pod „Masz pytania?”. W gotowym manualu klik otwiera program pocztowy." onInput=${(v) => up((x) => { x.contact = v; })} />
-    <p class="note">Logo KHOREI i „Designed by KHOREI” linkują do khorei.com. Nota prawna i sygnatura wdrożenia trafiają do eksportu automatycznie (LICENSE.txt).</p>
+    <h2 class="h">Stopka</h2>
+    <p class="note">Stopka każdej strony manuala: kto jest autorem manuala i — opcjonalnie — kto zaprojektował identyfikację.</p>
 
-    <b class="group__sub">Studio projektowe</b>
-    <label class="check is--line"><input type="checkbox" checked=${!!st.on} onChange=${(e) => upS((s) => { s.on = e.target.checked; })} />Pokaż w stopce studio, które zaprojektowało identyfikację</label>
-    ${st.on && html`
-      <p class="note">Nad linią: logo, nazwa, autor, e-mail i strona studia. Pod linią zostaje stopka KHOREI. Puste pola nie pojawiają się w manualu. LICENSE.txt przypisuje studiu autorstwo identyfikacji i treści manuala, w tym doboru typografii.</p>
-      <${FileField} label="Logo studia (SVG)" value=${st.logo} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} hint="Przebarwia się na kolor tekstu stopki. Pole 160×40, proporcje z pliku." onChange=${(p) => upS((s) => { s.logo = p; })} />
-      <div class="grid2"><${Text} label="Nazwa studia" value=${st.name} onInput=${(v) => upS((s) => { s.name = v; })} />
-      <${Text} label="Autor" value=${st.author} placeholder="Imię i nazwisko" onInput=${(v) => upS((s) => { s.author = v; })} /></div>
-      <div class="grid2"><${Text} label="E-mail" value=${st.email} onInput=${(v) => upS((s) => { s.email = v; })} />
-      <${Text} label="Strona www" value=${st.www} placeholder="studio.pl" onInput=${(v) => upS((s) => { s.www = v; })} /></div>`}
+    <${Group} id="credit" title="Autor manuala (KHOREI)" open=${open.credit} onToggle=${toggle} warn=${w.credit} summary=${(b.contact || "").trim() || "bez e-maila"}>
+      <${Text} label="E-mail kontaktowy" value=${b.contact} placeholder="studio@khorei.com" hint="Stoi w stopce pod „Masz pytania?”. W gotowym manualu klik otwiera program pocztowy." onInput=${(v) => up((x) => { x.contact = v; })} />
+      ${w.credit && html`<p class="f__warn">To nie wygląda na adres e-mail — w manualu będzie zwykłym tekstem, bez linku.</p>`}
+      <p class="note">Logo KHOREI i „Designed by KHOREI” linkują do khorei.com. Nota prawna i sygnatura wdrożenia trafiają do eksportu automatycznie (LICENSE.txt).</p>
+    <//>
 
-    <b class="group__sub">Kolor stopki</b>
-    <${ColorPick} label="Tło stopki" b=${b} value=${b.footerColor || ""} hex=${b.footerHex} defLabel="Domyślny (jasnoszary)"
-      onPick=${(v) => up((x) => { x.footerColor = v || null; if (v === "custom" && !x.footerHex) x.footerHex = "#1C1C1C"; })} onHex=${(v) => up((x) => { x.footerHex = v; })} />
-    ${ft && html`<p class="note">Tekst i logo w stopce: ${ft.fg === "#FFFFFF" ? "białe" : "czarne"} (kontrast ${ft.ratio.toFixed(1).replace(".", ",")}:1).</p>`}
+    <${Group} id="studio" title="Studio projektowe" open=${open.studio} onToggle=${toggle} warn=${w.studio}
+      summary=${st.on ? (st.name || st.author || "włączone") : "wyłączone"}>
+      <label class="check is--line"><input type="checkbox" checked=${!!st.on} onChange=${(e) => upS((s) => { s.on = e.target.checked; })} />Pokaż w stopce studio, które zaprojektowało identyfikację</label>
+      ${st.on && html`
+        <p class="note">Nad linią: logo, nazwa, autor, e-mail i strona studia. Pod linią zostaje stopka KHOREI. Puste pola nie pojawiają się w manualu. LICENSE.txt przypisuje studiu autorstwo identyfikacji i treści manuala, w tym doboru typografii.</p>
+        <${FileField} label="Logo studia (SVG)" value=${st.logo} accept=".svg,image/svg+xml" folder="media" ctx=${ctx} hint="Przebarwia się na kolor tekstu stopki. Pole 160×40, proporcje z pliku." onChange=${(p) => upS((s) => { s.logo = p; })} />
+        <div class="grid2"><${Text} label="Nazwa studia" value=${st.name} onInput=${(v) => upS((s) => { s.name = v; })} />
+        <${Text} label="Autor" value=${st.author} placeholder="Imię i nazwisko" onInput=${(v) => upS((s) => { s.author = v; })} /></div>
+        <div class="grid2"><${Text} label="E-mail" value=${st.email} placeholder="hej@studio.pl" onInput=${(v) => upS((s) => { s.email = v; })} />
+        <${Text} label="Strona www" value=${st.www} placeholder="studio.pl" onInput=${(v) => upS((s) => { s.www = v; })} /></div>
+        ${(badEmail || badWww) && html`<p class="f__warn">${[badEmail && "E-mail potrzebuje @ i domeny (np. hej@studio.pl)", badWww && "Strona www potrzebuje domeny (np. studio.pl)"].filter(Boolean).join(". ")}. Do poprawy — w manualu pole będzie zwykłym tekstem, bez linku.</p>`}`}
+    <//>
+
+    <${Group} id="color" title="Kolor stopki" open=${open.color} onToggle=${toggle}
+      summary=${ft ? html`<span class="group__chips"><span class="check__chip" style=${`background:${ft.bg}`}></span></span>${ft.bg}` : "domyślny (jasnoszary)"}>
+      <${ColorPick} label="Tło stopki" b=${b} value=${b.footerColor || ""} hex=${b.footerHex} defLabel="Domyślny (jasnoszary)"
+        onPick=${(v) => up((x) => { x.footerColor = v || null; if (v === "custom" && !x.footerHex) x.footerHex = "#1C1C1C"; })} onHex=${(v) => up((x) => { x.footerHex = v; })} />
+      ${ft && html`<p class="note">Tekst i logo w stopce: ${ft.fg === "#FFFFFF" ? "białe" : "czarne"} (kontrast ${ft.ratio.toFixed(1).replace(".", ",")}:1).</p>`}
+    <//>
   </div>`;
 }
 

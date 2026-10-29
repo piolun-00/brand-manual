@@ -24,7 +24,7 @@ function Safe({ children, label }) {
 const Q = new URL(import.meta.url).search; // ta sama wersja co app.js
 const { BASE_CSS, CAN_FOLDER, demoDoc, demoFonts, demoLicense, demoPath, ENGINE_URL, FIGMA, GEIST_FILES, Icon, SAMPLE, SAMPLE_SINGLE, VENDOR_ASSETS, VERSION, ago, clone, download, fileName, fmtMB, fontOf, freshIds, halfSize, html, legal, lockKey, lockPage, mimeOf, move, moveTo, newChapter, posterOf, prepare, prepareFile, projectJson, readTree, renderPage, renderSite, slugify, store, studioOf, uid, usedAssets, BLOCK_TYPES, blockInfo, uses, variantOf, withIds, writeFile } = await import("./core.js" + Q);
 const { ChapterForm } = await import("./blocks.js" + Q);
-const { BrandForm, PublishForm, StudioForm, brandWarnings } = await import("./forms.js" + Q);
+const { BrandForm, PublishForm, StudioForm, brandWarnings, footerWarnings } = await import("./forms.js" + Q);
 // JSZip (ok. 95 KB, prawie 1/5 tego, co edytor pobiera na starcie) wczytujemy dopiero, gdy jest potrzebny:
 // eksport, backup, wczytanie backupu. Raz wczytany zostaje w pamięci; przy błędzie sieci można spróbować ponownie.
 let zipLib = null;
@@ -291,6 +291,9 @@ function App() {
     if (!(b.siteUrl || "").trim()) out.push({ t: "Brak adresu manuala", d: "Licencja (LICENSE.txt) nie wskaże adresu, pod którym działa manual.", go: { view: "publish", group: "address", field: "Adres manuala" } });
     const w = brandWarnings(b);
     for (const [k, v] of Object.entries(w)) if (v && GROUP[k]) out.push({ t: v[0].toUpperCase() + v.slice(1), d: k === "fonts" ? "Marka → Kroje marki. Bez potwierdzenia krój nie trafi do eksportu — bloki pokażą grafikę SVG." : "Marka → " + GROUP[k], go: { view: "brand", group: k } });
+    const fw = footerWarnings(b);
+    if (fw.credit) out.push({ t: "E-mail kontaktowy w stopce bez @ lub domeny", d: "Stopka → Autor manuala. W manualu będzie zwykłym tekstem, bez linku.", go: { view: "studio", group: "credit", field: "E-mail kontaktowy" } });
+    if (fw.studio) out.push({ t: `Studio w stopce — ${fw.studio}`, d: "Stopka → Studio projektowe. W manualu pole będzie zwykłym tekstem, bez linku.", go: { view: "studio", group: "studio" } });
     if (w.share) out.push({ t: "Obrazek linku bez adresu manuala", d: "Bez adresu podgląd linku w Slacku / mailu się nie pokaże.", go: { view: "publish", group: "address", field: "Adres manuala" } });
     // Brakujące pliki — każdy wskazuje blok (albo zakładkę), który go używa
     const keys = new Set(await store.assetKeys(pid));
@@ -302,7 +305,7 @@ function App() {
           for (const bl of sc.blocks || []) if (JSON.stringify(bl).includes(path)) return { view: c.id, section: sc.id, block: bl.id };
         }
       }
-      return JSON.stringify(b.studio || {}).includes(path) ? { view: "studio" } : /^(ogImage|favicon)$/.test(Object.keys(b).find((k) => b[k] === path) || "") ? { view: "publish" } : { view: "brand" };
+      return JSON.stringify(b.studio || {}).includes(path) ? { view: "studio", group: "studio" } : /^(ogImage|favicon)$/.test(Object.keys(b).find((k) => b[k] === path) || "") ? { view: "publish" } : { view: "brand" };
     };
     for (const p of usedAssets(project).filter((x) => !keys.has(x))) out.push({ t: `Brakuje pliku: ${p.split("/").pop()}`, d: "Plik zniknął z pamięci przeglądarki — wgraj go ponownie.", go: owner(p) });
     // Puste miejsca: najpierw konkretne bloki (karta bloku z liczbą pustych pól), potem reszta z podglądu
@@ -733,7 +736,7 @@ function App() {
       <button type="button" class="btn is--add" onClick=${() => { const nc = newChapter(); update((p) => { p.chapters.push(nc); }); setView(nc.id); setPage(nc.id); }}>+ Dodaj rozdział</button>
       <span class="nav__label">Publikacja</span>
       <button type="button" class=${view === "publish" ? "is--on" : ""} onClick=${() => setView("publish")}>Wydanie${publishWarn ? html` <span class="nav__dot" title="Coś wymaga uwagi"></span>` : null}</button>
-      <button type="button" class=${view === "studio" ? "is--on" : ""} onClick=${() => setView("studio")}>Studio</button>
+      <button type="button" class=${view === "studio" ? "is--on" : ""} onClick=${() => setView("studio")}>Stopka${Object.keys(footerWarnings(project.brand)).length ? html` <span class="nav__dot" title="Coś wymaga uwagi"></span>` : null}</button>
     </nav>
     <main class="panel"><${Safe} key=${view} label="Formularz">
       ${view === "publish"

@@ -178,8 +178,10 @@ test("stopka: pas studia projektowego nad linią, kolor tła stopki, autorstwo w
     d.brand.studio = { on: true, logo: "media/studio.svg", name: "Studio Testowe", author: "Anna Projektantka", email: "hej@studio.test", www: "studio.test" };
     d.brand.footerColor = "custom"; d.brand.footerHex = "#1C1C1C";
   }, assets: { "media/studio.svg": "logo-test.svg" } });
-  // formularz Studio pokazuje pola pasa i kontrast stopki
-  await p.click('.nav > button:has-text("Studio")');
+  // zakładka Stopka: grupy, pola pasa i kontrast stopki
+  await p.click('.nav > button:has-text("Stopka")');
+  await openGroup(p, "Studio projektowe", '.check:has-text("studio, które zaprojektowało") input');
+  await openGroup(p, "Kolor stopki", '.panel :text("kontrast")');
   assert.equal(await p.locator('.check:has-text("studio, które zaprojektowało") input').isChecked(), true);
   assert.match(await p.locator(".panel").innerText(), /kontrast \d+,\d:1/);
   const { dir, url, zip } = await exportManual(p, "stopka-studio");
@@ -260,4 +262,21 @@ test("wydajność: biblioteka ZIP wczytuje się dopiero przy backupie / eksporci
   assert.ok(dl.suggestedFilename().endsWith(".khorei"));
   assert.equal(zipReq.length, 1, "przy backupie wczytuje się raz");
   await ctx.close();
+});
+
+test("stopka: błędny e-mail i www studia — ostrzeżenie w formularzu i na liście, w manualu tekst bez martwego linku", async () => {
+  const p = await editor("single");
+  await loadProject(p, { edit: (d) => { d.brand.studio = { on: true, name: "Studio X", email: "cweewcwe", www: "cwweew" }; } });
+  assert.equal(await p.locator('.nav > button:has-text("Stopka") .nav__dot').count(), 1, "kropka przy zakładce Stopka");
+  await p.click('.nav > button:has-text("Stopka")');
+  assert.match(await p.locator('.panel [data-group="studio"] .group__warn').innerText(), /do poprawy: e-mail, www/);
+  await p.click('button:has-text("Eksport ZIP")'); await p.waitForSelector(".precheck");
+  assert.ok((await p.locator(".precheck__list li").allInnerTexts()).some((t) => /Studio w stopce — do poprawy: e-mail, www/.test(t)));
+  await p.click('.precheck button:has-text("Wróć")');
+  const { dir } = await exportManual(p, "stopka-bledy");
+  const html = fs.readFileSync(path.join(dir, "index.html"), "utf8");
+  assert.match(html, /footer__studio[\s\S]*cweewcwe<br>cwweew/, "wartości widoczne jako zwykły tekst");
+  assert.doesNotMatch(html, /mailto:cweewcwe|href="https:\/\/cwweew"/, "bez martwych linków");
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
 });
