@@ -8,7 +8,7 @@ Każdy manual to osobna instancja: uzupełniasz w edytorze → **Eksport ZIP** �
 
 ## Jak pracować
 1. Otwórz edytor (GitHub Pages). Lista projektów: przycisk z nazwą marki u góry.
-2. **Ustawienia dokumentu** — grupy: *Nazwa i wersja* (nazwa, wersja, tryb multi / single), *Kolory marki* (zwijane: nazwa + HEX), *Kroje marki* (pliki OTF / TTF / WOFF2, nazwa wyświetlana, potwierdzenie licencji webfont), *Logo i oprawa* (logo i jego kolor, pasek boczny, akcent, krój, okładka). Ostrzeżenia wypływają na nagłówki grup.
+2. **Ustawienia dokumentu** — grupy: *Nazwa i wersja* (nazwa, wersja, tryb multi / single), *Kolory* (zwijane: nazwa + HEX), *Kroje pisma* (pliki OTF / TTF / WOFF2, nazwa wyświetlana, potwierdzenie licencji webfont), *Logo i oprawa* (logo i jego kolor, pasek boczny, akcent, krój, okładka). Ostrzeżenia wypływają na nagłówki grup.
 3. **Rozdziały** → sekcje → bloki. Podgląd obok, z suwakiem szerokości; kliknięcie w ustawienie podświetla jego miejsce w podglądzie.
 4. **Publikacja** — *Wydanie* (adres manuala, dostęp / hasło, favicon i obrazek linku) oraz *Stopka* (autorstwo: kontakt KHOREI, opcjonalny pas studia projektowego nad linią, kolor tła stopki).
 5. **Eksport ZIP** — najpierw lista kontrolna (brak adresu, puste miejsca, brakujące pliki, ostrzeżenia marki), potem gotowa strona do wgrania. Działa z dowolnego folderu na serwerze.
@@ -25,10 +25,10 @@ Skrót: **Shift+Spacja** w polu tekstowym wstawia twardą spację (np. „Nazwa 
 | Zdjęcia | 1–2 zdjęcia w rzędzie; eksport dodaje wersję @1x dla telefonów |
 | Ikony | siatka SVG, pobieranie pojedynczo i ZIP |
 | Logo | znaki na polach (specimeny SVG) |
-| Kolorystyka | kolory marki z HEX / RGB / CMYK |
+| Kolorystyka | kolory z HEX / RGB / CMYK |
 | Kontrast kolorów | pary kolorów z poziomem WCAG |
-| Typografia | krój marki: specimen na żywo z zakładkami odmian; bez kroju — grafika SVG |
-| Skala typograficzna | krój marki: skala z rozmiaru bazowego i mnożnika (H1–H6, tekst, podpis); bez kroju — grafika |
+| Typografia | wgrany krój: specimen na żywo z zakładkami odmian; bez kroju — grafika SVG |
+| Skala typograficzna | wgrany krój: skala z rozmiaru bazowego i mnożnika (H1–H6, tekst, podpis); bez kroju — grafika |
 | Animacja Lottie | 4 w rzędzie, pobieranie JSON i ZIP |
 | Video | MP4 (z klatką startową) lub embed |
 | Model 3D | GLB lub OBJ, obrót 360° |

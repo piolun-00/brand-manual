@@ -82,7 +82,7 @@ export const newSection = (title = "") => ({ id: uid(), title, text: [""], actio
   blocks: [{ id: uid(), type: "images", label: "", text: "", ...newBlock("images"), layout: "1", items: [{ image: null, caption: "" }] }] });
 export const newChapter = (title = "Nowy rozdział") => ({ id: uid(), slug: slugify(title), title, cover: null, downloadAll: null, sections: [newSection("Wprowadzenie")] });
 
-// Starsze projekty: kolory z bloków palety → kolory marki, pary kontrastowe po id, bez wyboru krojów.
+// Starsze projekty: kolory z bloków palety → brand.colors, pary kontrastowe po id, bez wyboru krojów.
 export function migrate(p) {
   const b = p.brand ||= {};
   if (!Array.isArray(b.colors)) {
@@ -206,9 +206,9 @@ export function blockInfo(b) {
     case "lottie": sub = plural(items.filter((i) => i.file).length, "animacja", "animacje", "animacji"); holes = lack("file"); break;
     case "model": sub = fileLabel(b.file); holes = b.file ? 0 : 1; break;
     case "video": sub = (b.source || "file") === "file" ? fileLabel(b.file) : "embed"; holes = (b.source || "file") === "file" ? (b.file ? 0 : 1) : (b.embed ? 0 : 1); break;
-    case "typeface": sub = b.name || (b.font ? "krój marki" : ""); holes = b.svg || b.font ? 0 : 1; break;
+    case "typeface": sub = b.name || (b.font ? "wgrany krój" : ""); holes = b.svg || b.font ? 0 : 1; break;
     case "typeScale": sub = b.font ? `mnożnik ${String(b.ratio === "custom" ? b.ratioCustom : b.ratio || "1.25").replace(".", ",")}` : ""; holes = b.image || b.font ? 0 : 1; break;
-    case "palette": sub = (b.colors || []).length ? plural(b.colors.length, "kolor", "kolory", "kolorów") : "wszystkie kolory marki"; break;
+    case "palette": sub = (b.colors || []).length ? plural(b.colors.length, "kolor", "kolory", "kolorów") : "wszystkie kolory"; break;
     case "contrast": sub = plural((b.pairs || []).length, "para", "pary", "par"); break;
     case "text": sub = b.columns === 2 ? "2 kolumny" : "1 kolumna"; if (!(b.col1 || "").trim()) holes = 1; break;
     case "code": { const langs = [["HTML", b.html], ["CSS", b.css], ["JS", b.js]].filter(([, v]) => (v || "").trim()).map(([l]) => l); sub = langs.join(" · "); holes = langs.length ? 0 : 1; break; }

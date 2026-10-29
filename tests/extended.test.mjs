@@ -481,11 +481,11 @@ test("demo kodu na dotyku: strona przewija się nad demem, demo działa dopiero 
   await v.context().close(); await d.context().close(); await p.context().close();
 });
 
-test("kroje marki: wgranie odmian, licencja, specimen z zakładkami, skala z mnożnika, eksport tylko z licencją", async () => {
+test("kroje pisma: wgranie odmian, licencja, specimen z zakładkami, skala z mnożnika, eksport tylko z licencją", async () => {
   const p = await editor("single");
   await p.click('.nav > button:has-text("Ustawienia dokumentu")');
   const add = 'button:has-text("+ Dodaj krój")';
-  await openGroup(p, "Kroje marki", add);
+  await openGroup(p, "Kroje pisma", add);
   const FF = (n) => path.join(ROOT, "tests/fixtures/font", n);
   const [chooser] = await Promise.all([p.waitForEvent("filechooser"), p.click(add)]);
   await chooser.setFiles([FF("KaTeX_Main-Regular.ttf"), FF("KaTeX_Main-Bold.ttf"), FF("KaTeX_Main-Italic.ttf")]); await p.waitForTimeout(800);
@@ -514,7 +514,7 @@ test("kroje marki: wgranie odmian, licencja, specimen z zakładkami, skala z mno
   assert.ok(!(await zip.file("assets/style.css").async("string")).includes("kh-font-"));
   // potwierdzenie licencji
   await p.click('.nav > button:has-text("Ustawienia dokumentu")');
-  await openGroup(p, "Kroje marki", add);
+  await openGroup(p, "Kroje pisma", add);
   if (!(await p.isVisible('.check:has-text("Klient ma licencję webfont") input'))) await p.click('.card__title:has-text("Krój testowy")');
   await p.check('.check:has-text("Klient ma licencję webfont") input'); await p.waitForTimeout(300);
   let r = await exportManual(p, "kroje-z");

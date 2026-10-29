@@ -50,7 +50,7 @@ export function SpecimensBlock({ b, set, ctx }) {
 export function PaletteBlock({ b, set, ctx }) {
   const all = ctx.colors;
   const sel = b.colors || [];
-  if (!all.length) return html`<p class="note">Kolory dodajesz raz w „Ustawienia dokumentu” → Kolory marki. Tu wybierasz, które pokazać.</p>`;
+  if (!all.length) return html`<p class="note">Kolory dodajesz raz w „Ustawienia dokumentu” → Kolory. Tu wybierasz, które pokazać.</p>`;
   return html`<span class="f__label">Pokaż kolory (nic nie zaznaczone = wszystkie)</span>
     <div class="checks">${all.map((c) => html`<label class="check"><input type="checkbox" checked=${sel.includes(c.id)}
       onChange=${(e) => set((x) => { const cur = x.colors || []; x.colors = e.target.checked ? all.map((k) => k.id).filter((id) => id === c.id || cur.includes(id)) : cur.filter((id) => id !== c.id); })} />
@@ -59,7 +59,7 @@ export function PaletteBlock({ b, set, ctx }) {
 export function ContrastBlock({ b, set, ctx }) {
   const all = ctx.colors;
   const opts = [["", "— wybierz kolor —"], ...all.map((c) => [c.id, c.name || c.hex])];
-  if (!all.length) return html`<p class="note">Najpierw dodaj kolory w „Ustawienia dokumentu” → Kolory marki.</p>`;
+  if (!all.length) return html`<p class="note">Najpierw dodaj kolory w „Ustawienia dokumentu” → Kolory.</p>`;
   return html`<${ListBlock} items=${b.pairs || []} addLabel="Dodaj parę"
     add=${() => set((x) => { (x.pairs ||= []).push({ bg: "", fg: "" }); })}
     render=${(p, i) => html`<div class="sub grid2x">
@@ -244,7 +244,7 @@ export function TypefaceBlock({ b, set, ctx }) {
   const l = b.license || {};
   const font = (ctx.fonts || []).find((f) => f.id === b.font);
   return html`
-    <${Select} label="Krój" value=${font ? b.font : ""} options=${fontOptions(ctx)} hint=${(ctx.fonts || []).length ? "" : "Kroje dodajesz w „Ustawienia dokumentu” → Kroje marki."} onChange=${(v) => set((x) => { x.font = v || null; })} />
+    <${Select} label="Krój" value=${font ? b.font : ""} options=${fontOptions(ctx)} hint=${(ctx.fonts || []).length ? "" : "Kroje dodajesz w „Ustawienia dokumentu” → Kroje pisma."} onChange=${(v) => set((x) => { x.font = v || null; })} />
     ${font && !font.licensed && html`<p class="f__warn">Bez potwierdzonej licencji krój widać tylko w podglądzie — w eksporcie blok pokaże grafikę SVG.</p>`}
     <div class="grid2"><${Text} label="Nazwa kroju" value=${b.name} placeholder=${font ? font.name || font.family : ""} onInput=${(v) => set((x) => { x.name = v; })} />
     <${Text} label="Odlewnia / autor" value=${b.foundry} placeholder=${font?.foundry || ""} onInput=${(v) => set((x) => { x.foundry = v; })} /></div>
@@ -259,7 +259,7 @@ export function TypefaceBlock({ b, set, ctx }) {
       : html`<div class="grid2"><${Text} label="Tekst linku" value=${l.linkLabel} onInput=${(v) => set((x) => { x.license = { ...l, linkLabel: v }; })} />
         <${Text} label="Adres kroju" value=${l.href} placeholder="https://" hint="Bez adresu nie ma linku — zostaje nazwa i autor." onInput=${(v) => set((x) => { x.license = { ...l, href: v }; })} /></div>`}`;
 }
-// Skala: z kroju marki liczy się sama (baza × mnożnik), bez kroju — grafika SVG / PNG
+// Skala: z wgranego kroju liczy się sama (baza × mnożnik), bez kroju — grafika SVG / PNG
 export function TypeScaleBlock({ b, set, ctx }) {
   const font = (ctx.fonts || []).find((f) => f.id === b.font);
   const ratio = b.ratio || "1.25";

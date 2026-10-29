@@ -290,10 +290,10 @@ function App() {
   // Lista kontrolna: każda pozycja wie, gdzie jest brak — go = { view, group?, field?, section?, block? }
   async function exportChecks() {
     const out = [], b = project.brand, site = prepare(project);
-    const GROUP = { doc: "Nazwa i wersja", colors: "Kolory marki", fonts: "Kroje marki", look: "Logo i oprawa" };
+    const GROUP = { doc: "Nazwa i wersja", colors: "Kolory", fonts: "Kroje pisma", look: "Logo i oprawa" };
     if (!(b.siteUrl || "").trim()) out.push({ t: "Brak adresu manuala", d: "Licencja (LICENSE.txt) nie wskaże adresu, pod którym działa manual.", go: { view: "publish", group: "address", field: "Adres manuala" } });
     const w = brandWarnings(b);
-    for (const [k, v] of Object.entries(w)) if (v && GROUP[k]) out.push({ t: v[0].toUpperCase() + v.slice(1), d: k === "fonts" ? "Ustawienia dokumentu → Kroje marki. Bez potwierdzenia krój nie trafi do eksportu — bloki pokażą grafikę SVG." : "Ustawienia dokumentu → " + GROUP[k], go: { view: "brand", group: k } });
+    for (const [k, v] of Object.entries(w)) if (v && GROUP[k]) out.push({ t: v[0].toUpperCase() + v.slice(1), d: k === "fonts" ? "Ustawienia dokumentu → Kroje pisma. Bez potwierdzenia krój nie trafi do eksportu — bloki pokażą grafikę SVG." : "Ustawienia dokumentu → " + GROUP[k], go: { view: "brand", group: k } });
     const fw = footerWarnings(b);
     if (fw.credit) out.push({ t: "E-mail kontaktowy w stopce bez @ lub domeny", d: "Stopka → Autor manuala. W manualu będzie zwykłym tekstem, bez linku.", go: { view: "studio", group: "credit", field: "E-mail kontaktowy" } });
     if (fw.studio) out.push({ t: `Studio w stopce — ${fw.studio}`, d: "Stopka → Studio projektowe. W manualu pole będzie zwykłym tekstem, bez linku.", go: { view: "studio", group: "studio" } });
@@ -394,7 +394,7 @@ function App() {
     const zip = new JSZip();
     const font = fontOf(project), missing = [];
     const extra = { variants: new Map(), posters: new Set(), iconZips: new Map() };
-    // Kroje marki bez potwierdzonej licencji webfont nie wychodzą poza edytor
+    // Kroje pisma bez potwierdzonej licencji webfont nie wychodzą poza edytor
     const blockedFonts = new Set((project.brand.fonts || []).filter((f) => !f.licensed).flatMap((f) => (f.styles || []).map((s) => s.file)));
     const all = usedAssets(project).filter((p) => !blockedFonts.has(p));
     for (const [k, path] of all.entries()) { if (k % 10 === 0) step(`Zbieram pliki… ${k + 1}/${all.length}`, 0.02 + 0.13 * k / Math.max(1, all.length)); const blob = await store.getAsset(pid, path); blob ? zip.file(path, blob) : missing.push(path); }

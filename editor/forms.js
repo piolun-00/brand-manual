@@ -15,7 +15,7 @@ const { accentOf, contrastRatio, coverTheme, fontOf, footerTheme, html, moveTo, 
 const { Color, FileField, Group, Row, Select, Text, useGroups } = await import("./fields.js" + Q);
 // ——— Marka ———
 // ——— Marka i Publikacja: grupy (akordeon z podsumowaniem i ostrzeżeniem) ———
-// Kolejność = kolejność pracy i zależności: kolory marki stoją wyżej niż pola, które z nich wybierają.
+// Kolejność = kolejność pracy i zależności: kolory stoją wyżej niż pola, które z nich wybierają.
 export const colorName = (b, id) => (b.colors || []).find((c) => c.id === id)?.name;
 // Wybór koloru: z palety marki albo własny HEX (pasek, logo, akcent — jeden wzór)
 export function ColorPick({ label, b, value, hex, onPick, onHex, extra = [], defLabel }) {
@@ -23,7 +23,7 @@ export function ColorPick({ label, b, value, hex, onPick, onHex, extra = [], def
   return html`${html`<${Select} label=${label} value=${value || ""} options=${[...(defLabel ? [["", defLabel]] : []), ...extra, ...colors.map((c) => [c.id, `${c.name || "Kolor"} — ${c.hex}`]), ["custom", "Własny kolor…"]]} onChange=${onPick} />`}
     ${value === "custom" && html`<${Color} label=${`${label} — własny`} value=${hex} onInput=${onHex} />`}`;
 }
-// Kolory marki: zwinięte wiersze (kwadrat + nazwa + HEX), rozwinięcie = pełne dane, przeciąganie
+// Kolory: zwinięte wiersze (kwadrat + nazwa + HEX), rozwinięcie = pełne dane, przeciąganie
 export function ColorList({ b, up, ctx }) {
   const [open, setOpen] = useState(null);
   const list = b.colors || [];
@@ -47,7 +47,7 @@ export function ColorList({ b, up, ctx }) {
   </div>`;
 }
 
-// Kroje marki: krój = nazwa wyświetlana + odmiany z plików (OTF / TTF / WOFF2) + potwierdzenie licencji webfont.
+// Kroje pisma: krój = nazwa wyświetlana + odmiany z plików (OTF / TTF / WOFF2) + potwierdzenie licencji webfont.
 // Wgranie kilku plików naraz grupuje je w kroje po nazwie rodziny zapisanej w pliku.
 export function FontList({ b, up, ctx }) {
   const [open, setOpen] = useState(null);
@@ -141,13 +141,13 @@ export function BrandForm({ b, set, ctx }) {
       <${Select} label="Tryb strony" value=${b.mode} options=${[["multi", "Multi site — osobna strona na rozdział"], ["single", "Single site — wszystko na jednej stronie"]]} onChange=${(v) => ctx.switchMode(v)} />
     <//>
 
-    <${Group} id="colors" title="Kolory marki" open=${open.colors} onToggle=${toggle} warn=${w.colors}
+    <${Group} id="colors" title="Kolory" open=${open.colors} onToggle=${toggle} warn=${w.colors}
       summary=${colors.length ? html`<span class="group__chips">${colors.slice(0, 8).map((c) => html`<span class="check__chip" style=${`background:${c.hex}`}></span>`)}</span>${colors.length} ${colors.length === 1 ? "kolor" : colors.length < 5 ? "kolory" : "kolorów"}` : "brak"}>
       <p class="note">Z tej palety korzystają bloki „Kolorystyka” i „Kontrast kolorów” oraz kolory paska, logo i akcentu.</p>
       <${ColorList} b=${b} up=${up} ctx=${ctx} />
     <//>
 
-    <${Group} id="fonts" title="Kroje marki" open=${open.fonts} onToggle=${toggle} warn=${w.fonts}
+    <${Group} id="fonts" title="Kroje pisma" open=${open.fonts} onToggle=${toggle} warn=${w.fonts}
       summary=${(b.fonts || []).length ? (b.fonts || []).map((f) => f.name || f.family).join(" · ") : "brak — bloki typografii jako grafika SVG"}>
       <p class="note">Z tych krojów korzystają bloki „Typografia” i „Skala typograficzna”. Bez kroju bloki pokazują grafikę SVG.</p>
       <${FontList} b=${b} up=${up} ctx=${ctx} />

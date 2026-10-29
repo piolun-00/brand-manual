@@ -60,7 +60,7 @@ function luminance(hex) {
     .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
-// Kolory marki definiowane raz w „Marka” → Kolory marki (brand.colors). Bloki odwołują się do nich po id.
+// Kolory definiowane raz w „Marka” → Kolory (brand.colors). Bloki odwołują się do nich po id.
 function brandColors(site) { return (site.brand.colors || []).filter((c) => c && c.hex); }
 function colorById(site, id) {
   const all = brandColors(site);
@@ -141,7 +141,7 @@ function toc(ctx, chapter) {
 //  — blok bez belki → w nagłówku sekcji (gdy sekcja nie ma własnego przycisku i ma jeden akapit),
 //  — gdy oba miejsca zajęte → nad blokiem, w panelu.
 const hasMeta = (b) => !!(b.line || (b.label || "").trim() || (b.text || "").trim());
-// ——— Kroje marki (Marka → Kroje marki) ———
+// ——— Kroje pisma (Marka → Kroje pisma) ———
 // Krój: { id, name (nazwa wyświetlana), family (z pliku), foundry, licensed, licensedAt, styles: [{ id, file, weight, italic, label }] }
 // W eksporcie trafiają tylko kroje z potwierdzoną licencją webfont; w podglądzie wszystkie (żeby było widać efekt).
 export const fontFamilyId = (f) => `kh-font-${f.id}`;
@@ -315,7 +315,7 @@ const BLOCKS = {
   palette: (ctx, b, site) => {
     const all = brandColors(site);
     const items = b.colors && b.colors.length ? b.colors.map((id) => colorById(site, id)).filter(Boolean) : all;
-    if (!items.length) return `<p class="block__empty text-small">Dodaj kolory w „Ustawienia dokumentu” → Kolory marki.</p>`;
+    if (!items.length) return `<p class="block__empty text-small">Dodaj kolory w „Ustawienia dokumentu” → Kolory.</p>`;
     return `<div class="palette">${items.map((c) => `
     <div class="swatch${isLight(c.hex) ? " is--light" : ""}">
       <button class="swatch__chip" type="button" data-copy="${esc(c.hex)}" style="background:${esc(c.hex)}" aria-label="Kopiuj ${esc(c.hex)}"><span class="swatch__copy"><span class="button is--copy text-body"><span class="button__label">Kopiuj HEX</span></span></span></button>
@@ -402,7 +402,7 @@ const BLOCKS = {
         <span class="typeface__chars">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>ĄĆĘŁŃÓŚŹŻ ąćęłńóśźż<br>0123456789 &amp;@#%?!.,:;()„”–—</span>
         <span class="typeface__sample">${t(sample)}</span>
       </div></div>`
-      : `<div class="typeface__specimen">${b.svg ? `<img class="typeface__svg" src="${esc(ctx.url(b.svg))}" alt="Specimen kroju ${esc(name)}">` : `<span class="typeface__placeholder text-small">Specimen kroju — SVG albo krój marki</span>`}</div>`;
+      : `<div class="typeface__specimen">${b.svg ? `<img class="typeface__svg" src="${esc(ctx.url(b.svg))}" alt="Specimen kroju ${esc(name)}">` : `<span class="typeface__placeholder text-small">Specimen kroju — SVG albo wgrany krój</span>`}</div>`;
     const weights = f ? fontStyles(f).map((x) => x.label).join(", ") : b.weights;
     return `<div class="typeface is--${free ? "free" : "commercial"}${f ? " has--font" : ""}">
     ${specimen}
@@ -453,7 +453,7 @@ const BLOCKS = {
   </div>
   <p class="type-scale__note text-small">${esc(f.name)} · rozmiar bazowy ${fmtPx(base)} px · mnożnik ${fmtPx(ratio)}</p></div>`;
     }
-    return `<div class="graphic">${b.image ? `<img class="graphic__img" src="${esc(ctx.url(b.image))}" alt="${esc(b.label || "Skala typograficzna")}">` : `<span class="graphic__placeholder text-small">Skala typograficzna — SVG / PNG albo krój marki</span>`}</div>`;
+    return `<div class="graphic">${b.image ? `<img class="graphic__img" src="${esc(ctx.url(b.image))}" alt="${esc(b.label || "Skala typograficzna")}">` : `<span class="graphic__placeholder text-small">Skala typograficzna — SVG / PNG albo wgrany krój</span>`}</div>`;
   }
 };
 

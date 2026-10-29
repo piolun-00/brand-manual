@@ -8,7 +8,7 @@
    wprowadza wyłącznie autor lub osoba działająca na jego polecenie. */
 
 // Tokeny CSS liczone w przeglądarce z eksportu zmiennych Figmy (engine/figma-variables.json)
-// i ustawień marki z edytora (akcent, krój marki, krój interfejsu, pliki krojów).
+// i ustawień marki z edytora (akcent, kroje pisma, krój interfejsu, pliki krojów).
 // Zasada jak dotąd: nazwa zmiennej w Figmie = custom property ("bg/page" → --bg-page),
 // tryby Layout (Mobile / Tablet / Desktop) = media queries 768 / 1280.
 

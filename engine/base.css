@@ -376,7 +376,7 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 }
 .code-demo__actions { display: flex; justify-content: flex-end; margin-top: var(--space-12); }
 
-/* ——— Typografia z krojem marki ———
+/* ——— Typografia z wgranym krojem ———
    Zakładki odmian jak w demie kodu; specimen i skala składane na żywo krojem z Marki. */
 .type-tabs { display: flex; gap: var(--space-4); padding: var(--space-8); border-bottom: 1px solid var(--border-subtle); overflow-x: auto; scrollbar-width: none; }
 .type-tabs__tab { appearance: none; border: 0; background: none; font: inherit; color: var(--text-subtle); padding: var(--space-4) var(--space-8); cursor: pointer; white-space: nowrap; }
@@ -389,7 +389,7 @@ p, .section-header__text, .gallery__caption, .specimen__caption, .typeface__note
 .typeface__chars { font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
 .typeface__sample { grid-column: 1 / -1; font-size: clamp(28px, 4vw, 48px); line-height: 1.15; overflow-wrap: anywhere; }
 @media (max-width: 767px) { .typeface__board { grid-template-columns: 1fr; } .typeface__chars { font-size: 15px; } }
-/* Skala z kroju marki: układ wierszy jak w projekcie (linia, etykieta, próbka, parametry); nad nimi zakładki odmian */
+/* Skala z wgranego kroju: układ wierszy jak w projekcie (linia, etykieta, próbka, parametry); nad nimi zakładki odmian */
 .type-scale.has--font .type-tabs { padding-left: 0; padding-right: 0; border-bottom: 0; }
 .type-scale.has--font .type-scale__sample { overflow-wrap: anywhere; }
 .type-scale__params > span { color: var(--text-subtle); }
